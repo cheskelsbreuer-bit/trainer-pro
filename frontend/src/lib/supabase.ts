@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -13,7 +12,11 @@ if (!url || !anonKey) {
   );
 }
 
-export const supabase = createClient<Database>(
+// We intentionally don't pass <Database> here. The auto-generated types from
+// `supabase gen types typescript` are stricter than our hand-written ones and
+// fight with supabase-js v2's overload signatures. We use explicit `as` casts
+// at query sites for read paths, which is good enough until we wire up codegen.
+export const supabase = createClient(
   url ?? 'https://missing.supabase.co',
   anonKey ?? 'missing-anon-key',
   {

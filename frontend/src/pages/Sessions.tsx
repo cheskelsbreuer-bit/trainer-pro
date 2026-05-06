@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { PageHeader } from '../components/PageHeader';
 import { formatSessionWhen, formatMoney, initials } from '../lib/format';
 import { Plus, Calendar as CalIcon, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import type { Session, Client } from '../lib/database.types';
+import type { Session } from '../lib/database.types';
 
 type Tab = 'upcoming' | 'today' | 'past' | 'cancelled';
 
