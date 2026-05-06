@@ -41,8 +41,25 @@ export interface Trainer {
   notify_email: boolean;
   notify_sms: boolean;
   sms_phone: string | null;
+  // Public booking (added in supabase/04_booking.sql)
+  slug: string | null;
+  booking_enabled: boolean;
+  booking_settings: BookingSettings;
   created_at: string;
   updated_at: string;
+}
+
+export interface BookingSettings {
+  lead_hours: number;
+  max_days_ahead: number;
+  default_duration_min: number;
+  buffer_min: number;
+  intro_text?: string;
+  windows: {
+    weekday: number; // 0=Sun..6=Sat
+    start: string; // "06:00"
+    end: string; // "20:00"
+  }[];
 }
 
 export interface PackageDefinition {

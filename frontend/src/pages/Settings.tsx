@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
+import { BookingSettingsCard } from '../components/BookingSettingsCard';
 import type { Trainer } from '../lib/database.types';
 
 export function Settings() {
@@ -187,6 +188,10 @@ export function Settings() {
           {saved && <span className="text-sm text-emerald-600">✓ Saved</span>}
         </div>
       </form>
+
+      <div className="mt-8">
+        <BookingSettingsCard trainer={trainer} />
+      </div>
     </div>
   );
 }
