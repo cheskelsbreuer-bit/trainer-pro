@@ -12,6 +12,7 @@ import { Workouts } from './pages/Workouts';
 import { Progress } from './pages/Progress';
 import { Settings } from './pages/Settings';
 import { BookingPage } from './pages/BookingPage';
+import { IntakePage } from './pages/IntakePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +44,7 @@ export default function App() {
           <Routes>
             {/* Public — no auth required */}
             <Route path="/book/:slug" element={<BookingPage />} />
+            <Route path="/intake/:token" element={<IntakePage />} />
 
             {/* Trainer app — protected */}
             <Route element={<ProtectedShell />}>
