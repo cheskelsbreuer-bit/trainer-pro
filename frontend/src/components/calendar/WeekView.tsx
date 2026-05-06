@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import {
   DAY_END_HOUR,
@@ -47,24 +47,36 @@ export function WeekView({ anchor, sessions, onCreateAt, onEdit, onReschedule }:
     return Array.from({ length: 7 }, (_, i) => addDays(s, i));
   }, [anchor]);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to a useful default time on first mount (current time on today, otherwise 7 AM).
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const now = new Date();
+    const todayInRange = days.some((d) => isToday(d));
+    const targetHour = todayInRange ? Math.max(DAY_START_HOUR, now.getHours() - 1) : 7;
+    const offsetMin = (targetHour - DAY_START_HOUR) * 60;
+    scrollRef.current.scrollTop = Math.max(0, offsetMin * PIXELS_PER_MINUTE);
+  }, [days]);
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
       {/* day header */}
-      <div className="grid grid-cols-[60px_repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-slate-50/60">
+      <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-slate-50/60">
         <div className="p-2" />
         {days.map((d) => {
           const { weekday, day } = formatDayHeader(d);
           const today = isToday(d);
           return (
-            <div key={d.toISOString()} className="p-3 text-center border-l border-slate-100 first:border-l-0">
-              <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">{weekday}</div>
+            <div key={d.toISOString()} className="px-2 py-2 text-center border-l border-slate-100 first:border-l-0">
+              <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">{weekday}</div>
               <div
-                className={`mt-0.5 text-2xl font-semibold ${
+                className={`mt-0.5 text-base font-semibold ${
                   today ? 'text-blue-600' : 'text-slate-900'
                 }`}
               >
                 {today ? (
-                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-blue-600 text-white text-base">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-sm">
                     {day}
                   </span>
                 ) : (
@@ -76,32 +88,38 @@ export function WeekView({ anchor, sessions, onCreateAt, onEdit, onReschedule }:
         })}
       </div>
 
-      {/* time grid */}
-      <div className="grid grid-cols-[60px_repeat(7,minmax(0,1fr))] relative">
-        {/* hour labels column */}
-        <div className="bg-slate-50/40 border-r border-slate-100">
-          {HOURS.map((h) => (
-            <div
-              key={h}
-              className="text-[11px] text-slate-400 text-right pr-2 -mt-2"
-              style={{ height: `${60 * PIXELS_PER_MINUTE}px` }}
-            >
-              {formatHourLabel(h)}
-            </div>
+      {/* time grid (scrolls internally) */}
+      <div
+        ref={scrollRef}
+        className="overflow-y-auto"
+        style={{ maxHeight: 'min(70vh, 640px)' }}
+      >
+        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] relative">
+          {/* hour labels column */}
+          <div className="bg-slate-50/40 border-r border-slate-100">
+            {HOURS.map((h) => (
+              <div
+                key={h}
+                className="text-[10px] text-slate-400 text-right pr-1.5 -mt-1.5"
+                style={{ height: `${60 * PIXELS_PER_MINUTE}px` }}
+              >
+                {formatHourLabel(h)}
+              </div>
+            ))}
+          </div>
+
+          {/* day columns */}
+          {days.map((day) => (
+            <DayColumn
+              key={day.toISOString()}
+              day={day}
+              sessions={sessions.filter((s) => sameDay(new Date(s.starts_at), day))}
+              onCreateAt={onCreateAt}
+              onEdit={onEdit}
+              onReschedule={onReschedule}
+            />
           ))}
         </div>
-
-        {/* day columns */}
-        {days.map((day) => (
-          <DayColumn
-            key={day.toISOString()}
-            day={day}
-            sessions={sessions.filter((s) => sameDay(new Date(s.starts_at), day))}
-            onCreateAt={onCreateAt}
-            onEdit={onEdit}
-            onReschedule={onReschedule}
-          />
-        ))}
       </div>
     </div>
   );
@@ -219,6 +237,9 @@ function SessionChip({ session, onEdit }: { session: WeekViewSession; onEdit: (s
   const end = new Date(session.ends_at);
   const offsetMin = (start.getHours() - DAY_START_HOUR) * 60 + start.getMinutes();
   const heightMin = Math.max(20, diffMinutes(start, end));
+  const heightPx = heightMin * PIXELS_PER_MINUTE - 2;
+  // Sessions shorter than ~35 px get a single-line treatment.
+  const compact = heightPx < 32;
 
   // Hide if outside visible hours
   if (offsetMin < 0 || offsetMin > (DAY_END_HOUR - DAY_START_HOUR) * 60) return null;
@@ -229,6 +250,8 @@ function SessionChip({ session, onEdit }: { session: WeekViewSession; onEdit: (s
     e.dataTransfer.setData('application/x-session', JSON.stringify(session));
   }
 
+  const timeStr = start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
   return (
     <div
       data-session
@@ -238,23 +261,32 @@ function SessionChip({ session, onEdit }: { session: WeekViewSession; onEdit: (s
         e.stopPropagation();
         onEdit(session);
       }}
-      className={`absolute left-1 right-1 rounded-md border px-2 py-1 text-xs cursor-pointer shadow-sm transition-shadow hover:shadow-md ${
+      className={`absolute left-1 right-1 rounded-md border ${compact ? 'px-1.5 py-0' : 'px-2 py-0.5'} text-[11px] cursor-pointer shadow-sm transition-shadow hover:shadow-md ${
         STATUS_STYLES[session.status]
       }`}
       style={{
         top: `${offsetMin * PIXELS_PER_MINUTE}px`,
-        height: `${heightMin * PIXELS_PER_MINUTE - 2}px`,
+        height: `${heightPx}px`,
         zIndex: 5,
       }}
-      title={`${session.clients?.full_name ?? 'Client'} · ${start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`}
+      title={`${session.clients?.full_name ?? 'Client'} · ${timeStr}${session.location ? ' · ' + session.location : ''}`}
     >
-      <div className="font-medium truncate leading-tight">
-        {session.clients?.full_name ?? 'Unknown'}
-      </div>
-      <div className="opacity-90 truncate leading-tight">
-        {start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-        {session.location ? ` · ${session.location}` : ''}
-      </div>
+      {compact ? (
+        <div className="truncate leading-tight font-medium">
+          <span className="opacity-80">{timeStr}</span>{' '}
+          {session.clients?.full_name ?? 'Unknown'}
+        </div>
+      ) : (
+        <>
+          <div className="font-medium truncate leading-tight">
+            {session.clients?.full_name ?? 'Unknown'}
+          </div>
+          <div className="opacity-90 truncate leading-tight">
+            {timeStr}
+            {session.location ? ` · ${session.location}` : ''}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -112,9 +112,9 @@ export function formatRangeTitle(view: CalendarView, anchor: Date): string {
 // ---------- positioning math (week view) ----------
 
 export const DAY_START_HOUR = 6; // 6 AM
-export const DAY_END_HOUR = 22; // 10 PM
+export const DAY_END_HOUR = 24; // midnight (exclusive — last visible hour is 11 PM)
 export const SLOT_MINUTES = 30; // 30-minute time slots
-export const PIXELS_PER_MINUTE = 1.0; // height tuning — 1px per minute = ~16h × 60 = 960px tall
+export const PIXELS_PER_MINUTE = 0.65; // height tuning — 18h × 60 × 0.65 ≈ 702px tall
 
 export function minutesFromDayStart(d: Date): number {
   return d.getHours() * 60 + d.getMinutes() - DAY_START_HOUR * 60;
