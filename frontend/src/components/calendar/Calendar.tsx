@@ -16,6 +16,7 @@ import type { Session } from '../../lib/database.types';
 import { WeekView, type WeekViewSession } from './WeekView';
 import { MonthView } from './MonthView';
 import { SessionModal } from './SessionModal';
+import { DayPanel } from './DayPanel';
 
 interface ModalState {
   open: boolean;
@@ -29,6 +30,7 @@ export function Calendar() {
   const [view, setView] = useState<CalendarView>('week');
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [modal, setModal] = useState<ModalState>({ open: false, mode: 'create' });
+  const [panelDay, setPanelDay] = useState<Date | null>(null);
   const qc = useQueryClient();
 
   const { from, to } = useMemo(() => {
@@ -183,8 +185,23 @@ export function Calendar() {
           sessions={sessions as WeekViewSession[]}
           onCreateAt={openCreate}
           onEdit={openEdit}
+          onDayClick={(d) => setPanelDay(d)}
         />
       )}
+
+      <DayPanel
+        day={panelDay}
+        sessions={sessions as WeekViewSession[]}
+        onClose={() => setPanelDay(null)}
+        onCreateAt={(start) => {
+          setPanelDay(null);
+          openCreate(start);
+        }}
+        onEdit={(s) => {
+          setPanelDay(null);
+          openEdit(s);
+        }}
+      />
 
       <SessionModal
         open={modal.open}

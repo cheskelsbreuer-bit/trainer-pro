@@ -16,6 +16,7 @@ interface MonthViewProps {
   sessions: MonthViewSession[];
   onCreateAt: (start: Date) => void;
   onEdit: (session: MonthViewSession) => void;
+  onDayClick: (day: Date) => void;
 }
 
 const STATUS_DOT: Record<Session['status'], string> = {
@@ -26,7 +27,12 @@ const STATUS_DOT: Record<Session['status'], string> = {
   cancelled: 'bg-red-300',
 };
 
-export function MonthView({ anchor, sessions, onCreateAt, onEdit }: MonthViewProps) {
+export function MonthView({ anchor, sessions, onCreateAt: _onCreateAt, onEdit: _onEdit, onDayClick }: MonthViewProps) {
+  // We funnel both day-cell clicks AND in-cell session clicks through onDayClick;
+  // the parent panel offers New / Edit actions explicitly. _onCreateAt and _onEdit
+  // are kept on the API for future direct-create flows from the month grid.
+  void _onCreateAt;
+  void _onEdit;
   const monthStart = startOfMonth(anchor);
   const { from, to } = monthGridRange(anchor);
 
@@ -78,11 +84,7 @@ export function MonthView({ anchor, sessions, onCreateAt, onEdit }: MonthViewPro
           return (
             <div
               key={d.toISOString()}
-              onClick={() => {
-                const slot = new Date(d);
-                slot.setHours(9, 0, 0, 0);
-                onCreateAt(slot);
-              }}
+              onClick={() => onDayClick(d)}
               className={`min-h-[110px] p-2 border-r border-b border-slate-100 last:border-r-0 cursor-pointer hover:bg-slate-50 transition ${
                 inMonth ? 'bg-white' : 'bg-slate-50/40'
               }`}
@@ -108,13 +110,9 @@ export function MonthView({ anchor, sessions, onCreateAt, onEdit }: MonthViewPro
                   const start = new Date(s.starts_at);
                   const cancelled = s.status === 'cancelled';
                   return (
-                    <button
+                    <div
                       key={s.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(s);
-                      }}
-                      className={`w-full flex items-center gap-1 text-left text-[11px] px-1.5 py-0.5 rounded hover:bg-slate-100 ${
+                      className={`w-full flex items-center gap-1 text-left text-[11px] px-1.5 py-0.5 rounded ${
                         cancelled ? 'line-through text-slate-400' : 'text-slate-700'
                       }`}
                     >
@@ -126,7 +124,7 @@ export function MonthView({ anchor, sessions, onCreateAt, onEdit }: MonthViewPro
                         {' '}
                         {s.clients?.full_name ?? 'Client'}
                       </span>
-                    </button>
+                    </div>
                   );
                 })}
                 {daySessions.length > 3 && (
