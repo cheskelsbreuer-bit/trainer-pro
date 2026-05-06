@@ -15,6 +15,7 @@ backend/*.pyc
 backend/.env
 backend/venv/
 backend/.venv/
+backend/demo_report.pdf
 backend/.pytest_cache/
 backend/.ruff_cache/
 backend/.mypy_cache/
