@@ -1,16 +1,58 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PageHeader } from '../components/PageHeader';
+import { Calendar } from '../components/calendar/Calendar';
 import { formatSessionWhen, formatMoney, initials } from '../lib/format';
-import { Plus, Calendar as CalIcon, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import {
+  CalendarDays,
+  List as ListIcon,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+} from 'lucide-react';
 import type { Session } from '../lib/database.types';
 
-type Tab = 'upcoming' | 'today' | 'past' | 'cancelled';
+type Mode = 'calendar' | 'list';
+type ListTab = 'upcoming' | 'today' | 'past' | 'cancelled';
 
 export function Sessions() {
-  const [tab, setTab] = useState<Tab>('upcoming');
+  const [mode, setMode] = useState<Mode>('calendar');
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto">
+      <PageHeader
+        title="Sessions"
+        subtitle="Schedule, track, and manage every training session."
+        actions={
+          <div className="bg-slate-100 rounded-lg p-1 flex">
+            <button
+              onClick={() => setMode('calendar')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition ${
+                mode === 'calendar' ? 'bg-white shadow-sm text-slate-900 font-medium' : 'text-slate-600'
+              }`}
+            >
+              <CalendarDays size={14} /> Calendar
+            </button>
+            <button
+              onClick={() => setMode('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition ${
+                mode === 'list' ? 'bg-white shadow-sm text-slate-900 font-medium' : 'text-slate-600'
+              }`}
+            >
+              <ListIcon size={14} /> List
+            </button>
+          </div>
+        }
+      />
+
+      {mode === 'calendar' ? <Calendar /> : <SessionListView />}
+    </div>
+  );
+}
+
+function SessionListView() {
+  const [tab, setTab] = useState<ListTab>('upcoming');
   const qc = useQueryClient();
 
   const { data: sessions, isLoading } = useQuery({
@@ -53,33 +95,21 @@ export function Sessions() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sessions'] });
+      qc.invalidateQueries({ queryKey: ['calendar-sessions'] });
       qc.invalidateQueries({ queryKey: ['upcoming-sessions'] });
     },
   });
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <PageHeader
-        title="Sessions"
-        subtitle="Schedule and track your training sessions."
-        actions={
-          <Link
-            to="/clients"
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-          >
-            <Plus size={16} /> New session
-          </Link>
-        }
-      />
-
+    <div>
       <div className="flex gap-2 mb-6">
-        {(['upcoming', 'today', 'past', 'cancelled'] as Tab[]).map((t) => (
+        {(['upcoming', 'today', 'past', 'cancelled'] as ListTab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm capitalize ${
+            className={`px-4 py-2 rounded-lg text-sm capitalize transition ${
               tab === t
-                ? 'bg-blue-600 text-white'
+                ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
@@ -91,14 +121,14 @@ export function Sessions() {
       {isLoading && <p className="text-slate-500">Loading…</p>}
       {!isLoading && !sessions?.length && (
         <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-300">
-          <CalIcon className="mx-auto text-slate-300 mb-2" size={40} />
+          <CalendarDays className="mx-auto text-slate-300 mb-2" size={40} />
           <p className="text-slate-500">No sessions to show.</p>
         </div>
       )}
 
       <div className="space-y-2">
         {sessions?.map((s) => (
-          <div key={s.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4">
+          <div key={s.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
             <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-medium">
               {initials(s.clients?.full_name)}
             </div>
@@ -110,10 +140,7 @@ export function Sessions() {
                 {s.price && ` · ${formatMoney(s.price)}`}
               </p>
             </div>
-            <StatusActions
-              session={s}
-              onChange={(status) => update.mutate({ id: s.id, status })}
-            />
+            <StatusActions session={s} onChange={(status) => update.mutate({ id: s.id, status })} />
           </div>
         ))}
       </div>

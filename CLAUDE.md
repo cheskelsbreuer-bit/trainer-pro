@@ -33,8 +33,7 @@ C:/Users/chaya/Downloads/trainer-pro/
 
 ## Constraints in the user's environment
 
-- **Network has a content filter** (Geder / "Level Browser") that intercepts npm registry requests. The user is requesting a whitelist for `registry.npmjs.org`, `*.npmjs.org`, `nodejs.org`, `vercel.com`, `*.vercel.app`, `render.com`, `supabase.com`, `*.supabase.co`. Until that's done, **`npm install` won't work locally** — but Vercel's cloud build is unaffected and can deploy successfully.
-- **Node.js v24 is installed** (we installed it via winget during scaffolding).
+- **Node.js v24.15.0 (LTS) is installed via winget — as a portable package, not a system installer.** Lives at `C:\Users\chaya\AppData\Local\Microsoft\WinGet\Packages\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\node-v24.15.0-win-x64`. That folder IS in the user PATH, so any freshly-opened terminal sees `npm` and `node` fine. But if a process inherits PATH from before the winget install completed, prepend the folder: `$env:Path = "<that folder>;$env:Path"`. (An earlier session assumed npm.org was blocked by a content filter — that was wrong. Real issue was just process-PATH inheritance. `npm install` works.)
 - **Python 3.12 + 3.14 are installed.** Use `py -3.12` if version matters.
 - **PowerShell ExecutionPolicy was set to RemoteSigned** so `npm` works.
 
