@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarSync, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { CalendarCheck, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { Trainer } from '../lib/database.types';
 
 // Placeholder card — actual OAuth flow + sync engine ships in Phase 2.x.
@@ -11,7 +11,7 @@ export function GoogleCalendarCard({ trainer }: { trainer: Trainer }) {
   return (
     <section className="bg-white border border-slate-200 rounded-xl p-5">
       <div className="flex items-start gap-2 mb-3">
-        <CalendarSync size={18} className="text-blue-600 mt-0.5" />
+        <CalendarCheck size={18} className="text-blue-600 mt-0.5" />
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-slate-900">Google Calendar sync</h3>
