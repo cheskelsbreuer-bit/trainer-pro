@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
 import { BookingSettingsCard } from '../components/BookingSettingsCard';
+import { GoogleCalendarCard } from '../components/GoogleCalendarCard';
 import type { Trainer } from '../lib/database.types';
 
 export function Settings() {
@@ -189,8 +190,9 @@ export function Settings() {
         </div>
       </form>
 
-      <div className="mt-8">
+      <div className="mt-8 space-y-6">
         <BookingSettingsCard trainer={trainer} />
+        <GoogleCalendarCard trainer={trainer} />
       </div>
     </div>
   );
