@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useBrandTheme } from '../hooks/useBrandTheme';
 import {
   LayoutDashboard,
   Users,
@@ -23,12 +24,16 @@ const navItems = [
 
 export function Layout() {
   const { user, signOut } = useAuth();
+  const brand = useBrandTheme();
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
-        <div className="px-6 py-5 border-b border-slate-200">
+        <div
+          className="px-6 py-5 border-b border-slate-200"
+          style={{ borderTop: `3px solid ${brand}` }}
+        >
           <div className="flex items-center gap-2">
             <span className="text-2xl">💪</span>
             <h1 className="font-bold text-slate-900">Trainer Pro</h1>
@@ -44,9 +49,17 @@ export function Layout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700 font-medium'
+                    ? 'font-medium'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`
+              }
+              style={({ isActive }) =>
+                isActive
+                  ? {
+                      backgroundColor: 'var(--brand-tint)',
+                      color: brand,
+                    }
+                  : undefined
               }
             >
               <item.icon size={18} />
