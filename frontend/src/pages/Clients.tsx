@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PageHeader } from '../components/PageHeader';
 import { initials, formatMoney } from '../lib/format';
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X, AlertTriangle } from 'lucide-react';
 import type { Client } from '../lib/database.types';
 
 export function Clients() {
@@ -59,6 +59,8 @@ export function Clients() {
         />
       </div>
 
+      <LowBalanceBanner clients={clients ?? []} />
+
       {isLoading && <p className="text-slate-500">Loading…</p>}
       {!isLoading && !clients?.length && (
         <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-300">
@@ -105,11 +107,7 @@ function ClientGroup({ title, clients }: { title: string; clients: Client[] }) {
                       {formatMoney(c.rate_per_session)}/session
                     </span>
                   )}
-                  {c.package_balance > 0 && (
-                    <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                      {c.package_balance} sessions left
-                    </span>
-                  )}
+                  <BalanceBadge balance={c.package_balance} />
                   {c.tags.slice(0, 2).map((t) => (
                     <span
                       key={t}
@@ -285,5 +283,49 @@ function Field({
       </span>
       {children}
     </label>
+  );
+}
+
+function LowBalanceBanner({ clients }: { clients: Client[] }) {
+  const low = clients.filter((c) => c.status === 'active' && c.package_balance > 0 && c.package_balance <= 2);
+  if (low.length === 0) return null;
+  return (
+    <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+      <AlertTriangle className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
+      <div className="flex-1">
+        <p className="text-sm font-medium text-amber-900">
+          {low.length} client{low.length === 1 ? '' : 's'} running low on package sessions
+        </p>
+        <p className="text-xs text-amber-800 mt-0.5">
+          {low
+            .slice(0, 4)
+            .map((c) => `${c.full_name} (${c.package_balance})`)
+            .join(' · ')}
+          {low.length > 4 && ` · +${low.length - 4} more`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BalanceBadge({ balance }: { balance: number }) {
+  if (balance === 0) {
+    return (
+      <span className="text-xs font-medium text-red-700 bg-red-50 border border-red-100 px-2 py-0.5 rounded">
+        No package
+      </span>
+    );
+  }
+  if (balance <= 2) {
+    return (
+      <span className="text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+        Low: {balance} left
+      </span>
+    );
+  }
+  return (
+    <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+      {balance} sessions left
+    </span>
   );
 }
