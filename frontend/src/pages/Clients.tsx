@@ -4,11 +4,13 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PageHeader } from '../components/PageHeader';
 import { initials, formatMoney } from '../lib/format';
-import { Plus, Search, X, AlertTriangle } from 'lucide-react';
+import { Plus, Search, X, AlertTriangle, Download } from 'lucide-react';
 import type { Client } from '../lib/database.types';
+import { downloadCsv, dateStamp } from '../lib/csv';
 
 export function Clients() {
   const [search, setSearch] = useState('');
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
 
   const { data: clients, isLoading } = useQuery({
@@ -23,15 +25,49 @@ export function Clients() {
     },
   });
 
-  const filtered = clients?.filter((c) =>
-    c.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase()) ||
-    c.tags.some((t) => t.toLowerCase().includes(search.toLowerCase())),
-  );
+  // Build the unique tag set across all clients (excluding the 'demo' tag noise)
+  const tagSet = new Map<string, number>();
+  for (const c of clients ?? []) {
+    for (const t of c.tags ?? []) {
+      tagSet.set(t, (tagSet.get(t) ?? 0) + 1);
+    }
+  }
+  const allTags = Array.from(tagSet.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 16); // cap to top 16 most-common
+
+  const filtered = clients?.filter((c) => {
+    const matchesSearch =
+      !search ||
+      c.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      c.email?.toLowerCase().includes(search.toLowerCase()) ||
+      c.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()));
+    const matchesTag = !activeTag || c.tags.includes(activeTag);
+    return matchesSearch && matchesTag;
+  });
 
   const active = filtered?.filter((c) => c.status === 'active') ?? [];
   const paused = filtered?.filter((c) => c.status === 'paused') ?? [];
   const archived = filtered?.filter((c) => c.status === 'archived') ?? [];
+
+  function exportCsv() {
+    if (!clients?.length) return;
+    const rows = clients.map((c) => ({
+      full_name: c.full_name,
+      email: c.email,
+      phone: c.phone,
+      status: c.status,
+      goals: c.goals,
+      medical_notes: c.medical_notes,
+      emergency_contact: c.emergency_contact,
+      rate_per_session: c.rate_per_session,
+      package_balance: c.package_balance,
+      tags: (c.tags ?? []).join('; '),
+      date_of_birth: c.date_of_birth,
+      created_at: c.created_at,
+    }));
+    downloadCsv(dateStamp('clients'), rows);
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -39,16 +75,26 @@ export function Clients() {
         title="Clients"
         subtitle={`${clients?.length ?? 0} total · ${active.length} active`}
         actions={
-          <button
-            onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-          >
-            <Plus size={16} /> New client
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportCsv}
+              disabled={!clients?.length}
+              className="flex items-center gap-2 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              title="Download all clients as CSV"
+            >
+              <Download size={14} /> Export CSV
+            </button>
+            <button
+              onClick={() => setShowNew(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              <Plus size={16} /> New client
+            </button>
+          </div>
         }
       />
 
-      <div className="relative mb-6">
+      <div className="relative mb-3">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
         <input
           type="text"
@@ -58,6 +104,34 @@ export function Clients() {
           className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
+
+      {allTags.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-6">
+          <button
+            onClick={() => setActiveTag(null)}
+            className={`text-xs px-2.5 py-1 rounded-full border transition ${
+              activeTag === null
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            All
+          </button>
+          {allTags.map(([tag, count]) => (
+            <button
+              key={tag}
+              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                activeTag === tag
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {tag} <span className="opacity-60">{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <LowBalanceBanner clients={clients ?? []} />
 

@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PageHeader } from '../components/PageHeader';
 import { formatMoney, formatDate } from '../lib/format';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Download } from 'lucide-react';
 import type { Payment } from '../lib/database.types';
+import { downloadCsv, dateStamp } from '../lib/csv';
 
 export function Payments() {
   const { data: payments, isLoading } = useQuery({
@@ -35,6 +36,29 @@ export function Payments() {
       <PageHeader
         title="Payments"
         subtitle="Money in. Record payments from a client's profile."
+        actions={
+          <button
+            onClick={() => {
+              if (!payments?.length) return;
+              const rows = payments.map((p) => ({
+                paid_at: p.paid_at,
+                client: p.clients?.full_name ?? '',
+                amount: p.amount,
+                currency: p.currency,
+                method: p.method,
+                payment_type: p.payment_type,
+                sessions_covered: p.sessions_covered,
+                description: p.description,
+                reference: p.reference,
+              }));
+              downloadCsv(dateStamp('payments'), rows);
+            }}
+            disabled={!payments?.length}
+            className="flex items-center gap-2 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+          >
+            <Download size={14} /> Export CSV
+          </button>
+        }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

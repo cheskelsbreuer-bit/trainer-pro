@@ -6,6 +6,7 @@ import { PageHeader } from '../components/PageHeader';
 import { formatMoney, formatSessionWhen, initials } from '../lib/format';
 import { Calendar, Users, DollarSign, TrendingUp } from 'lucide-react';
 import type { Session, Client, Payment } from '../lib/database.types';
+import { LastNotesWidget, BirthdayBanner, NoShowStreakWidget } from '../components/DashboardExtras';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -94,6 +95,9 @@ export function Dashboard() {
     <div className="p-8 max-w-6xl mx-auto">
       <PageHeader title="Dashboard" subtitle="At-a-glance view of your training business." />
 
+      <BirthdayBanner />
+      <NoShowStreakWidget />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           icon={<Users className="text-blue-600" size={20} />}
@@ -119,6 +123,10 @@ export function Dashboard() {
           value={upcoming?.length ?? 0}
           subtitle="next 7 days"
         />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <LastNotesWidget />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

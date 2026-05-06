@@ -10,8 +10,10 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  Download,
 } from 'lucide-react';
 import type { Session } from '../lib/database.types';
+import { downloadCsv, dateStamp } from '../lib/csv';
 
 type Mode = 'calendar' | 'list';
 type ListTab = 'upcoming' | 'today' | 'past' | 'cancelled';
@@ -117,6 +119,30 @@ function SessionListView() {
           </button>
         ))}
       </div>
+
+      {sessions && sessions.length > 0 && (
+        <div className="flex justify-end mb-3">
+          <button
+            onClick={() => {
+              const rows = sessions.map((s) => ({
+                starts_at: s.starts_at,
+                ends_at: s.ends_at,
+                client: s.clients?.full_name ?? '',
+                status: s.status,
+                session_type: s.session_type,
+                location: s.location,
+                price: s.price,
+                paid: s.paid,
+                notes: s.notes,
+              }));
+              downloadCsv(dateStamp(`sessions-${tab}`), rows);
+            }}
+            className="flex items-center gap-2 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-xs font-medium"
+          >
+            <Download size={12} /> Export CSV
+          </button>
+        </div>
+      )}
 
       {isLoading && <p className="text-slate-500">Loading…</p>}
       {!isLoading && !sessions?.length && (
