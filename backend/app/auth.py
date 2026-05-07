@@ -99,10 +99,22 @@ def get_current_user(authorization: Annotated[str | None, Header()] = None) -> A
                 status.HTTP_401_UNAUTHORIZED,
                 f"Unsupported JWT algorithm: {alg!r}",
             )
+    except HTTPException:
+        raise
     except jwt.ExpiredSignatureError as e:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token expired") from e
     except jwt.InvalidTokenError as e:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, f"Invalid token: {e}") from e
+    except Exception as e:
+        # JWKS fetch failure, network glitch, etc — convert to a clean 401
+        # with the underlying message so the frontend can surface it.
+        import traceback
+        print(f"[auth] Unexpected error verifying JWT (alg={alg!r}): {e}")
+        traceback.print_exc()
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            f"Token verification failed: {type(e).__name__}: {e}",
+        ) from e
 
     user_id = payload.get("sub")
     if not user_id:
