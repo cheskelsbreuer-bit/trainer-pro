@@ -70,6 +70,27 @@ begin
    where id = t_id
      and (default_packages is null or default_packages = '[]'::jsonb);
 
+  -- 5b. Turn booking ON. Without this the "Book now" button leads to a dead
+  --     page. Default windows = Mon-Fri 6 AM - 8 PM, Sat 8 AM - 1 PM.
+  update public.trainers
+     set booking_enabled = true,
+         booking_settings = coalesce(booking_settings, '{}'::jsonb) || jsonb_build_object(
+           'lead_hours', 24,
+           'max_days_ahead', 30,
+           'default_duration_min', 60,
+           'buffer_min', 15,
+           'windows', jsonb_build_array(
+             jsonb_build_object('weekday', 1, 'start', '06:00', 'end', '20:00'),
+             jsonb_build_object('weekday', 2, 'start', '06:00', 'end', '20:00'),
+             jsonb_build_object('weekday', 3, 'start', '06:00', 'end', '20:00'),
+             jsonb_build_object('weekday', 4, 'start', '06:00', 'end', '20:00'),
+             jsonb_build_object('weekday', 5, 'start', '06:00', 'end', '20:00'),
+             jsonb_build_object('weekday', 6, 'start', '08:00', 'end', '13:00')
+           ),
+           'intro_text', 'Pick a slot that works. After you book you''ll get a confirmation and a quick intake form.'
+         )
+   where id = t_id;
+
   -- 5. Wipe any old demo testimonials and insert fresh ones -----------------
   delete from public.testimonials
     where trainer_id = t_id and client_name like '%[demo]';
