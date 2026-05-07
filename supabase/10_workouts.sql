@@ -40,12 +40,13 @@ create table if not exists public.exercises (
     updated_at timestamptz default now()
 );
 
+-- Trigram extension for fast name search. MUST come before any gin_trgm_ops
+-- index that depends on it.
+create extension if not exists pg_trgm;
+
 create index if not exists exercises_trainer_idx on public.exercises(trainer_id);
 create index if not exists exercises_studio_idx on public.exercises(studio_id);
 create index if not exists exercises_name_trgm_idx on public.exercises using gin (name gin_trgm_ops);
-
--- (Trigram extension for fast name search; safe if already enabled.)
-create extension if not exists pg_trgm;
 
 drop trigger if exists touch_exercises on public.exercises;
 create trigger touch_exercises before update on public.exercises
