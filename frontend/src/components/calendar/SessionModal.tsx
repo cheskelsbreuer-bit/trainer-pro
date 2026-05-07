@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, Trash2, Repeat, AlertTriangle, Calendar as CalIcon } from 'lucide-react';
+import { X, Trash2, Repeat, AlertTriangle, Calendar as CalIcon, ClipboardList } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Client, Session, SessionStatus } from '../../lib/database.types';
 import {
@@ -9,6 +9,7 @@ import {
   expandRecurring,
   findConflicts,
 } from '../../lib/calendar';
+import { WorkoutLoggerModal } from '../workouts/WorkoutLoggerModal';
 
 type Mode = 'create' | 'edit';
 
@@ -155,6 +156,8 @@ export function SessionModal(props: SessionModalProps) {
   }, [form.recurring, form.recur_weeks, startDate, endDate, allSessions, session?.id]);
 
   const totalConflicts = conflictsByOccurrence.reduce((n, o) => n + o.conflicts.length, 0);
+
+  const [showLogger, setShowLogger] = useState(false);
 
   // ---------- save / delete ----------
   const save = useMutation({
@@ -445,7 +448,7 @@ export function SessionModal(props: SessionModalProps) {
 
         {/* footer */}
         <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
-          <div>
+          <div className="flex items-center gap-2">
             {mode === 'edit' && (
               <button
                 onClick={() => {
@@ -455,6 +458,14 @@ export function SessionModal(props: SessionModalProps) {
                 className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50"
               >
                 <Trash2 size={14} /> Delete
+              </button>
+            )}
+            {mode === 'edit' && session && (
+              <button
+                onClick={() => setShowLogger(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 rounded-lg"
+              >
+                <ClipboardList size={14} /> Log workout
               </button>
             )}
           </div>
@@ -475,6 +486,16 @@ export function SessionModal(props: SessionModalProps) {
           </div>
         </div>
       </div>
+
+      {mode === 'edit' && session && (
+        <WorkoutLoggerModal
+          open={showLogger}
+          sessionId={session.id}
+          clientId={session.client_id}
+          trainerId={session.trainer_id}
+          onClose={() => setShowLogger(false)}
+        />
+      )}
     </div>
   );
 }

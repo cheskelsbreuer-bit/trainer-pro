@@ -64,6 +64,25 @@ export interface Studio {
   updated_at: string;
 }
 
+export interface Exercise {
+  id: string;
+  trainer_id: string | null;
+  studio_id: string | null;
+  name: string;
+  category: 'strength' | 'cardio' | 'mobility' | 'plyo' | 'core' | 'rehab' | 'other' | null;
+  primary_muscle: string | null;
+  equipment: string | null;
+  video_url: string | null;
+  thumbnail_url: string | null;
+  description: string | null;
+  default_sets: number;
+  default_reps: string;
+  default_rest_sec: number;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface StudioInvite {
   id: string;
   studio_id: string;

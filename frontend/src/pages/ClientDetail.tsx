@@ -9,6 +9,7 @@ import type { Client, Session, Payment, Trainer } from '../lib/database.types';
 import { IntakeStatusCard } from '../components/IntakeStatusCard';
 import { ClientPortalInviteCard } from '../components/ClientPortalInviteCard';
 import { SellPackageCard } from '../components/SellPackageCard';
+import { ClientWorkoutsPanel } from './Workouts';
 
 export function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -117,6 +118,9 @@ export function ClientDetail() {
           trainerDefaultPackages={(trainer?.default_packages as never) ?? null}
           trainerCurrency={trainer?.currency ?? 'USD'}
         />
+      </div>
+      <div className="mb-6">
+        <ClientWorkoutsPanel clientId={client.id} />
       </div>
 
       {(client.goals || client.notes || client.medical_notes) && (
