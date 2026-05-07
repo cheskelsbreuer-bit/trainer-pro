@@ -16,6 +16,7 @@ import { IntakePage } from './pages/IntakePage';
 import { JoinStudioPage } from './pages/JoinStudioPage';
 import { ClientPortal } from './pages/ClientPortal';
 import { PortalJoinPage } from './pages/PortalJoinPage';
+import { PublicProfilePage } from './pages/PublicProfilePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,6 +62,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             {/* Public — no auth required */}
+            <Route path="/p/:slug" element={<PublicProfilePage />} />
             <Route path="/book/:slug" element={<BookingPage />} />
             <Route path="/intake/:token" element={<IntakePage />} />
             <Route path="/join-studio/:token" element={<JoinStudioPage />} />

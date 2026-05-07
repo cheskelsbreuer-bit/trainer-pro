@@ -48,6 +48,8 @@ export interface Trainer {
   // Studio mode (added in supabase/07_studios.sql)
   studio_id: string | null;
   studio_role: 'owner' | 'staff' | null;
+  // Public marketing profile (added in supabase/12_public_profile.sql)
+  public_profile: PublicProfile;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +62,43 @@ export interface Studio {
   logo_url: string | null;
   intro_text: string | null;
   owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PublicProfile {
+  hero: {
+    title: string | null;
+    subtitle: string | null;
+    photo_url: string | null;
+    cta_text: string | null;
+  };
+  about: {
+    headline: string | null;
+    body: string | null;
+    photo_url: string | null;
+  };
+  contact: {
+    phone: string | null;
+    email: string | null;
+    instagram: string | null;
+    whatsapp: string | null;
+    address: string | null;
+  };
+  gallery: { url: string; caption?: string }[];
+}
+
+export interface Testimonial {
+  id: string;
+  trainer_id: string;
+  studio_id: string | null;
+  client_name: string;
+  client_role: string | null;
+  client_photo_url: string | null;
+  body: string;
+  rating: number;
+  display_order: number;
+  is_published: boolean;
   created_at: string;
   updated_at: string;
 }
