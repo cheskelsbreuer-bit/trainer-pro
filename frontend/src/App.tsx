@@ -13,6 +13,7 @@ import { Progress } from './pages/Progress';
 import { Settings } from './pages/Settings';
 import { BookingPage } from './pages/BookingPage';
 import { IntakePage } from './pages/IntakePage';
+import { JoinStudioPage } from './pages/JoinStudioPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +46,7 @@ export default function App() {
             {/* Public — no auth required */}
             <Route path="/book/:slug" element={<BookingPage />} />
             <Route path="/intake/:token" element={<IntakePage />} />
+            <Route path="/join-studio/:token" element={<JoinStudioPage />} />
 
             {/* Trainer app — protected */}
             <Route element={<ProtectedShell />}>

@@ -45,8 +45,36 @@ export interface Trainer {
   slug: string | null;
   booking_enabled: boolean;
   booking_settings: BookingSettings;
+  // Studio mode (added in supabase/07_studios.sql)
+  studio_id: string | null;
+  studio_role: 'owner' | 'staff' | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Studio {
+  id: string;
+  name: string;
+  slug: string | null;
+  primary_color: string;
+  logo_url: string | null;
+  intro_text: string | null;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudioInvite {
+  id: string;
+  studio_id: string;
+  token: string;
+  email: string | null;
+  role: 'staff' | 'owner';
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  expires_at: string;
+  accepted_by: string | null;
+  accepted_at: string | null;
+  created_at: string;
 }
 
 export interface BookingSettings {

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Calendar, Clock, MapPin, CheckCircle2, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle2, ArrowLeft, AlertCircle, Users, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import {
   computeAvailableSlots,
@@ -11,7 +11,8 @@ import {
   type ComputedSlot,
 } from '../lib/booking';
 
-interface BookingInfo {
+interface TrainerBookingInfo {
+  kind: 'trainer';
   trainer: {
     full_name: string;
     business_name: string | null;
@@ -25,8 +26,32 @@ interface BookingInfo {
   now: string;
 }
 
+interface StudioBookingInfo {
+  kind: 'studio';
+  studio: {
+    name: string;
+    primary_color: string | null;
+    logo_url: string | null;
+    intro_text: string | null;
+  };
+  trainers: {
+    id: string;
+    full_name: string;
+    business_name: string | null;
+    slug: string | null;
+    primary_color: string | null;
+    logo_url: string | null;
+    booking_settings: BookingSettings;
+  }[];
+  busy: (BusySlot & { trainer_id: string })[];
+  now: string;
+}
+
+type BookingInfo = TrainerBookingInfo | StudioBookingInfo;
+
 export function BookingPage() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<ComputedSlot | null>(null);
   const [confirmed, setConfirmed] = useState<{ start: Date; end: Date } | null>(null);
 
@@ -34,15 +59,21 @@ export function BookingPage() {
     queryKey: ['public-booking', slug],
     queryFn: async (): Promise<BookingInfo | null> => {
       if (!slug) return null;
-      const { data, error } = await supabase.rpc('public_booking_info', { p_slug: slug });
-      if (error) throw error;
+      // Use v2 RPC if it exists, fall back to v1 (for backwards-compat during migration)
+      const { data, error } = await supabase.rpc('public_booking_info_v2', { p_slug: slug });
+      if (error) {
+        // Fall back to v1 if v2 isn't deployed yet
+        const fb = await supabase.rpc('public_booking_info', { p_slug: slug });
+        if (fb.error) throw error;
+        return fb.data ? ({ kind: 'trainer', ...(fb.data as object) } as BookingInfo) : null;
+      }
       return data as BookingInfo | null;
     },
     enabled: !!slug,
   });
 
   const slotsByDay = useMemo(() => {
-    if (!data) return [];
+    if (!data || data.kind !== 'trainer') return [];
     return computeAvailableSlots(data.settings, data.busy, new Date(data.now));
   }, [data]);
 
@@ -70,6 +101,87 @@ export function BookingPage() {
     );
   }
 
+  // Studio mode: show trainer picker, click → navigate to specific trainer's slug
+  if (data.kind === 'studio') {
+    const sColor = data.studio.primary_color || '#2d6a9f';
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <header
+          className="text-white py-10 px-6"
+          style={{ background: `linear-gradient(135deg, ${sColor}, ${darken(sColor, 12)})` }}
+        >
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center gap-4">
+              {data.studio.logo_url ? (
+                <img src={data.studio.logo_url} alt="" className="w-14 h-14 rounded-full object-cover bg-white/10" />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center">
+                  <Users size={28} />
+                </div>
+              )}
+              <div>
+                <p className="text-white/80 text-sm">Book a session at</p>
+                <h1 className="text-2xl md:text-3xl font-bold">{data.studio.name}</h1>
+              </div>
+            </div>
+            {data.studio.intro_text && (
+              <p className="mt-4 text-white/90 max-w-prose">{data.studio.intro_text}</p>
+            )}
+          </div>
+        </header>
+        <main className="max-w-3xl mx-auto px-6 py-8">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Choose your trainer</h2>
+          {data.trainers.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 text-sm">
+              No trainers available right now. Check back soon.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {data.trainers.map((t) => {
+                const tColor = t.primary_color || sColor;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => t.slug && navigate(`/book/${t.slug}`)}
+                    disabled={!t.slug}
+                    className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-300 hover:shadow-md transition flex items-center gap-3 text-left disabled:opacity-50"
+                  >
+                    {t.logo_url ? (
+                      <img src={t.logo_url} alt="" className="w-12 h-12 rounded-full object-cover" />
+                    ) : (
+                      <div
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
+                        style={{ backgroundColor: tColor }}
+                      >
+                        {t.full_name
+                          .split(' ')
+                          .map((p) => p[0])
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .join('')}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-900 truncate">{t.full_name}</p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {t.business_name ?? 'Personal trainer'}
+                      </p>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-400" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </main>
+        <footer className="text-center text-xs text-slate-400 py-8">
+          Powered by Trainer Pro
+        </footer>
+      </div>
+    );
+  }
+
+  // Trainer mode (existing flow)
   const trainerColor = data.trainer.primary_color || '#2d6a9f';
   const heading = data.trainer.business_name || data.trainer.full_name;
 

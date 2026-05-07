@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
 import { BookingSettingsCard } from '../components/BookingSettingsCard';
 import { GoogleCalendarCard } from '../components/GoogleCalendarCard';
+import { StudioSettingsCard } from '../components/StudioSettingsCard';
 import type { Trainer } from '../lib/database.types';
 
 export function Settings() {
@@ -191,6 +192,7 @@ export function Settings() {
       </form>
 
       <div className="mt-8 space-y-6">
+        <StudioSettingsCard trainer={trainer} />
         <BookingSettingsCard trainer={trainer} />
         <GoogleCalendarCard trainer={trainer} />
       </div>
