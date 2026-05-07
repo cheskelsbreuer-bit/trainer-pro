@@ -8,6 +8,14 @@ generation, SMS reminders, analytics). Plain CRUD goes directly from the
 frontend to Supabase — no need for a backend round trip.
 """
 
+# Use the OS-native certificate store for SSL verification. Necessary on
+# networks behind TLS-intercepting proxies (corporate filters, school
+# networks, etc.) where the OS trusts a private CA but Python's bundled
+# certifi roots don't include it. Affects every later HTTPS call (httpx,
+# requests, urllib).
+import truststore
+truststore.inject_into_ssl()
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
