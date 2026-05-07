@@ -8,6 +8,7 @@ import { Calendar, Users, DollarSign, TrendingUp } from 'lucide-react';
 import type { Session, Client, Payment, Trainer } from '../lib/database.types';
 import { LastNotesWidget, BirthdayBanner, NoShowStreakWidget } from '../components/DashboardExtras';
 import { StudioOverviewCard } from '../components/StudioOverviewCard';
+import { RevenueTrendWidget } from '../components/RevenueTrendWidget';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -143,6 +144,7 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <RevenueTrendWidget />
         <LastNotesWidget />
       </div>
 
