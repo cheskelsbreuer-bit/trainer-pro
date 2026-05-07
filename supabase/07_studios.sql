@@ -178,16 +178,33 @@ end $$;
 
 -- TRAINERS table: a studio owner can see other trainers in their studio
 -- (so the team list works) — but cannot modify them.
+-- IMPORTANT: this policy uses shares_studio_with() instead of an inline
+-- subquery against trainers. An inline subquery here causes infinite
+-- recursion because evaluating the subquery re-triggers this policy.
+create or replace function public.shares_studio_with(other_trainer uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.trainers me
+    join public.trainers them on them.studio_id = me.studio_id
+    where me.id = auth.uid()
+      and me.studio_id is not null
+      and them.id = other_trainer
+  )
+$$;
+
+grant execute on function public.shares_studio_with(uuid) to authenticated;
+
 drop policy if exists trainer_studio_peer_select on public.trainers;
 create policy trainer_studio_peer_select on public.trainers for select
   using (
     auth.uid() = id
-    or exists (
-      select 1 from public.trainers me
-      where me.id = auth.uid()
-        and me.studio_id is not null
-        and me.studio_id = trainers.studio_id
-    )
+    or public.shares_studio_with(id)
   );
 
 -- 7. Public booking now resolves slug across studios first, then trainers ---
