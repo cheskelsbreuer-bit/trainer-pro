@@ -6,6 +6,7 @@ import { PageHeader } from '../components/PageHeader';
 import { BookingSettingsCard } from '../components/BookingSettingsCard';
 import { GoogleCalendarCard } from '../components/GoogleCalendarCard';
 import { StudioSettingsCard } from '../components/StudioSettingsCard';
+import { StripeStatusCard } from '../components/StripeStatusCard';
 import type { Trainer } from '../lib/database.types';
 
 export function Settings() {
@@ -193,6 +194,7 @@ export function Settings() {
 
       <div className="mt-8 space-y-6">
         <StudioSettingsCard trainer={trainer} />
+        <StripeStatusCard />
         <BookingSettingsCard trainer={trainer} />
         <GoogleCalendarCard trainer={trainer} />
       </div>

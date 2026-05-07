@@ -5,9 +5,10 @@ import { supabase } from '../lib/supabase';
 import { PageHeader } from '../components/PageHeader';
 import { formatMoney, formatSessionWhen, formatDate } from '../lib/format';
 import { ArrowLeft, Plus, X, Edit, DollarSign, Calendar } from 'lucide-react';
-import type { Client, Session, Payment } from '../lib/database.types';
+import type { Client, Session, Payment, Trainer } from '../lib/database.types';
 import { IntakeStatusCard } from '../components/IntakeStatusCard';
 import { ClientPortalInviteCard } from '../components/ClientPortalInviteCard';
+import { SellPackageCard } from '../components/SellPackageCard';
 
 export function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +39,21 @@ export function ClientDetail() {
       return (data ?? []) as Session[];
     },
     enabled: !!id,
+  });
+
+  const { data: trainer } = useQuery({
+    queryKey: ['trainer-for-detail', client?.trainer_id],
+    queryFn: async () => {
+      if (!client) return null;
+      const { data, error } = await supabase
+        .from('trainers')
+        .select('id, full_name, currency, default_packages')
+        .eq('id', client.trainer_id)
+        .single();
+      if (error) throw error;
+      return data as Pick<Trainer, 'id' | 'full_name' | 'currency' | 'default_packages'>;
+    },
+    enabled: !!client,
   });
 
   const { data: payments } = useQuery({
@@ -92,6 +108,14 @@ export function ClientDetail() {
           clientId={client.id}
           trainerId={client.trainer_id}
           authUserId={client.auth_user_id}
+        />
+      </div>
+      <div className="mb-6">
+        <SellPackageCard
+          clientId={client.id}
+          clientFullName={client.full_name}
+          trainerDefaultPackages={(trainer?.default_packages as never) ?? null}
+          trainerCurrency={trainer?.currency ?? 'USD'}
         />
       </div>
 

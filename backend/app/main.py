@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routers import analytics, health, reminders, reports, workouts_ai
+from .routers import analytics, health, reminders, reports, stripe_checkout, workouts_ai
 
 
 @asynccontextmanager
@@ -47,6 +47,7 @@ app.include_router(reports.router)
 app.include_router(workouts_ai.router)
 app.include_router(reminders.router)
 app.include_router(analytics.router)
+app.include_router(stripe_checkout.router)
 
 
 @app.get("/")
