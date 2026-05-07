@@ -7,6 +7,7 @@ import { formatMoney, formatSessionWhen, formatDate } from '../lib/format';
 import { ArrowLeft, Plus, X, Edit, DollarSign, Calendar } from 'lucide-react';
 import type { Client, Session, Payment } from '../lib/database.types';
 import { IntakeStatusCard } from '../components/IntakeStatusCard';
+import { ClientPortalInviteCard } from '../components/ClientPortalInviteCard';
 
 export function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -85,8 +86,13 @@ export function ClientDetail() {
         <Stat label="Total paid" value={formatMoney(totalPaid)} />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <IntakeStatusCard clientId={client.id} trainerId={client.trainer_id} />
+        <ClientPortalInviteCard
+          clientId={client.id}
+          trainerId={client.trainer_id}
+          authUserId={client.auth_user_id}
+        />
       </div>
 
       {(client.goals || client.notes || client.medical_notes) && (

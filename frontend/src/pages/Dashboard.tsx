@@ -5,11 +5,26 @@ import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
 import { formatMoney, formatSessionWhen, initials } from '../lib/format';
 import { Calendar, Users, DollarSign, TrendingUp } from 'lucide-react';
-import type { Session, Client, Payment } from '../lib/database.types';
+import type { Session, Client, Payment, Trainer } from '../lib/database.types';
 import { LastNotesWidget, BirthdayBanner, NoShowStreakWidget } from '../components/DashboardExtras';
+import { StudioOverviewCard } from '../components/StudioOverviewCard';
 
 export function Dashboard() {
   const { user } = useAuth();
+
+  const { data: trainer } = useQuery({
+    queryKey: ['trainer', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('trainers')
+        .select('*')
+        .eq('id', user!.id)
+        .single();
+      if (error) throw error;
+      return data as Trainer;
+    },
+    enabled: !!user,
+  });
 
   // Active clients
   const { data: clientCount } = useQuery({
@@ -94,6 +109,8 @@ export function Dashboard() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <PageHeader title="Dashboard" subtitle="At-a-glance view of your training business." />
+
+      {trainer && <StudioOverviewCard trainer={trainer} />}
 
       <BirthdayBanner />
       <NoShowStreakWidget />

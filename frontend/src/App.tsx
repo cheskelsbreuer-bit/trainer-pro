@@ -14,6 +14,8 @@ import { Settings } from './pages/Settings';
 import { BookingPage } from './pages/BookingPage';
 import { IntakePage } from './pages/IntakePage';
 import { JoinStudioPage } from './pages/JoinStudioPage';
+import { ClientPortal } from './pages/ClientPortal';
+import { PortalJoinPage } from './pages/PortalJoinPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +39,21 @@ function ProtectedShell() {
   return <Layout />;
 }
 
+// /portal uses the same auth gate but doesn't render the trainer Layout —
+// ClientPortal is its own self-contained page.
+function PortalShell() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-500">Loading…</div>
+      </div>
+    );
+  }
+  if (!user) return <Login />;
+  return <ClientPortal />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -47,6 +64,10 @@ export default function App() {
             <Route path="/book/:slug" element={<BookingPage />} />
             <Route path="/intake/:token" element={<IntakePage />} />
             <Route path="/join-studio/:token" element={<JoinStudioPage />} />
+            <Route path="/portal-join/:token" element={<PortalJoinPage />} />
+
+            {/* Auth-protected but uses its own layout */}
+            <Route path="/portal" element={<PortalShell />} />
 
             {/* Trainer app — protected */}
             <Route element={<ProtectedShell />}>
