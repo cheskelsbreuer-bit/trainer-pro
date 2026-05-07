@@ -72,6 +72,19 @@ export function BookingPage() {
     enabled: !!slug,
   });
 
+  // Pull the public profile in parallel — gives us hero photo + nicer headline
+  // without requiring another RPC migration.
+  const { data: profileData } = useQuery({
+    queryKey: ['public-profile-for-booking', slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const { data, error } = await supabase.rpc('public_profile_info', { p_slug: slug });
+      if (error) return null; // Profile is optional — booking still works without it
+      return data as { profile?: { hero?: { photo_url?: string | null; title?: string | null; subtitle?: string | null } } } | null;
+    },
+    enabled: !!slug && data?.kind === 'trainer',
+  });
+
   const slotsByDay = useMemo(() => {
     if (!data || data.kind !== 'trainer') return [];
     return computeAvailableSlots(data.settings, data.busy, new Date(data.now));
@@ -225,21 +238,38 @@ export function BookingPage() {
     );
   }
 
+  const heroPhoto = profileData?.profile?.hero?.photo_url ?? null;
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header bar */}
+      {/* Header bar — uses hero photo if the trainer has one, falls back to brand gradient */}
       <header
-        className="text-white py-10 px-6"
-        style={{
-          background: `linear-gradient(135deg, ${trainerColor}, ${darken(trainerColor, 12)})`,
-        }}
+        className="relative text-white py-12 px-6 overflow-hidden"
+        style={
+          heroPhoto
+            ? { background: `url(${heroPhoto}) center/cover no-repeat` }
+            : {
+                background: `linear-gradient(135deg, ${trainerColor}, ${darken(trainerColor, 12)})`,
+              }
+        }
       >
-        <div className="max-w-3xl mx-auto">
+        {heroPhoto && (
+          <div className="absolute inset-0 bg-gradient-to-br from-black/65 via-black/40 to-black/55" />
+        )}
+        <div className="relative max-w-3xl mx-auto">
+          {slug && (
+            <a
+              href={`/p/${slug}`}
+              className="inline-flex items-center gap-1 text-white/80 hover:text-white text-xs mb-4 transition"
+            >
+              <ArrowLeft size={12} /> Back to {heading}
+            </a>
+          )}
           <div className="flex items-center gap-4">
             {data.trainer.logo_url ? (
-              <img src={data.trainer.logo_url} alt="" className="w-14 h-14 rounded-full object-cover bg-white/10" />
+              <img src={data.trainer.logo_url} alt="" className="w-14 h-14 rounded-full object-cover bg-white/10 ring-2 ring-white/20" />
             ) : (
-              <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center text-2xl font-semibold">
+              <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center text-2xl font-semibold ring-2 ring-white/20">
                 {heading
                   .split(' ')
                   .map((p) => p[0])
@@ -249,8 +279,8 @@ export function BookingPage() {
               </div>
             )}
             <div>
-              <p className="text-white/80 text-sm">Book a session with</p>
-              <h1 className="text-2xl md:text-3xl font-bold">{heading}</h1>
+              <p className="text-white/80 text-sm uppercase tracking-wide">Book a session with</p>
+              <h1 className="text-2xl md:text-4xl font-bold tracking-tight">{heading}</h1>
             </div>
           </div>
           {data.settings.intro_text && (
