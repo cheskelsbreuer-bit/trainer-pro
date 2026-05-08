@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -5,6 +6,7 @@ import { supabase } from './lib/supabase';
 import { Login } from './components/Login';
 import { Layout } from './components/Layout';
 import { OnboardingWizard } from './components/OnboardingWizard';
+import { AdminLogin } from './components/AdminLogin';
 import type { Trainer } from './lib/database.types';
 import { Dashboard } from './pages/Dashboard';
 import { Clients } from './pages/Clients';
@@ -80,18 +82,41 @@ function PortalShell() {
   return <ClientPortal />;
 }
 
-// Admin shell: gate by backend whoami so the email allowlist lives server-side
-// and frontend can't leak the list. Non-admins see a generic NotFound — even
-// the existence of /admin is hidden.
+// Admin shell — every browser tab requires a fresh magic-link sign-in. We track
+// "this tab has verified" in sessionStorage (auto-cleared on tab close) so a
+// long-lived Supabase session in localStorage doesn't grant admin access by
+// itself. Real auth still happens on the backend via the email allowlist.
 function AdminShell() {
   const { user, loading } = useAuth();
+
+  const [verified, setVerified] = useState<boolean>(() =>
+    typeof window !== 'undefined' && sessionStorage.getItem('admin_verified') === 'true',
+  );
+
+  // Magic-link callback: Supabase parses tokens from the URL fragment
+  // automatically. We watch for the ?verified=1 marker we set in the redirect
+  // URL, then flag this tab as verified and clean the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('verified') === '1' && user) {
+      sessionStorage.setItem('admin_verified', 'true');
+      setVerified(true);
+      window.history.replaceState({}, '', '/admin');
+    }
+  }, [user]);
 
   const check = useQuery({
     queryKey: ['admin-whoami', user?.id],
     queryFn: () => api<{ is_admin: boolean }>('/admin/whoami'),
-    enabled: !!user,
+    enabled: !!user && verified,
     retry: false,
   });
+
+  // Not verified for this tab — always show the magic-link form, even if the
+  // user has a persisted Supabase session for the regular app.
+  if (!verified) {
+    return <AdminLogin />;
+  }
 
   if (loading || (user && check.isLoading)) {
     return (
@@ -100,7 +125,11 @@ function AdminShell() {
       </div>
     );
   }
-  if (!user) return <Login />;
+  // Edge case: verified flag set but session expired between requests.
+  if (!user) {
+    sessionStorage.removeItem('admin_verified');
+    return <AdminLogin />;
+  }
   // Treat any error or non-admin as 404 — don't reveal /admin exists.
   if (check.error instanceof ApiError || !check.data?.is_admin) {
     return <NotFound />;
