@@ -95,14 +95,14 @@ function Hero() {
         </div>
 
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.05]">
-          The dashboard for personal trainers who{' '}
+          A free website for your training business.{' '}
           <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            hate clunky software.
+            With everything to run it.
           </span>
         </h1>
         <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-9 leading-relaxed">
-          Clients, workouts, payments, and progress — in one clean web app. No mobile-app
-          nightmare for your clients. No per-client fees. Set up in 10 minutes.
+          Get a real public profile clients can find and book through. Take card payments. Track
+          workouts and progress. Manage your whole roster — for <strong>$19 a month</strong>.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-5">
@@ -110,7 +110,7 @@ function Hero() {
             href={SIGNUP_URL}
             className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-7 py-3.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-transform hover:-translate-y-0.5"
           >
-            Get my free account <ArrowRight size={16} />
+            Start 2 months free <ArrowRight size={16} />
           </a>
           <a
             href={APP_URL}
@@ -120,15 +120,85 @@ function Hero() {
           </a>
         </div>
         <p className="text-xs text-slate-400">
-          No credit card required · Cancel anytime · Set up in 10 minutes
+          No credit card required · Cancel anytime · Works on every device
         </p>
       </div>
 
-      {/* App mock */}
-      <div className="relative max-w-5xl mx-auto px-6 pb-16">
-        <DashboardMock />
+      {/* Two-up mock: client view + trainer view */}
+      <div className="relative max-w-6xl mx-auto px-6 pb-16">
+        <SplitMock />
       </div>
     </section>
+  );
+}
+
+/* ─────────────── Split mock: public profile + dashboard ─────────────── */
+function SplitMock() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-center">
+      {/* What clients see — phone-shaped public profile */}
+      <div className="lg:col-span-2">
+        <div className="text-center lg:text-left mb-3">
+          <p className="text-xs uppercase tracking-wider font-semibold text-blue-600">
+            What your clients see
+          </p>
+          <p className="text-sm text-slate-600">Your free public website</p>
+        </div>
+        <div className="mx-auto lg:mx-0 max-w-[280px] bg-slate-900 rounded-[2.5rem] p-2.5 shadow-2xl shadow-blue-900/30">
+          <div className="rounded-[2rem] bg-white overflow-hidden">
+            {/* status bar */}
+            <div className="h-6 bg-slate-100 flex items-center justify-center">
+              <div className="w-16 h-1 bg-slate-300 rounded-full" />
+            </div>
+            {/* hero image */}
+            <div
+              className="h-32 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 relative flex items-end p-3"
+            >
+              <div className="text-white">
+                <div className="text-[10px] opacity-80">trainerpro.coach/p/jane</div>
+                <div className="font-bold text-lg leading-tight">Jane Strong</div>
+                <div className="text-[11px] opacity-90">Personal trainer · Brooklyn</div>
+              </div>
+            </div>
+            {/* body */}
+            <div className="p-3 space-y-2.5">
+              <p className="text-[11px] text-slate-700 leading-relaxed">
+                10 years helping busy professionals build strength and feel better.
+                NASM-certified.
+              </p>
+              <button className="w-full bg-blue-600 text-white text-xs font-semibold py-2.5 rounded-lg shadow">
+                Book a free intro session
+              </button>
+              <div className="grid grid-cols-3 gap-1.5">
+                {['💪', '🏋️', '🥗'].map((e, i) => (
+                  <div
+                    key={i}
+                    className="aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-xl"
+                  >
+                    {e}
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <div className="text-[10px] text-amber-500">★★★★★</div>
+                <div className="text-[10px] text-slate-500">"Changed my life" — Sarah K.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* What you see — laptop-style dashboard */}
+      <div className="lg:col-span-3">
+        <div className="text-center lg:text-left mb-3">
+          <p className="text-xs uppercase tracking-wider font-semibold text-emerald-600">
+            What you see
+          </p>
+          <p className="text-sm text-slate-600">Your private trainer dashboard</p>
+        </div>
+        <DashboardMock />
+      </div>
+    </div>
   );
 }
 
@@ -305,8 +375,8 @@ function SocialProof() {
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <Stat n="10 min" label="Average setup time" />
-          <Stat n="$0" label="Per-client fees" />
-          <Stat n="100%" label="Web — no app needed" />
+          <Stat n="$19" label="Flat monthly price" />
+          <Stat n="Free" label="Public website included" />
           <Stat n="∞" label="Clients per account" />
         </div>
       </div>
@@ -329,25 +399,25 @@ function HowItWorks() {
   const steps = [
     {
       n: 1,
-      icon: <Users />,
-      title: 'Add your clients',
-      body: 'Import or invite. Each client gets a private portal — no app to install.',
+      icon: <Sparkles />,
+      title: 'Customize your site',
+      body: 'Pick your name, brand color, photo, and bio. Your public website goes live at trainerpro.coach/p/your-name.',
       color: 'from-blue-500 to-indigo-600',
       bg: 'from-blue-50 to-indigo-50',
     },
     {
       n: 2,
-      icon: <Dumbbell />,
-      title: 'Build their workouts',
-      body: 'Templates or per-client. Sets, reps, weights, notes. Reuse what works.',
+      icon: <Users />,
+      title: 'Add your clients',
+      body: 'Invite existing clients or let new ones book through your site. Each gets a private portal.',
       color: 'from-emerald-500 to-teal-600',
       bg: 'from-emerald-50 to-teal-50',
     },
     {
       n: 3,
-      icon: <TrendingUp />,
-      title: 'Track progress',
-      body: "Weight, body comp, PRs, photos. Charts that make wins obvious to your client.",
+      icon: <Dumbbell />,
+      title: 'Run sessions & workouts',
+      body: 'Build workouts, log sessions, track weight and PRs. Charts make every win obvious.',
       color: 'from-amber-500 to-orange-600',
       bg: 'from-amber-50 to-orange-50',
     },
@@ -355,7 +425,7 @@ function HowItWorks() {
       n: 4,
       icon: <CreditCard />,
       title: 'Get paid',
-      body: 'Sell session packages, take card payments via Stripe. See revenue trend in real-time.',
+      body: 'Take card payments through Stripe right on your website. Sell session packages or one-offs.',
       color: 'from-purple-500 to-fuchsia-600',
       bg: 'from-purple-50 to-fuchsia-50',
     },
@@ -409,58 +479,58 @@ function FeatureGrid() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <Feature
-            icon={<Users />}
+            icon={<Sparkles />}
             iconBg="bg-blue-100 text-blue-600"
+            title="Your free trainer website"
+            body="A real public page at trainerpro.coach/p/your-name. Photo, bio, testimonials, gallery, and a Book button — all in your brand color."
+          />
+          <Feature
+            icon={<Calendar />}
+            iconBg="bg-emerald-100 text-emerald-600"
+            title="Self-serve bookings"
+            body="Clients pick a time on your site. Google Calendar sync, automatic reminders. You stop playing scheduler."
+          />
+          <Feature
+            icon={<CreditCard />}
+            iconBg="bg-rose-100 text-rose-600"
+            title="Card payments via Stripe"
+            body="Sell session packages right on your website. Money lands in your bank account, not a third-party wallet."
+          />
+          <Feature
+            icon={<Users />}
+            iconBg="bg-purple-100 text-purple-600"
             title="Client management"
             body="Profiles, intake forms, signed waivers, and a private portal so each client knows what's next."
           />
           <Feature
             icon={<Dumbbell />}
-            iconBg="bg-emerald-100 text-emerald-600"
+            iconBg="bg-amber-100 text-amber-600"
             title="Workout builder"
             body="Templates and per-client plans. Sets, reps, weights, notes — all editable in seconds."
           />
           <Feature
             icon={<TrendingUp />}
-            iconBg="bg-amber-100 text-amber-600"
+            iconBg="bg-cyan-100 text-cyan-600"
             title="Progress tracking"
             body="Weight, body comp, PRs, and progress photos. Charts that make wins obvious."
-          />
-          <Feature
-            icon={<Calendar />}
-            iconBg="bg-purple-100 text-purple-600"
-            title="Sessions & bookings"
-            body="Public booking page, Google Calendar sync, automatic reminders. Clients self-serve."
-          />
-          <Feature
-            icon={<CreditCard />}
-            iconBg="bg-rose-100 text-rose-600"
-            title="Payments via Stripe"
-            body="Sell session packages, take card payments, see revenue trends. No extra invoicing tool."
-          />
-          <Feature
-            icon={<ClipboardList />}
-            iconBg="bg-cyan-100 text-cyan-600"
-            title="Studio mode"
-            body="Add team trainers, share clients, run multiple coaches under one brand."
           />
           <Feature
             icon={<Camera />}
             iconBg="bg-indigo-100 text-indigo-600"
             title="Progress photos"
-            body="Side-by-side comparison photos. Your clients see their transformation, you keep them motivated."
+            body="Side-by-side comparisons. Your clients see their transformation, you keep them motivated."
           />
           <Feature
-            icon={<Heart />}
+            icon={<ClipboardList />}
             iconBg="bg-pink-100 text-pink-600"
-            title="Client portal"
-            body="Each client gets their own page: workouts, sessions, payments, photos. Branded to you."
+            title="Studio mode"
+            body="Add team trainers, share clients, run multiple coaches under one brand."
           />
           <Feature
             icon={<Zap />}
             iconBg="bg-yellow-100 text-yellow-600"
-            title="Lightning fast"
-            body="No clunky page loads. Built on modern tech so you spend time training, not waiting."
+            title="Works on every device"
+            body="Phone, tablet, laptop — no app to install. Your clients get a link and it just works."
           />
         </div>
       </div>
@@ -507,18 +577,18 @@ function CompareSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <Compare
-            title="Web-only, no app"
-            body="Your clients open a link and it just works on phone or laptop. No App Store. No login emails to debug."
+            title="A real public website included"
+            body="Your own page at trainerpro.coach/p/your-name with photo, bio, testimonials, and a book button. No Wix, no Squarespace bill."
             color="emerald"
           />
           <Compare
-            title="Flat pricing"
-            body="One price for all your clients. Doesn't get more expensive when you grow your roster."
+            title="Flat $19/month"
+            body="One price, every client included. Trainerize and TrueCoach charge per client and add up fast at $30–$80/month."
             color="blue"
           />
           <Compare
             title="10-minute setup"
-            body="Sign up, add a client, build a workout, take payment. Today. Not next weekend."
+            body="Sign up, answer a few questions, share your link. You'll be taking your first payment today, not next weekend."
             color="amber"
           />
         </div>

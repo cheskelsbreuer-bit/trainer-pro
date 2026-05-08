@@ -9,25 +9,39 @@ import {
   Target,
   Palette,
   CheckCircle2,
+  Calendar,
+  Globe,
+  SkipForward,
+  Instagram,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
 
 type ClientCount = '0' | '1-5' | '6-15' | '16-30' | '30+';
-type Specialty =
-  | 'strength'
-  | 'weight_loss'
-  | 'general_fitness'
-  | 'athletic_performance'
-  | 'mobility_rehab'
-  | 'other';
 
 interface Props {
   trainer: Trainer;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 7;
+
+const SPECIALTIES = [
+  { val: 'strength', label: 'Strength training', emoji: '🏋️' },
+  { val: 'weight_loss', label: 'Weight loss', emoji: '⚖️' },
+  { val: 'general_fitness', label: 'General fitness', emoji: '💪' },
+  { val: 'bodybuilding', label: 'Bodybuilding', emoji: '💯' },
+  { val: 'athletic_performance', label: 'Athletic performance', emoji: '🏃' },
+  { val: 'mobility_rehab', label: 'Mobility & rehab', emoji: '🧘' },
+  { val: 'yoga_pilates', label: 'Yoga / pilates', emoji: '🪷' },
+  { val: 'group_classes', label: 'Group classes', emoji: '👥' },
+  { val: 'sports_specific', label: 'Sports-specific', emoji: '⚽' },
+  { val: 'martial_arts', label: 'Martial arts', emoji: '🥋' },
+  { val: 'boxing_kickboxing', label: 'Boxing / kickboxing', emoji: '🥊' },
+  { val: 'senior_fitness', label: 'Senior fitness', emoji: '🌿' },
+  { val: 'pre_postnatal', label: 'Pre / postnatal', emoji: '🤱' },
+  { val: 'nutrition_coaching', label: 'Nutrition coaching', emoji: '🥗' },
+];
 
 export function OnboardingWizard({ trainer }: Props) {
   const { user } = useAuth();
@@ -39,24 +53,57 @@ export function OnboardingWizard({ trainer }: Props) {
   const [clientCount, setClientCount] = useState<ClientCount | null>(
     (trainer.client_count_estimate as ClientCount | null) ?? null,
   );
-  const [specialty, setSpecialty] = useState<Specialty | null>(
-    (trainer.specialty as Specialty | null) ?? null,
-  );
+  const [specialties, setSpecialties] = useState<string[]>(trainer.specialties ?? []);
   const [brand, setBrand] = useState(trainer.primary_color ?? '#2563eb');
+  const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
+  const [profileHeadline, setProfileHeadline] = useState(
+    (trainer.public_profile?.hero?.title as string) ?? '',
+  );
+  const [profileBio, setProfileBio] = useState(
+    (trainer.public_profile?.about?.body as string) ?? '',
+  );
+  const [profileInstagram, setProfileInstagram] = useState(
+    ((trainer.public_profile?.contact?.instagram as string) ?? '').replace(/^@/, ''),
+  );
 
   const finish = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('trainers')
-        .update({
-          full_name: fullName.trim() || trainer.full_name,
-          business_name: businessName.trim() || null,
-          client_count_estimate: clientCount,
-          specialty,
-          primary_color: brand,
-          onboarded_at: new Date().toISOString(),
-        })
-        .eq('id', user!.id);
+      // Merge new public-profile fields into existing JSONB structure
+      const existing = trainer.public_profile ?? ({} as Trainer['public_profile']);
+      const mergedProfile = {
+        ...existing,
+        hero: {
+          ...(existing.hero ?? {}),
+          title: profileHeadline.trim() || existing.hero?.title || null,
+        },
+        about: {
+          ...(existing.about ?? {}),
+          body: profileBio.trim() || existing.about?.body || null,
+        },
+        contact: {
+          ...(existing.contact ?? {}),
+          instagram: profileInstagram.trim()
+            ? profileInstagram.trim().replace(/^@/, '')
+            : existing.contact?.instagram || null,
+        },
+      };
+
+      const update: Record<string, unknown> = {
+        full_name: fullName.trim() || trainer.full_name,
+        business_name: businessName.trim() || null,
+        client_count_estimate: clientCount,
+        specialties,
+        primary_color: brand,
+        public_profile: mergedProfile,
+        onboarded_at: new Date().toISOString(),
+      };
+
+      // Only flip booking_enabled if they made an explicit choice
+      if (bookingEnabled !== null) {
+        update.booking_enabled = bookingEnabled;
+      }
+
+      const { error } = await supabase.from('trainers').update(update).eq('id', user!.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -70,9 +117,11 @@ export function OnboardingWizard({ trainer }: Props) {
   const canAdvance = (() => {
     if (step === 2) return fullName.trim().length > 0;
     if (step === 3) return clientCount !== null;
-    if (step === 4) return specialty !== null;
+    if (step === 4) return specialties.length > 0;
     return true;
   })();
+
+  const isOptionalStep = step >= 6; // booking + public profile are skippable
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -104,7 +153,9 @@ export function OnboardingWizard({ trainer }: Props) {
           {step === 3 && (
             <StepClientCount value={clientCount} onChange={setClientCount} />
           )}
-          {step === 4 && <StepSpecialty value={specialty} onChange={setSpecialty} />}
+          {step === 4 && (
+            <StepSpecialties value={specialties} onChange={setSpecialties} />
+          )}
           {step === 5 && (
             <StepBrand
               brand={brand}
@@ -112,8 +163,20 @@ export function OnboardingWizard({ trainer }: Props) {
               businessName={businessName || fullName || 'Your business'}
             />
           )}
+          {step === 6 && (
+            <StepBooking value={bookingEnabled} onChange={setBookingEnabled} />
+          )}
+          {step === 7 && (
+            <StepPublicProfile
+              headline={profileHeadline}
+              setHeadline={setProfileHeadline}
+              bio={profileBio}
+              setBio={setProfileBio}
+              instagram={profileInstagram}
+              setInstagram={setProfileInstagram}
+            />
+          )}
 
-          {/* error from save */}
           {finish.error && (
             <div className="mt-5 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               Couldn't save: {(finish.error as Error).message}
@@ -121,7 +184,7 @@ export function OnboardingWizard({ trainer }: Props) {
           )}
 
           {/* nav buttons */}
-          <div className="mt-9 flex items-center justify-between">
+          <div className="mt-9 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={back}
@@ -135,25 +198,37 @@ export function OnboardingWizard({ trainer }: Props) {
               <ArrowLeft size={14} /> Back
             </button>
 
-            {step < TOTAL_STEPS ? (
-              <button
-                type="button"
-                onClick={next}
-                disabled={!canAdvance}
-                className="flex items-center gap-1.5 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 disabled:from-slate-300 disabled:to-slate-300 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-md shadow-blue-600/30 transition"
-              >
-                Continue <ArrowRight size={14} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => finish.mutate()}
-                disabled={finish.isPending}
-                className="flex items-center gap-1.5 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-60 text-white px-6 py-2.5 rounded-lg text-sm font-semibold shadow-md shadow-emerald-500/30 transition"
-              >
-                {finish.isPending ? 'Setting up…' : <>Take me to my dashboard <ArrowRight size={14} /></>}
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {isOptionalStep && step < TOTAL_STEPS && (
+                <button
+                  type="button"
+                  onClick={next}
+                  className="flex items-center gap-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 px-3 py-2.5 rounded-lg text-sm font-medium transition"
+                >
+                  <SkipForward size={14} /> Skip
+                </button>
+              )}
+
+              {step < TOTAL_STEPS ? (
+                <button
+                  type="button"
+                  onClick={next}
+                  disabled={!canAdvance}
+                  className="flex items-center gap-1.5 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 disabled:from-slate-300 disabled:to-slate-300 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-md shadow-blue-600/30 transition"
+                >
+                  Continue <ArrowRight size={14} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => finish.mutate()}
+                  disabled={finish.isPending}
+                  className="flex items-center gap-1.5 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-60 text-white px-6 py-2.5 rounded-lg text-sm font-semibold shadow-md shadow-emerald-500/30 transition"
+                >
+                  {finish.isPending ? 'Setting up…' : <>Take me to my dashboard <ArrowRight size={14} /></>}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -182,24 +257,26 @@ function StepWelcome() {
         </span>
       </h1>
       <p className="text-slate-600 max-w-md mx-auto leading-relaxed">
-        A few quick questions and we'll have your dashboard ready. You can skip nothing — just
-        the basics. Promise.
+        A few quick questions and we'll have your dashboard, booking page, and public profile
+        ready to share.
       </p>
-      <div className="mt-7 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto">
+      <div className="mt-7 grid grid-cols-3 sm:grid-cols-6 gap-3 max-w-xl mx-auto">
         {[
-          { icon: <Users size={16} />, label: 'Your business' },
-          { icon: <Target size={16} />, label: 'What you do' },
-          { icon: <Palette size={16} />, label: 'Your brand' },
-          { icon: <CheckCircle2 size={16} />, label: 'Ready to go' },
+          { icon: <Users size={14} />, label: 'You' },
+          { icon: <Target size={14} />, label: 'Focus' },
+          { icon: <Palette size={14} />, label: 'Brand' },
+          { icon: <Calendar size={14} />, label: 'Booking' },
+          { icon: <Globe size={14} />, label: 'Website' },
+          { icon: <CheckCircle2 size={14} />, label: 'Done' },
         ].map((s) => (
           <div
             key={s.label}
-            className="flex flex-col items-center gap-1.5 p-3 bg-slate-50 rounded-xl text-slate-600"
+            className="flex flex-col items-center gap-1 p-2.5 bg-slate-50 rounded-xl text-slate-600"
           >
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-blue-600">
+            <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-blue-600">
               {s.icon}
             </div>
-            <span className="text-[11px] font-medium">{s.label}</span>
+            <span className="text-[10px] font-medium">{s.label}</span>
           </div>
         ))}
       </div>
@@ -222,7 +299,7 @@ function StepBusiness({
   return (
     <div>
       <StepHeader
-        eyebrow="Step 1"
+        eyebrow="Step 1 of 6"
         title="What should clients call you?"
         subtitle="This shows up on your booking page and in receipts."
       />
@@ -278,7 +355,7 @@ function StepClientCount({
   return (
     <div>
       <StepHeader
-        eyebrow="Step 2"
+        eyebrow="Step 2 of 6"
         title="How many clients do you train right now?"
         subtitle="Just a rough number. Helps us suggest the right setup."
       />
@@ -310,45 +387,60 @@ function StepClientCount({
   );
 }
 
-/* ─────────────── Step 4: Specialty ─────────────── */
-function StepSpecialty({
+/* ─────────────── Step 4: Specialties (multi) ─────────────── */
+function StepSpecialties({
   value,
   onChange,
 }: {
-  value: Specialty | null;
-  onChange: (v: Specialty) => void;
+  value: string[];
+  onChange: (v: string[]) => void;
 }) {
-  const options: { val: Specialty; label: string; emoji: string }[] = [
-    { val: 'strength', label: 'Strength training', emoji: '🏋️' },
-    { val: 'weight_loss', label: 'Weight loss', emoji: '⚖️' },
-    { val: 'general_fitness', label: 'General fitness', emoji: '💪' },
-    { val: 'athletic_performance', label: 'Athletic performance', emoji: '🏃' },
-    { val: 'mobility_rehab', label: 'Mobility & rehab', emoji: '🧘' },
-    { val: 'other', label: 'A bit of everything', emoji: '✨' },
-  ];
+  const toggle = (val: string) => {
+    if (value.includes(val)) {
+      onChange(value.filter((v) => v !== val));
+    } else {
+      onChange([...value, val]);
+    }
+  };
   return (
     <div>
       <StepHeader
-        eyebrow="Step 3"
-        title="What do you mostly train people for?"
-        subtitle="Pick the closest fit. We'll seed your workout templates."
+        eyebrow="Step 3 of 6"
+        title="What do you train people for?"
+        subtitle={`Pick everything that applies — no limit. ${
+          value.length > 0
+            ? `${value.length} selected.`
+            : 'Tap a card to select it.'
+        }`}
       />
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 max-w-2xl mx-auto">
-        {options.map((o) => (
-          <button
-            key={o.val}
-            type="button"
-            onClick={() => onChange(o.val)}
-            className={`p-4 rounded-xl border-2 transition text-center ${
-              value === o.val
-                ? 'border-blue-500 bg-blue-50 shadow-sm'
-                : 'border-slate-200 hover:border-slate-300 bg-white'
-            }`}
-          >
-            <div className="text-3xl mb-1.5">{o.emoji}</div>
-            <div className="text-sm font-medium text-slate-800">{o.label}</div>
-          </button>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-w-2xl mx-auto">
+        {SPECIALTIES.map((o) => {
+          const selected = value.includes(o.val);
+          return (
+            <button
+              key={o.val}
+              type="button"
+              onClick={() => toggle(o.val)}
+              className={`relative p-3 rounded-xl border-2 transition text-center ${
+                selected
+                  ? 'border-blue-500 bg-blue-50 shadow-sm'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+              }`}
+            >
+              {selected && (
+                <CheckCircle2
+                  size={16}
+                  className="absolute top-1.5 right-1.5 text-blue-600"
+                  fill="white"
+                />
+              )}
+              <div className="text-2xl mb-1">{o.emoji}</div>
+              <div className="text-xs font-medium text-slate-800 leading-tight">
+                {o.label}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -365,26 +457,18 @@ function StepBrand({
   businessName: string;
 }) {
   const presets = [
-    '#2563eb', // blue
-    '#0ea5e9', // sky
-    '#0d9488', // teal
-    '#16a34a', // green
-    '#ca8a04', // amber
-    '#ea580c', // orange
-    '#dc2626', // red
-    '#db2777', // pink
-    '#7c3aed', // violet
-    '#1e293b', // slate dark
+    '#2563eb', '#0ea5e9', '#0d9488', '#16a34a',
+    '#ca8a04', '#ea580c', '#dc2626', '#db2777',
+    '#7c3aed', '#1e293b',
   ];
   return (
     <div>
       <StepHeader
-        eyebrow="Step 4"
+        eyebrow="Step 4 of 6"
         title="Pick your brand color."
         subtitle="Buttons, highlights, and your client portal will use this."
       />
 
-      {/* Live preview */}
       <div
         className="rounded-2xl p-6 mb-6 max-w-md mx-auto text-center transition-colors"
         style={{
@@ -432,6 +516,139 @@ function StepBrand({
   );
 }
 
+/* ─────────────── Step 6: Booking page ─────────────── */
+function StepBooking({
+  value,
+  onChange,
+}: {
+  value: boolean | null;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div>
+      <StepHeader
+        eyebrow="Step 5 of 6 · Optional"
+        title="Want clients to book sessions on your site?"
+        subtitle="Turn on a public booking page where clients pick a time and you get an email. Easy to change later."
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-lg mx-auto">
+        <button
+          type="button"
+          onClick={() => onChange(true)}
+          className={`text-left p-5 rounded-xl border-2 transition ${
+            value === true
+              ? 'border-emerald-500 bg-emerald-50 shadow-sm'
+              : 'border-slate-200 hover:border-slate-300 bg-white'
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <Calendar size={18} />
+            </div>
+            <div className="font-semibold text-slate-900">Yes, turn it on</div>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Get a public link clients can use to self-book. You can fine-tune hours and session
+            length later in Settings.
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(false)}
+          className={`text-left p-5 rounded-xl border-2 transition ${
+            value === false
+              ? 'border-slate-500 bg-slate-50 shadow-sm'
+              : 'border-slate-200 hover:border-slate-300 bg-white'
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+              <SkipForward size={18} />
+            </div>
+            <div className="font-semibold text-slate-900">Not yet</div>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            I'll book sessions for clients myself. I can turn this on later if I change my
+            mind.
+          </p>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────── Step 7: Public profile ─────────────── */
+function StepPublicProfile({
+  headline,
+  setHeadline,
+  bio,
+  setBio,
+  instagram,
+  setInstagram,
+}: {
+  headline: string;
+  setHeadline: (v: string) => void;
+  bio: string;
+  setBio: (v: string) => void;
+  instagram: string;
+  setInstagram: (v: string) => void;
+}) {
+  return (
+    <div>
+      <StepHeader
+        eyebrow="Step 6 of 6 · Optional"
+        title="Last bit — your public profile."
+        subtitle="You get a free trainer website at trainerpro.coach/p/your-name. Fill this in now or skip and edit later."
+      />
+      <div className="space-y-4 max-w-md mx-auto">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Headline
+          </label>
+          <input
+            type="text"
+            value={headline}
+            onChange={(e) => setHeadline(e.target.value)}
+            placeholder="Personal trainer in Brooklyn"
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <p className="text-xs text-slate-500 mt-1.5">
+            One line. Where you train and who you train.
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Short bio
+          </label>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="I help busy professionals build strength and feel better in their bodies. 10 years of experience, certified through NASM."
+            rows={4}
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Instagram <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <div className="flex items-center gap-2 px-4 py-3 border border-slate-300 rounded-xl focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+            <Instagram size={16} className="text-slate-400" />
+            <span className="text-slate-400">@</span>
+            <input
+              type="text"
+              value={instagram}
+              onChange={(e) => setInstagram(e.target.value.replace(/^@/, ''))}
+              placeholder="janetrainer"
+              className="flex-1 outline-none text-base"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─────────────── Helpers ─────────────── */
 function StepHeader({
   eyebrow,
@@ -453,7 +670,6 @@ function StepHeader({
   );
 }
 
-// Quick hex shade helper for the brand preview gradient.
 function shade(hex: string, percent: number): string {
   const m = hex.replace('#', '').match(/^([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (!m) return hex;

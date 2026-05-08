@@ -53,14 +53,8 @@ export interface Trainer {
   // First-run onboarding (added in supabase/15_onboarding.sql)
   onboarded_at: string | null;
   client_count_estimate: '0' | '1-5' | '6-15' | '16-30' | '30+' | null;
-  specialty:
-    | 'strength'
-    | 'weight_loss'
-    | 'general_fitness'
-    | 'athletic_performance'
-    | 'mobility_rehab'
-    | 'other'
-    | null;
+  // Multi-select specialties (16_specialties_multiselect.sql) — free-form slugs
+  specialties: string[];
   created_at: string;
   updated_at: string;
 }
