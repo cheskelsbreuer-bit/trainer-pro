@@ -21,6 +21,8 @@ import { ClientPortal } from './pages/ClientPortal';
 import { PortalJoinPage } from './pages/PortalJoinPage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
 import { LandingPage } from './pages/LandingPage';
+import { AdminPage } from './pages/AdminPage';
+import { api, ApiError } from './lib/api';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,6 +80,54 @@ function PortalShell() {
   return <ClientPortal />;
 }
 
+// Admin shell: gate by backend whoami so the email allowlist lives server-side
+// and frontend can't leak the list. Non-admins see a generic NotFound — even
+// the existence of /admin is hidden.
+function AdminShell() {
+  const { user, loading } = useAuth();
+
+  const check = useQuery({
+    queryKey: ['admin-whoami', user?.id],
+    queryFn: () => api<{ is_admin: boolean }>('/admin/whoami'),
+    enabled: !!user,
+    retry: false,
+  });
+
+  if (loading || (user && check.isLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-500">Loading…</div>
+      </div>
+    );
+  }
+  if (!user) return <Login />;
+  // Treat any error or non-admin as 404 — don't reveal /admin exists.
+  if (check.error instanceof ApiError || !check.data?.is_admin) {
+    return <NotFound />;
+  }
+  return <AdminPage />;
+}
+
+function NotFound() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="text-center max-w-sm">
+        <h1 className="text-6xl font-bold text-slate-200 mb-2">404</h1>
+        <p className="text-slate-700 font-medium mb-1">Page not found</p>
+        <p className="text-sm text-slate-500 mb-5">
+          The link you followed may be broken, or the page may have been removed.
+        </p>
+        <a
+          href="/"
+          className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+        >
+          Back to dashboard
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function isLandingHost() {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname;
@@ -107,6 +157,9 @@ export default function App() {
 
             {/* Auth-protected but uses its own layout */}
             <Route path="/portal" element={<PortalShell />} />
+
+            {/* Admin — hidden, no nav link, gated by backend email allowlist */}
+            <Route path="/admin" element={<AdminShell />} />
 
             {/* Trainer app — protected */}
             <Route element={<ProtectedShell />}>

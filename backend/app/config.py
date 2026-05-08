@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     # CORS — comma-separated list of allowed origins
     FRONTEND_ORIGIN: str = "http://localhost:5173"
 
+    # Admin allowlist — comma-separated emails that can call /admin/*
+    ADMIN_EMAILS: str = ""
+
     # Optional integrations
     ANTHROPIC_API_KEY: str = ""
     TWILIO_ACCOUNT_SID: str = ""

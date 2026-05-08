@@ -31,3 +31,5 @@ services:
         sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false
+      - key: ADMIN_EMAILS
+        sync: false
