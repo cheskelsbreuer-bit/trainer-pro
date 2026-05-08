@@ -18,6 +18,13 @@ def health() -> dict:
             "supabase": bool(settings.SUPABASE_URL and settings.SUPABASE_ANON_KEY),
             "supabase_jwt": bool(settings.SUPABASE_JWT_SECRET),
             "anthropic": bool(settings.ANTHROPIC_API_KEY),
-            "twilio": bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN),
+            "twilio": bool(
+                settings.TWILIO_ACCOUNT_SID
+                and settings.TWILIO_AUTH_TOKEN
+                and settings.TWILIO_FROM_NUMBER
+            ),
+            "resend": bool(settings.RESEND_API_KEY),
+            "stripe": bool(settings.STRIPE_SECRET_KEY),
+            "admin_emails": bool(settings.ADMIN_EMAILS),
         },
     }
