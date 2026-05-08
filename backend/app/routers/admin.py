@@ -47,55 +47,89 @@ class OverviewStats(BaseModel):
     waitlist_count: int
 
 
+def _list_auth_users(sb: Any) -> list[Any]:
+    """Page through auth.admin.list_users() — Supabase paginates at 50/page."""
+    out: list[Any] = []
+    page = 1
+    while True:
+        resp = sb.auth.admin.list_users(page=page, per_page=200)
+        # supabase-py returns either a list directly or an object w/ `users`
+        users = resp if isinstance(resp, list) else getattr(resp, "users", [])
+        if not users:
+            break
+        out.extend(users)
+        if len(users) < 200:
+            break
+        page += 1
+        if page > 50:  # safety stop at ~10k users
+            break
+    return out
+
+
+def _safe_select_trainers(sb: Any) -> list[dict[str, Any]]:
+    """Select trainers data, falling back if newer columns don't exist yet.
+
+    Migrations 15/16 may not have run on every environment — we still want
+    /admin to work and just show empty profile fields for unmigrated DBs.
+    """
+    try:
+        resp = sb.table("trainers").select("*").execute()
+        return resp.data or []
+    except Exception as e:
+        print(f"[admin] trainers select failed, returning empty: {e}")
+        return []
+
+
 @router.get("/overview", response_model=OverviewStats)
 def overview(user: CurrentUser) -> OverviewStats:
     _require_admin(user)
     sb = supabase_admin()
     now = datetime.now(timezone.utc)
-    week_ago = (now - timedelta(days=7)).isoformat()
-    month_ago = (now - timedelta(days=30)).isoformat()
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
 
-    # head=True + count='exact' returns just the count, not rows
-    total_trainers = (
-        sb.table("trainers").select("id", count="exact", head=True).execute().count or 0
+    # Source of truth for "users" is auth.users — works even if the trigger
+    # that auto-creates trainers rows ever silently fails.
+    auth_users = _list_auth_users(sb)
+
+    def _parse_dt(s: Any) -> datetime | None:
+        if not s:
+            return None
+        if isinstance(s, datetime):
+            return s if s.tzinfo else s.replace(tzinfo=timezone.utc)
+        try:
+            return datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+    total_trainers = len(auth_users)
+    new_trainers_this_week = sum(
+        1 for u in auth_users if (d := _parse_dt(getattr(u, "created_at", None))) and d >= week_ago
     )
-    onboarded_trainers = (
-        sb.table("trainers")
-        .select("id", count="exact", head=True)
-        .not_.is_("onboarded_at", "null")
-        .execute()
-        .count
-        or 0
-    )
-    new_trainers_this_week = (
-        sb.table("trainers")
-        .select("id", count="exact", head=True)
-        .gte("created_at", week_ago)
-        .execute()
-        .count
-        or 0
-    )
-    new_trainers_this_month = (
-        sb.table("trainers")
-        .select("id", count="exact", head=True)
-        .gte("created_at", month_ago)
-        .execute()
-        .count
-        or 0
-    )
-    total_clients = (
-        sb.table("clients").select("id", count="exact", head=True).execute().count or 0
-    )
-    total_sessions = (
-        sb.table("sessions").select("id", count="exact", head=True).execute().count or 0
-    )
-    waitlist_count = (
-        sb.table("waitlist_emails").select("id", count="exact", head=True).execute().count
-        or 0
+    new_trainers_this_month = sum(
+        1 for u in auth_users if (d := _parse_dt(getattr(u, "created_at", None))) and d >= month_ago
     )
 
-    pay_resp = sb.table("payments").select("amount").execute()
-    total_payments_amount = sum(float(p.get("amount") or 0) for p in (pay_resp.data or []))
+    # Onboarded count comes from the trainers table — fields may be missing
+    # on unmigrated DBs, in which case treat everyone as not onboarded.
+    trainers_rows = _safe_select_trainers(sb)
+    onboarded_trainers = sum(1 for t in trainers_rows if t.get("onboarded_at"))
+
+    def _safe_count(table: str) -> int:
+        try:
+            return sb.table(table).select("id", count="exact", head=True).execute().count or 0
+        except Exception:
+            return 0
+
+    total_clients = _safe_count("clients")
+    total_sessions = _safe_count("sessions")
+    waitlist_count = _safe_count("waitlist_emails")
+
+    try:
+        pay_resp = sb.table("payments").select("amount").execute()
+        total_payments_amount = sum(float(p.get("amount") or 0) for p in (pay_resp.data or []))
+    except Exception:
+        total_payments_amount = 0.0
 
     return OverviewStats(
         total_trainers=total_trainers,
@@ -129,33 +163,56 @@ class TrainersResponse(BaseModel):
 
 
 @router.get("/trainers", response_model=TrainersResponse)
-def list_trainers(user: CurrentUser, limit: int = 200) -> TrainersResponse:
+def list_trainers(user: CurrentUser, limit: int = 500) -> TrainersResponse:
+    """List EVERY signed-up user, joined with their trainer profile if any.
+
+    auth.users is the source of truth — even if the auto-create-trainers
+    trigger failed at some point, we still want to see who signed up.
+    """
     _require_admin(user)
     sb = supabase_admin()
-    resp = (
-        sb.table("trainers")
-        .select(
-            "id,full_name,business_name,email,onboarded_at,client_count_estimate,specialties,created_at"
-        )
-        .order("created_at", desc=True)
-        .limit(limit)
-        .execute()
-    )
+
+    auth_users = _list_auth_users(sb)
+    trainers_by_id = {t.get("id"): t for t in _safe_select_trainers(sb)}
+
+    def _to_iso(v: Any) -> str | None:
+        if not v:
+            return None
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return str(v)
+
     rows: list[TrainerRow] = []
-    for r in resp.data or []:
+    for u in auth_users:
+        uid = getattr(u, "id", None) or (u.get("id") if isinstance(u, dict) else None)
+        if not uid:
+            continue
+        t = trainers_by_id.get(uid, {})
+        email = (
+            getattr(u, "email", None)
+            or (u.get("email") if isinstance(u, dict) else None)
+            or t.get("email")
+        )
+        created_at = (
+            getattr(u, "created_at", None)
+            or (u.get("created_at") if isinstance(u, dict) else None)
+            or t.get("created_at")
+        )
         rows.append(
             TrainerRow(
-                id=r["id"],
-                full_name=r.get("full_name"),
-                business_name=r.get("business_name"),
-                email=r.get("email"),
-                onboarded_at=r.get("onboarded_at"),
-                client_count_estimate=r.get("client_count_estimate"),
-                specialties=r.get("specialties") or [],
-                created_at=r.get("created_at"),
+                id=str(uid),
+                full_name=t.get("full_name"),
+                business_name=t.get("business_name"),
+                email=email,
+                onboarded_at=t.get("onboarded_at"),
+                client_count_estimate=t.get("client_count_estimate"),
+                specialties=t.get("specialties") or [],
+                created_at=_to_iso(created_at),
             )
         )
-    return TrainersResponse(rows=rows, total=len(rows))
+
+    rows.sort(key=lambda r: r.created_at or "", reverse=True)
+    return TrainersResponse(rows=rows[:limit], total=len(rows))
 
 
 # ─────────────── Waitlist ───────────────
@@ -177,23 +234,28 @@ class WaitlistResponse(BaseModel):
 def list_waitlist(user: CurrentUser, limit: int = 500) -> WaitlistResponse:
     _require_admin(user)
     sb = supabase_admin()
-    resp = (
-        sb.table("waitlist_emails")
-        .select("id,email,source,created_at")
-        .order("created_at", desc=True)
-        .limit(limit)
-        .execute()
-    )
-    rows = [
-        WaitlistRow(
-            id=r["id"],
-            email=r["email"],
-            source=r.get("source"),
-            created_at=r.get("created_at"),
+    try:
+        resp = (
+            sb.table("waitlist_emails")
+            .select("id,email,source,created_at")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
         )
-        for r in (resp.data or [])
-    ]
-    return WaitlistResponse(rows=rows, total=len(rows))
+        rows = [
+            WaitlistRow(
+                id=r["id"],
+                email=r["email"],
+                source=r.get("source"),
+                created_at=r.get("created_at"),
+            )
+            for r in (resp.data or [])
+        ]
+        return WaitlistResponse(rows=rows, total=len(rows))
+    except Exception as e:
+        # Table missing or query failed — show empty rather than 500.
+        print(f"[admin] waitlist select failed: {e}")
+        return WaitlistResponse(rows=[], total=0)
 
 
 # ─────────────── Whoami (used by frontend to show /admin only to admins) ───────────────
