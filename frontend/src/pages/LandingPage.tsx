@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Dumbbell,
   Users,
@@ -6,212 +7,717 @@ import {
   CreditCard,
   CheckCircle2,
   ArrowRight,
+  Sparkles,
+  Zap,
+  Heart,
+  Star,
+  Camera,
+  ClipboardList,
+  Activity,
+  DollarSign,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const APP_URL = 'https://app.trainerpro.coach';
+const SIGNUP_URL = `${APP_URL}/?mode=sign-up`;
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      {/* Nav */}
-      <header className="border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold">
-              T
-            </div>
-            <span className="font-bold text-lg">Trainer Pro</span>
-          </div>
-          <nav className="hidden md:flex items-center gap-6 text-sm text-slate-600">
-            <a href="#features" className="hover:text-slate-900">Features</a>
-            <a href="#pricing" className="hover:text-slate-900">Pricing</a>
-            <a href={APP_URL} className="hover:text-slate-900">Sign in</a>
-          </nav>
-          <a
-            href={APP_URL}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-          >
-            Get started
-          </a>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
+      <Nav />
+      <Hero />
+      <SocialProof />
+      <HowItWorks />
+      <FeatureGrid />
+      <CompareSection />
+      <EmailCapture />
+      <FinalCTA />
+      <Footer />
+    </div>
+  );
+}
 
-      {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 py-16 md:py-24 text-center">
-        <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium mb-6">
-          <span className="w-1.5 h-1.5 bg-blue-600 rounded-full" />
-          Now in beta — free for early trainers
+/* ─────────────── Nav ─────────────── */
+function Nav() {
+  return (
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+      <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
+        <Logo />
+        <nav className="hidden md:flex items-center gap-7 text-sm text-slate-600">
+          <a href="#how" className="hover:text-slate-900 transition">How it works</a>
+          <a href="#features" className="hover:text-slate-900 transition">Features</a>
+          <a href="#why" className="hover:text-slate-900 transition">Why us</a>
+          <a href="#pricing" className="hover:text-slate-900 transition">Pricing</a>
+          <a href={APP_URL} className="hover:text-slate-900 transition">Sign in</a>
+        </nav>
+        <a
+          href={SIGNUP_URL}
+          className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm shadow-blue-600/30"
+        >
+          Get started free
+        </a>
+      </div>
+    </header>
+  );
+}
+
+function Logo() {
+  return (
+    <a href="/" className="flex items-center gap-2.5">
+      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-blue-600/30">
+        <Dumbbell size={18} strokeWidth={2.5} />
+      </div>
+      <div className="leading-tight">
+        <div className="font-bold text-slate-900">Trainer Pro</div>
+        <div className="text-[10px] text-slate-400 -mt-0.5 hidden sm:block">
+          Run your training business
         </div>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-5 max-w-3xl mx-auto leading-[1.1]">
-          The dashboard for personal trainers who hate clunky software.
+      </div>
+    </a>
+  );
+}
+
+/* ─────────────── Hero ─────────────── */
+function Hero() {
+  return (
+    <section className="relative overflow-hidden">
+      {/* gradient blobs */}
+      <div className="absolute -top-20 -left-20 w-96 h-96 bg-blue-200/40 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-40 -right-20 w-96 h-96 bg-emerald-200/40 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-80 left-1/2 w-72 h-72 bg-amber-200/30 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative max-w-6xl mx-auto px-6 pt-16 pb-12 md:pt-24 md:pb-16 text-center">
+        <div className="inline-flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium mb-7 shadow-sm">
+          <Sparkles size={12} className="text-amber-500" />
+          <span className="bg-gradient-to-r from-blue-700 to-emerald-700 bg-clip-text text-transparent font-semibold">
+            Now in beta — free for early trainers
+          </span>
+        </div>
+
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.05]">
+          The dashboard for personal trainers who{' '}
+          <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            hate clunky software.
+          </span>
         </h1>
-        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-8">
+        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-9 leading-relaxed">
           Clients, workouts, payments, and progress — in one clean web app. No mobile-app
           nightmare for your clients. No per-client fees. Set up in 10 minutes.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-5">
+          <a
+            href={SIGNUP_URL}
+            className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-7 py-3.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-transform hover:-translate-y-0.5"
+          >
+            Get my free account <ArrowRight size={16} />
+          </a>
           <a
             href={APP_URL}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2"
+            className="bg-white text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 px-7 py-3.5 rounded-xl font-medium transition"
           >
-            Start free <ArrowRight size={16} />
-          </a>
-          <a
-            href="#features"
-            className="text-slate-700 hover:text-slate-900 px-6 py-3 rounded-lg font-medium"
-          >
-            See features
+            Sign in
           </a>
         </div>
-        <p className="text-xs text-slate-400 mt-4">No credit card required.</p>
-      </section>
+        <p className="text-xs text-slate-400">
+          No credit card required · Cancel anytime · Set up in 10 minutes
+        </p>
+      </div>
 
-      {/* Screenshot placeholder */}
-      <section className="max-w-5xl mx-auto px-6 pb-16">
-        <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-blue-50 p-3 shadow-2xl shadow-blue-900/10">
-          <div className="rounded-xl bg-white border border-slate-200 aspect-[16/10] flex items-center justify-center">
-            <div className="text-center text-slate-400">
-              <Dumbbell size={48} className="mx-auto mb-3 text-blue-500" />
-              <p className="text-sm">Dashboard preview</p>
+      {/* App mock */}
+      <div className="relative max-w-5xl mx-auto px-6 pb-16">
+        <DashboardMock />
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────── Dashboard mock ─────────────── */
+function DashboardMock() {
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-slate-100 to-blue-100 p-2 md:p-3 shadow-2xl shadow-blue-900/20">
+      {/* fake browser chrome */}
+      <div className="flex items-center gap-1.5 px-3 py-2.5">
+        <div className="w-3 h-3 rounded-full bg-rose-400" />
+        <div className="w-3 h-3 rounded-full bg-amber-400" />
+        <div className="w-3 h-3 rounded-full bg-emerald-400" />
+        <div className="ml-3 bg-white/70 rounded-md px-2 py-0.5 text-[11px] text-slate-500">
+          app.trainerpro.coach/dashboard
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
+        {/* fake top bar */}
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <div className="text-xs text-slate-400">Tuesday, May 8</div>
+            <div className="text-lg font-bold">Welcome back, Jane 👋</div>
+          </div>
+          <div className="flex gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
+              ● 3 active clients
+            </span>
+          </div>
+        </div>
+
+        {/* stats row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <StatCard
+            label="Revenue MTD"
+            value="$2,340"
+            delta="+18%"
+            color="emerald"
+            icon={<DollarSign size={14} />}
+          />
+          <StatCard
+            label="Sessions"
+            value="24"
+            delta="+4 this week"
+            color="blue"
+            icon={<Calendar size={14} />}
+          />
+          <StatCard
+            label="Active clients"
+            value="12"
+            delta="+2 new"
+            color="purple"
+            icon={<Users size={14} />}
+          />
+          <StatCard
+            label="Workouts logged"
+            value="38"
+            delta="92% completion"
+            color="amber"
+            icon={<Activity size={14} />}
+          />
+        </div>
+
+        {/* split body */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Today's sessions */}
+          <div className="md:col-span-2 bg-slate-50 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-slate-800 text-sm">Today's sessions</h3>
+              <span className="text-xs text-slate-400">3 of 5</span>
+            </div>
+            <div className="space-y-2">
+              <SessionRow time="9:00 AM" name="Sarah K." type="Strength" status="done" />
+              <SessionRow time="11:30 AM" name="Marco P." type="HIIT" status="now" />
+              <SessionRow time="2:00 PM" name="Lila R." type="Mobility" status="up" />
+              <SessionRow time="4:30 PM" name="Daniel A." type="Strength" status="up" />
+            </div>
+          </div>
+
+          {/* Mini chart */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 flex flex-col">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-slate-800 text-sm">Sarah's deadlift</h3>
+              <span className="text-[10px] text-emerald-600 font-medium">+15 lbs</span>
+            </div>
+            <div className="flex-1 flex items-end gap-1 h-20">
+              {[40, 45, 50, 55, 65, 72, 80].map((h, i) => (
+                <div
+                  key={i}
+                  className="flex-1 rounded-t bg-gradient-to-t from-blue-500 to-indigo-500"
+                  style={{ height: `${h}%` }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-400 mt-1.5">
+              <span>4w ago</span>
+              <span>now</span>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+  );
+}
 
-      {/* Features */}
-      <section id="features" className="max-w-6xl mx-auto px-6 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-3">
-            Everything you need. Nothing you don't.
+function StatCard({
+  label,
+  value,
+  delta,
+  color,
+  icon,
+}: {
+  label: string;
+  value: string;
+  delta: string;
+  color: 'emerald' | 'blue' | 'purple' | 'amber';
+  icon: React.ReactNode;
+}) {
+  const colors = {
+    emerald: 'from-emerald-50 to-teal-50 text-emerald-700 border-emerald-100',
+    blue: 'from-blue-50 to-sky-50 text-blue-700 border-blue-100',
+    purple: 'from-purple-50 to-fuchsia-50 text-purple-700 border-purple-100',
+    amber: 'from-amber-50 to-orange-50 text-amber-700 border-amber-100',
+  };
+  return (
+    <div className={`bg-gradient-to-br ${colors[color]} border rounded-lg p-3`}>
+      <div className="flex items-center gap-1.5 mb-1 text-[11px] font-medium opacity-80">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="text-xl font-bold text-slate-900">{value}</div>
+      <div className="text-[11px] mt-0.5 opacity-80">{delta}</div>
+    </div>
+  );
+}
+
+function SessionRow({
+  time,
+  name,
+  type,
+  status,
+}: {
+  time: string;
+  name: string;
+  type: string;
+  status: 'done' | 'now' | 'up';
+}) {
+  const badge = {
+    done: { dot: 'bg-emerald-400', text: 'Done', cls: 'text-emerald-700 bg-emerald-50' },
+    now: { dot: 'bg-blue-500 animate-pulse', text: 'Now', cls: 'text-blue-700 bg-blue-50' },
+    up: { dot: 'bg-slate-300', text: 'Upcoming', cls: 'text-slate-600 bg-slate-100' },
+  }[status];
+  return (
+    <div className="flex items-center gap-3 bg-white rounded-lg p-2.5 border border-slate-100">
+      <div className="text-xs font-mono text-slate-500 w-16">{time}</div>
+      <div className="flex-1">
+        <div className="text-sm font-medium text-slate-800">{name}</div>
+        <div className="text-[11px] text-slate-500">{type}</div>
+      </div>
+      <span className={`flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full font-medium ${badge.cls}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+        {badge.text}
+      </span>
+    </div>
+  );
+}
+
+/* ─────────────── Social proof ─────────────── */
+function SocialProof() {
+  return (
+    <section className="py-10 border-y border-slate-100 bg-slate-50/50">
+      <div className="max-w-5xl mx-auto px-6">
+        <p className="text-center text-xs font-semibold tracking-wider text-slate-400 uppercase mb-5">
+          Built by trainers, for trainers
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <Stat n="10 min" label="Average setup time" />
+          <Stat n="$0" label="Per-client fees" />
+          <Stat n="100%" label="Web — no app needed" />
+          <Stat n="∞" label="Clients per account" />
+        </div>
+      </div>
+    </section>
+  );
+}
+function Stat({ n, label }: { n: string; label: string }) {
+  return (
+    <div>
+      <div className="text-2xl md:text-3xl font-bold bg-gradient-to-br from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+        {n}
+      </div>
+      <div className="text-xs text-slate-500 mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+/* ─────────────── How it works ─────────────── */
+function HowItWorks() {
+  const steps = [
+    {
+      n: 1,
+      icon: <Users />,
+      title: 'Add your clients',
+      body: 'Import or invite. Each client gets a private portal — no app to install.',
+      color: 'from-blue-500 to-indigo-600',
+      bg: 'from-blue-50 to-indigo-50',
+    },
+    {
+      n: 2,
+      icon: <Dumbbell />,
+      title: 'Build their workouts',
+      body: 'Templates or per-client. Sets, reps, weights, notes. Reuse what works.',
+      color: 'from-emerald-500 to-teal-600',
+      bg: 'from-emerald-50 to-teal-50',
+    },
+    {
+      n: 3,
+      icon: <TrendingUp />,
+      title: 'Track progress',
+      body: "Weight, body comp, PRs, photos. Charts that make wins obvious to your client.",
+      color: 'from-amber-500 to-orange-600',
+      bg: 'from-amber-50 to-orange-50',
+    },
+    {
+      n: 4,
+      icon: <CreditCard />,
+      title: 'Get paid',
+      body: 'Sell session packages, take card payments via Stripe. See revenue trend in real-time.',
+      color: 'from-purple-500 to-fuchsia-600',
+      bg: 'from-purple-50 to-fuchsia-50',
+    },
+  ];
+  return (
+    <section id="how" className="py-20 md:py-28">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold text-blue-600 mb-2">How it works</p>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight max-w-2xl mx-auto leading-[1.1]">
+            From zero to running your business in an afternoon.
           </h2>
-          <p className="text-slate-600 max-w-xl mx-auto">
-            Built for solo trainers and small studios who want to look professional without
-            spending Sunday on admin.
-          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {steps.map((s) => (
+            <div
+              key={s.n}
+              className={`relative bg-gradient-to-br ${s.bg} rounded-2xl p-6 border border-white shadow-sm hover:shadow-md transition`}
+            >
+              <div className="absolute -top-3 -left-3 w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center font-bold text-sm shadow-md border border-slate-100">
+                {s.n}
+              </div>
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${s.color} text-white flex items-center justify-center mb-4 shadow-md`}>
+                {s.icon}
+              </div>
+              <h3 className="font-bold text-slate-900 mb-1.5">{s.title}</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────── Features grid ─────────────── */
+function FeatureGrid() {
+  return (
+    <section id="features" className="py-20 md:py-28 bg-gradient-to-b from-slate-50 to-white">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold text-emerald-600 mb-2">Everything included</p>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight max-w-2xl mx-auto leading-[1.1]">
+            Every tool you need.{' '}
+            <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+              Nothing you don't.
+            </span>
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <Feature
             icon={<Users />}
+            iconBg="bg-blue-100 text-blue-600"
             title="Client management"
             body="Profiles, intake forms, signed waivers, and a private portal so each client knows what's next."
           />
           <Feature
             icon={<Dumbbell />}
+            iconBg="bg-emerald-100 text-emerald-600"
             title="Workout builder"
             body="Templates and per-client plans. Sets, reps, weights, notes — all editable in seconds."
           />
           <Feature
             icon={<TrendingUp />}
+            iconBg="bg-amber-100 text-amber-600"
             title="Progress tracking"
             body="Weight, body comp, PRs, and progress photos. Charts that make wins obvious."
           />
           <Feature
             icon={<Calendar />}
+            iconBg="bg-purple-100 text-purple-600"
             title="Sessions & bookings"
             body="Public booking page, Google Calendar sync, automatic reminders. Clients self-serve."
           />
           <Feature
             icon={<CreditCard />}
+            iconBg="bg-rose-100 text-rose-600"
             title="Payments via Stripe"
             body="Sell session packages, take card payments, see revenue trends. No extra invoicing tool."
           />
           <Feature
-            icon={<CheckCircle2 />}
+            icon={<ClipboardList />}
+            iconBg="bg-cyan-100 text-cyan-600"
             title="Studio mode"
             body="Add team trainers, share clients, run multiple coaches under one brand."
           />
+          <Feature
+            icon={<Camera />}
+            iconBg="bg-indigo-100 text-indigo-600"
+            title="Progress photos"
+            body="Side-by-side comparison photos. Your clients see their transformation, you keep them motivated."
+          />
+          <Feature
+            icon={<Heart />}
+            iconBg="bg-pink-100 text-pink-600"
+            title="Client portal"
+            body="Each client gets their own page: workouts, sessions, payments, photos. Branded to you."
+          />
+          <Feature
+            icon={<Zap />}
+            iconBg="bg-yellow-100 text-yellow-600"
+            title="Lightning fast"
+            body="No clunky page loads. Built on modern tech so you spend time training, not waiting."
+          />
         </div>
-      </section>
-
-      {/* Why us */}
-      <section className="bg-slate-50 border-y border-slate-100 py-16">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-8 text-center">
-            Why trainers pick Trainer Pro over Trainerize, TrueCoach, My PT Hub.
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <Compare
-              title="Web-only, no app"
-              body="Your clients open a link and it just works on phone or laptop. No App Store. No login emails to debug."
-            />
-            <Compare
-              title="Flat pricing"
-              body="One price for all your clients. Doesn't get more expensive when you grow your roster."
-            />
-            <Compare
-              title="10-minute setup"
-              body="Sign up, add a client, build a workout, take payment. Today. Not next weekend."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="max-w-3xl mx-auto px-6 py-16 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-3">Free during beta.</h2>
-        <p className="text-slate-600 mb-8">
-          Early trainers lock in free access while we polish things. After beta, simple flat
-          pricing — no per-client fees, no contracts.
-        </p>
-        <a
-          href={APP_URL}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium"
-        >
-          Claim your free account <ArrowRight size={16} />
-        </a>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-100">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-slate-500">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-              T
-            </div>
-            <span>Trainer Pro</span>
-            <span className="text-slate-300">·</span>
-            <span>© {new Date().getFullYear()}</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <a href={APP_URL} className="hover:text-slate-900">Sign in</a>
-            <a href={`${APP_URL}`} className="hover:text-slate-900">Get started</a>
-            <a href="mailto:hello@trainerpro.coach" className="hover:text-slate-900">Contact</a>
-          </div>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </section>
   );
 }
 
 function Feature({
   icon,
+  iconBg,
   title,
   body,
 }: {
   icon: React.ReactNode;
+  iconBg: string;
   title: string;
   body: string;
 }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-sm transition">
-      <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+      <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center mb-4`}>
         {icon}
       </div>
-      <h3 className="font-semibold text-slate-900 mb-1">{title}</h3>
+      <h3 className="font-bold text-slate-900 mb-1.5">{title}</h3>
       <p className="text-sm text-slate-600 leading-relaxed">{body}</p>
     </div>
   );
 }
 
-function Compare({ title, body }: { title: string; body: string }) {
+/* ─────────────── Compare ─────────────── */
+function CompareSection() {
   return (
-    <div className="bg-white rounded-xl p-5 border border-slate-200">
-      <div className="flex items-start gap-2 mb-2">
-        <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-        <h3 className="font-semibold text-slate-900">{title}</h3>
+    <section id="why" className="py-20 md:py-28">
+      <div className="max-w-5xl mx-auto px-6">
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold text-purple-600 mb-2">Why us</p>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-[1.1] max-w-3xl mx-auto">
+            Why trainers pick us over{' '}
+            <span className="bg-gradient-to-r from-rose-500 to-purple-600 bg-clip-text text-transparent">
+              Trainerize, TrueCoach, My PT Hub.
+            </span>
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <Compare
+            title="Web-only, no app"
+            body="Your clients open a link and it just works on phone or laptop. No App Store. No login emails to debug."
+            color="emerald"
+          />
+          <Compare
+            title="Flat pricing"
+            body="One price for all your clients. Doesn't get more expensive when you grow your roster."
+            color="blue"
+          />
+          <Compare
+            title="10-minute setup"
+            body="Sign up, add a client, build a workout, take payment. Today. Not next weekend."
+            color="amber"
+          />
+        </div>
       </div>
+    </section>
+  );
+}
+function Compare({
+  title,
+  body,
+  color,
+}: {
+  title: string;
+  body: string;
+  color: 'emerald' | 'blue' | 'amber';
+}) {
+  const colors = {
+    emerald: 'bg-emerald-100 text-emerald-600',
+    blue: 'bg-blue-100 text-blue-600',
+    amber: 'bg-amber-100 text-amber-600',
+  };
+  return (
+    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition">
+      <div className={`inline-flex w-10 h-10 rounded-xl ${colors[color]} items-center justify-center mb-4`}>
+        <CheckCircle2 size={20} strokeWidth={2.5} />
+      </div>
+      <h3 className="font-bold text-slate-900 mb-2">{title}</h3>
       <p className="text-sm text-slate-600 leading-relaxed">{body}</p>
     </div>
+  );
+}
+
+/* ─────────────── Email capture ─────────────── */
+function EmailCapture() {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) return;
+    setStatus('submitting');
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase
+        .from('waitlist_emails')
+        .insert({ email: email.toLowerCase().trim(), source: 'landing' });
+      if (error) {
+        // Duplicate? Treat as success.
+        if (error.code === '23505') {
+          setStatus('done');
+          return;
+        }
+        throw error;
+      }
+      setStatus('done');
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg((err as Error).message || 'Something went wrong.');
+    }
+  }
+
+  return (
+    <section className="py-20 md:py-28">
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-3xl p-8 md:p-12 text-center text-white shadow-2xl shadow-blue-900/30 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-amber-300/20 rounded-full blur-2xl" />
+
+          <div className="relative">
+            <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-full text-xs font-medium mb-5">
+              <Star size={11} className="text-amber-300" fill="currentColor" />
+              Get early access
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 leading-[1.15]">
+              Want updates without committing yet?
+            </h2>
+            <p className="text-blue-100 mb-7 max-w-md mx-auto">
+              Drop your email. We'll only email you when something matters — new features,
+              your free-beta invite, that's it.
+            </p>
+
+            {status === 'done' ? (
+              <div className="bg-emerald-500/20 backdrop-blur-sm border border-emerald-300/30 rounded-xl p-5 max-w-md mx-auto">
+                <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-300" />
+                <p className="font-semibold">You're on the list.</p>
+                <p className="text-sm text-blue-100 mt-1">
+                  We'll be in touch. In the meantime, you can{' '}
+                  <a href={SIGNUP_URL} className="underline font-medium">
+                    start your free account now
+                  </a>
+                  .
+                </p>
+              </div>
+            ) : (
+              <form
+                onSubmit={handleSubmit}
+                className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto"
+              >
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  disabled={status === 'submitting'}
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/95 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={status === 'submitting'}
+                  className="bg-white text-blue-700 hover:bg-amber-50 px-5 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-60"
+                >
+                  {status === 'submitting' ? 'Saving…' : <>Notify me <ArrowRight size={16} /></>}
+                </button>
+              </form>
+            )}
+            {status === 'error' && errorMsg && (
+              <p className="text-amber-200 text-sm mt-3">{errorMsg}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────── Final CTA / pricing ─────────────── */
+function FinalCTA() {
+  return (
+    <section id="pricing" className="py-20 md:py-28 bg-gradient-to-b from-white to-slate-50">
+      <div className="max-w-3xl mx-auto px-6 text-center">
+        <p className="text-sm font-semibold text-amber-600 mb-2">Pricing</p>
+        <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
+          Free during beta.{' '}
+          <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
+            Locked-in pricing forever.
+          </span>
+        </h2>
+        <p className="text-slate-600 mb-8 max-w-xl mx-auto">
+          Early trainers lock in free access while we polish things. After beta, simple flat
+          pricing — no per-client fees, no contracts.
+        </p>
+
+        <div className="bg-white border-2 border-blue-200 rounded-3xl p-8 max-w-md mx-auto shadow-xl shadow-blue-900/10 mb-8">
+          <div className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold mb-3">
+            BETA EARLY ACCESS
+          </div>
+          <div className="flex items-baseline justify-center gap-1 mb-1">
+            <span className="text-5xl font-bold">$0</span>
+            <span className="text-slate-500">/month</span>
+          </div>
+          <p className="text-sm text-slate-500 mb-6">while in beta · all features included</p>
+          <ul className="text-left space-y-2.5 mb-6">
+            {[
+              'Unlimited clients',
+              'Unlimited workouts',
+              'Stripe payments built-in',
+              'Client portal + booking page',
+              'Progress tracking + photos',
+            ].map((f) => (
+              <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
+                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+          <a
+            href={SIGNUP_URL}
+            className="block w-full bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white py-3.5 rounded-xl font-semibold shadow-lg shadow-blue-600/30 transition"
+          >
+            Claim my free account
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────── Footer ─────────────── */
+function Footer() {
+  return (
+    <footer className="border-t border-slate-200 bg-slate-50">
+      <div className="max-w-6xl mx-auto px-6 py-10">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+          <Logo />
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-600">
+            <a href="#how" className="hover:text-slate-900">How it works</a>
+            <a href="#features" className="hover:text-slate-900">Features</a>
+            <a href="#pricing" className="hover:text-slate-900">Pricing</a>
+            <a href={APP_URL} className="hover:text-slate-900">Sign in</a>
+            <a href={SIGNUP_URL} className="hover:text-slate-900">Sign up</a>
+            <a href="mailto:hello@trainerpro.coach" className="hover:text-slate-900">Contact</a>
+          </div>
+        </div>
+        <div className="mt-6 pt-6 border-t border-slate-200 text-center text-xs text-slate-400">
+          © {new Date().getFullYear()} Trainer Pro · Built for personal trainers who'd rather train than admin.
+        </div>
+      </div>
+    </footer>
   );
 }
