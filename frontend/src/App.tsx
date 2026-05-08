@@ -17,6 +17,7 @@ import { JoinStudioPage } from './pages/JoinStudioPage';
 import { ClientPortal } from './pages/ClientPortal';
 import { PortalJoinPage } from './pages/PortalJoinPage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
+import { LandingPage } from './pages/LandingPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,12 +56,26 @@ function PortalShell() {
   return <ClientPortal />;
 }
 
+function isLandingHost() {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return host === 'trainerpro.coach' || host === 'www.trainerpro.coach';
+}
+
 export default function App() {
+  // Apex / www domain serves the marketing site — no router, no auth, no app shell.
+  if (isLandingHost()) {
+    return <LandingPage />;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            {/* Marketing preview route (works on app subdomain too) */}
+            <Route path="/welcome" element={<LandingPage />} />
+
             {/* Public — no auth required */}
             <Route path="/p/:slug" element={<PublicProfilePage />} />
             <Route path="/book/:slug" element={<BookingPage />} />
