@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Sparkles,
   Zap,
-  Heart,
   Star,
   Camera,
   ClipboardList,
