@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, Trash2, Repeat, AlertTriangle, Calendar as CalIcon, ClipboardList } from 'lucide-react';
+import { X, Trash2, Repeat, AlertTriangle, Calendar as CalIcon, ClipboardList, MessageSquare, Mail, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import type { Client, Session, SessionStatus } from '../../lib/database.types';
 import {
   addMinutes,
@@ -158,6 +159,30 @@ export function SessionModal(props: SessionModalProps) {
   const totalConflicts = conflictsByOccurrence.reduce((n, o) => n + o.conflicts.length, 0);
 
   const [showLogger, setShowLogger] = useState(false);
+  const [reminderSentAt, setReminderSentAt] = useState<{ channel: string; at: Date } | null>(null);
+  const [sendingChannel, setSendingChannel] = useState<'sms' | 'email' | null>(null);
+
+  // ---------- reminders ----------
+  const sendReminder = useMutation({
+    mutationFn: async (channel: 'sms' | 'email') => {
+      if (!session?.id) throw new Error('Save the session first.');
+      setSendingChannel(channel);
+      return api<{ sent: boolean; channel: string; detail: string | null }>(
+        '/reminders/send',
+        {
+          method: 'POST',
+          body: JSON.stringify({ session_id: session.id, channel }),
+        },
+      );
+    },
+    onSuccess: (data, channel) => {
+      if (data.sent) {
+        setReminderSentAt({ channel, at: new Date() });
+        qc.invalidateQueries({ queryKey: ['sessions'] });
+      }
+    },
+    onSettled: () => setSendingChannel(null),
+  });
 
   // ---------- save / delete ----------
   const save = useMutation({
@@ -442,6 +467,55 @@ export function SessionModal(props: SessionModalProps) {
           {save.error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
               {(save.error as Error).message}
+            </div>
+          )}
+
+          {/* Reminders — edit mode only, after the session has been saved */}
+          {mode === 'edit' && session && (
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare size={14} className="text-slate-500" />
+                <h3 className="text-sm font-semibold text-slate-700">Send a reminder</h3>
+                {session.reminder_sent_at && !reminderSentAt && (
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                    Last sent {new Date(session.reminder_sent_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mb-2.5">
+                Texts go to the client's phone. Emails go to their email on file.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => sendReminder.mutate('sms')}
+                  disabled={sendReminder.isPending}
+                  className="flex items-center gap-1.5 text-xs bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 px-3 py-1.5 rounded-lg disabled:opacity-50 transition"
+                >
+                  <MessageSquare size={12} />
+                  {sendingChannel === 'sms' ? 'Sending…' : 'SMS reminder'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => sendReminder.mutate('email')}
+                  disabled={sendReminder.isPending}
+                  className="flex items-center gap-1.5 text-xs bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 px-3 py-1.5 rounded-lg disabled:opacity-50 transition"
+                >
+                  <Mail size={12} />
+                  {sendingChannel === 'email' ? 'Sending…' : 'Email reminder'}
+                </button>
+              </div>
+              {reminderSentAt && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-700">
+                  <CheckCircle2 size={12} />
+                  Sent {reminderSentAt.channel} reminder.
+                </div>
+              )}
+              {sendReminder.error && (
+                <div className="mt-2 text-xs text-red-700">
+                  Couldn't send: {(sendReminder.error as Error).message}
+                </div>
+              )}
             </div>
           )}
         </div>
