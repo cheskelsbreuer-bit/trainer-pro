@@ -48,8 +48,8 @@ export function FeedbackCard() {
         <div className="flex-1">
           <h2 className="font-semibold text-slate-900">Send feedback</h2>
           <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">
-            Hit a bug? Want a feature? Tell us — every message goes straight to the
-            person building this app.
+            Hit a bug? Want a feature? Tell us — every message goes straight to our
+            product team.
           </p>
         </div>
       </div>

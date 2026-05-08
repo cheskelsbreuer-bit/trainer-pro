@@ -807,8 +807,12 @@ function Footer() {
             <a href="mailto:hello@trainerpro.coach" className="hover:text-slate-900">Contact</a>
           </div>
         </div>
-        <div className="mt-6 pt-6 border-t border-slate-200 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} Trainer Pro · Built for personal trainers who'd rather train than admin.
+        <div className="mt-6 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+          <div>© {new Date().getFullYear()} Trainer Pro · Built for personal trainers who'd rather train than admin.</div>
+          <div className="flex items-center gap-4">
+            <a href="/privacy" className="hover:text-slate-700">Privacy</a>
+            <a href="/terms" className="hover:text-slate-700">Terms</a>
+          </div>
         </div>
       </div>
     </footer>

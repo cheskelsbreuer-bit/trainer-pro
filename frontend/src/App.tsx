@@ -23,6 +23,8 @@ import { ClientPortal } from './pages/ClientPortal';
 import { PortalJoinPage } from './pages/PortalJoinPage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
 import { LandingPage } from './pages/LandingPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 import { AdminPage } from './pages/AdminPage';
 import { api, ApiError } from './lib/api';
 
@@ -165,7 +167,11 @@ function isLandingHost() {
 
 export default function App() {
   // Apex / www domain serves the marketing site — no router, no auth, no app shell.
+  // Privacy/Terms are exceptions: legal pages must be reachable on the apex domain too.
   if (isLandingHost()) {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+    if (path === '/privacy') return <PrivacyPage />;
+    if (path === '/terms') return <TermsPage />;
     return <LandingPage />;
   }
 
@@ -174,8 +180,10 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Marketing preview route (works on app subdomain too) */}
+            {/* Marketing + legal (work on app subdomain too) */}
             <Route path="/welcome" element={<LandingPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
 
             {/* Public — no auth required */}
             <Route path="/p/:slug" element={<PublicProfilePage />} />

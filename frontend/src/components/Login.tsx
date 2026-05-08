@@ -176,6 +176,19 @@ export function Login() {
         <p className="text-xs text-slate-400 text-center mt-6">
           Your data is private — only you can read it.
         </p>
+        {mode === 'sign-up' && (
+          <p className="text-[11px] text-slate-400 text-center mt-2 leading-relaxed">
+            By creating an account you agree to our{' '}
+            <a href="/terms" className="underline hover:text-slate-600" target="_blank" rel="noreferrer">
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a href="/privacy" className="underline hover:text-slate-600" target="_blank" rel="noreferrer">
+              Privacy Policy
+            </a>
+            .
+          </p>
+        )}
       </div>
     </div>
   );

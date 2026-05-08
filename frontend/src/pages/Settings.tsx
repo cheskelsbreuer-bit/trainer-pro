@@ -280,7 +280,7 @@ export function Settings() {
         <div className="border-t border-slate-200 pt-8 mt-10 mb-6">
           <h2 className="text-lg font-bold text-slate-900">Talk to us</h2>
           <p className="text-sm text-slate-500 mt-1">
-            We're early — your feedback shapes what we build next.
+            Your feedback shapes what we build next.
           </p>
         </div>
         <FeedbackCard />
