@@ -70,13 +70,53 @@ def send_reminder(
             raise HTTPException(502, f"SMS send failed: {e}") from e
 
     else:
-        # Email path — left as a TODO. We use Supabase's built-in mailer for auth
-        # emails; for transactional reminders you'd typically wire in Resend or
-        # Postmark here. The structure is in place; flip on when you pick a provider.
+        if not settings.RESEND_API_KEY:
+            raise HTTPException(503, "Email not configured. Set RESEND_API_KEY env var.")
         if not client.get("email"):
             raise HTTPException(400, "Client has no email on file.")
-        # (Wiring intentionally deferred — Phase 2.)
-        return SendReminderResponse(sent=False, channel="email", detail="Email provider not configured yet.")
+
+        import httpx
+
+        trainer_resp = sb.table("trainers").select("full_name,business_name").eq("id", user.user_id).single().execute()
+        trainer = trainer_resp.data or {}
+        trainer_name = trainer.get("business_name") or trainer.get("full_name") or "Your trainer"
+
+        subject = f"Reminder: training session {when}"
+        text_body = (
+            f"Hi {client.get('full_name', 'there')},\n\n"
+            f"This is a friendly reminder of your training session on {when}"
+            f"{' at ' + (s.get('location') or '') if s.get('location') else ''}.\n\n"
+            f"See you then,\n{trainer_name}\n"
+        )
+        html_body = (
+            f"<p>Hi {client.get('full_name', 'there')},</p>"
+            f"<p>This is a friendly reminder of your training session on <strong>{when}</strong>"
+            f"{' at <strong>' + (s.get('location') or '') + '</strong>' if s.get('location') else ''}.</p>"
+            f"<p>See you then,<br/>{trainer_name}</p>"
+        )
+
+        try:
+            resp = httpx.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": settings.RESEND_FROM_EMAIL,
+                    "to": [client["email"]],
+                    "subject": subject,
+                    "text": text_body,
+                    "html": html_body,
+                },
+                timeout=15,
+            )
+            if resp.status_code >= 300:
+                raise HTTPException(502, f"Email send failed: {resp.status_code} {resp.text}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(502, f"Email send failed: {e}") from e
 
     # Mark on the session
     sb.table("sessions").update({"reminder_sent_at": datetime.now(timezone.utc).isoformat()}).eq("id", req.session_id).execute()

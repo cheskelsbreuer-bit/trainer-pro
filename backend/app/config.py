@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
+    # Email (Resend) — used for session reminders + intake emails
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = "Trainer Pro <onboarding@resend.dev>"
 
     @property
     def cors_origins(self) -> list[str]:
