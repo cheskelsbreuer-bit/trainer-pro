@@ -55,6 +55,8 @@ export interface Trainer {
   client_count_estimate: '0' | '1-5' | '6-15' | '16-30' | '30+' | null;
   // Multi-select specialties (16_specialties_multiselect.sql) — free-form slugs
   specialties: string[];
+  // Custom waiver text the trainer can override (18_custom_waiver.sql)
+  custom_waiver_text: string | null;
   created_at: string;
   updated_at: string;
 }

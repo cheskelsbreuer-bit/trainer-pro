@@ -15,12 +15,14 @@ export function GoogleCalendarCard({ trainer }: { trainer: Trainer }) {
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-slate-900">Google Calendar sync</h3>
-            <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-              Coming soon
+            <span className="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
+              Coming this week
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Two-way sync: your sessions appear on Google, your other Google events block your booking page.
+            Two-way sync — your sessions appear on Google, your other Google events block
+            your booking page. We're shipping this in the next few days; the button below
+            won't do anything yet.
           </p>
         </div>
       </div>

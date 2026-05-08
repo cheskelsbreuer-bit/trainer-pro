@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
 import { BookingSettingsCard } from '../components/BookingSettingsCard';
+import { FeedbackCard } from '../components/FeedbackCard';
 import { GoogleCalendarCard } from '../components/GoogleCalendarCard';
 import { StudioSettingsCard } from '../components/StudioSettingsCard';
 import { StripeStatusCard } from '../components/StripeStatusCard';
@@ -270,11 +271,19 @@ export function Settings() {
             icon={<CalendarDays size={18} />}
             color="blue"
             title="Google Calendar sync"
-            description="Optional: every session you log here automatically appears in your personal Google Calendar."
+            description="Optional: every session you log here automatically appears in your personal Google Calendar. Coming this week."
           >
             <GoogleCalendarCard trainer={trainer} />
           </CardWrapper>
         </div>
+
+        <div className="border-t border-slate-200 pt-8 mt-10 mb-6">
+          <h2 className="text-lg font-bold text-slate-900">Talk to us</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            We're early — your feedback shapes what we build next.
+          </p>
+        </div>
+        <FeedbackCard />
       </div>
     </div>
   );

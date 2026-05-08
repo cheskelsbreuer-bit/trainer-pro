@@ -11,6 +11,7 @@ import {
   Search,
   ShieldCheck,
   ExternalLink,
+  MessageSquare,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -44,6 +45,18 @@ interface WaitlistRow {
   created_at: string | null;
 }
 
+interface FeedbackRow {
+  id: string;
+  trainer_id: string | null;
+  trainer_email: string | null;
+  category: string;
+  message: string;
+  user_agent: string | null;
+  url: string | null;
+  resolved_at: string | null;
+  created_at: string | null;
+}
+
 export function AdminPage() {
   const { user, signOut } = useAuth();
   const [search, setSearch] = useState('');
@@ -61,6 +74,11 @@ export function AdminPage() {
   const waitlist = useQuery({
     queryKey: ['admin-waitlist'],
     queryFn: () => api<{ rows: WaitlistRow[]; total: number }>('/admin/waitlist'),
+    refetchOnWindowFocus: false,
+  });
+  const feedback = useQuery({
+    queryKey: ['admin-feedback'],
+    queryFn: () => api<{ rows: FeedbackRow[]; total: number }>('/admin/feedback'),
     refetchOnWindowFocus: false,
   });
 
@@ -350,6 +368,61 @@ export function AdminPage() {
           )}
         </section>
 
+        {/* Feedback */}
+        <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-200 flex items-center gap-2">
+            <MessageSquare size={18} className="text-violet-600" />
+            <div>
+              <h2 className="font-bold text-slate-900">Feedback</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {feedback.data?.total ?? 0} message{feedback.data?.total === 1 ? '' : 's'} from
+                trainers
+              </p>
+            </div>
+          </div>
+          {feedback.isLoading ? (
+            <p className="p-5 text-sm text-slate-500">Loading…</p>
+          ) : feedback.error ? (
+            <p className="p-5 text-sm text-red-600">
+              Couldn't load: {(feedback.error as Error).message}
+            </p>
+          ) : (feedback.data?.rows ?? []).length === 0 ? (
+            <p className="p-5 text-sm text-slate-500">No feedback yet.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {(feedback.data?.rows ?? []).map((f) => (
+                <li key={f.id} className="p-4 hover:bg-slate-50">
+                  <div className="flex items-center gap-2 mb-1.5 text-xs">
+                    <span className={CATEGORY_COLORS[f.category] ?? CATEGORY_COLORS.general}>
+                      {CATEGORY_LABELS[f.category] ?? f.category}
+                    </span>
+                    <span className="text-slate-500 font-mono">
+                      {f.trainer_email ?? 'unknown'}
+                    </span>
+                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-500">
+                      {f.created_at
+                        ? new Date(f.created_at).toLocaleString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : '—'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                    {f.message}
+                  </p>
+                  {f.url && (
+                    <p className="text-[11px] text-slate-400 mt-1 truncate">From: {f.url}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         <p className="text-center text-xs text-slate-400 pt-4">
           Admin tools · Trainer Pro
         </p>
@@ -357,6 +430,19 @@ export function AdminPage() {
     </div>
   );
 }
+
+const CATEGORY_LABELS: Record<string, string> = {
+  bug: '🐛 Bug',
+  feature: '✨ Feature request',
+  general: '💬 General',
+  other: '🤷 Other',
+};
+const CATEGORY_COLORS: Record<string, string> = {
+  bug: 'px-1.5 py-0.5 rounded text-rose-700 bg-rose-50 font-medium',
+  feature: 'px-1.5 py-0.5 rounded text-blue-700 bg-blue-50 font-medium',
+  general: 'px-1.5 py-0.5 rounded text-slate-700 bg-slate-100 font-medium',
+  other: 'px-1.5 py-0.5 rounded text-amber-700 bg-amber-50 font-medium',
+};
 
 /* ─────────────── Helpers ─────────────── */
 function StatCard({

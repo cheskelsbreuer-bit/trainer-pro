@@ -31,7 +31,25 @@ const PAR_Q_ITEMS = [
   'Do you know of any other reason why you should not do physical activity?',
 ];
 
-const WAIVER_TEXT = `I acknowledge that physical exercise carries inherent risks of injury, illness, or death. I represent that I am in good health and have no medical condition that would prevent me from safely participating in training. I assume all risks of participation and release the trainer from liability for any injury, loss, or damage that may occur. I understand the trainer is not a licensed medical professional and any health-related advice is general in nature.`;
+const WAIVER_TEXT = `WAIVER AND RELEASE OF LIABILITY
+
+By signing this form, I acknowledge and agree to the following:
+
+1. ASSUMPTION OF RISK. I understand that physical exercise and personal training carry inherent risks, including but not limited to bodily injury, illness, aggravation of pre-existing conditions, and in rare cases, serious injury or death. I knowingly and freely assume all such risks, both known and unknown, even those arising from the negligence of the trainer or others.
+
+2. PHYSICAL CONDITION. I represent that I am in good physical condition and have no medical condition that would prevent safe participation. I have disclosed all relevant medical information on the intake form, and I will inform my trainer immediately of any change to my health.
+
+3. NOT MEDICAL ADVICE. I understand that the trainer is not a licensed medical professional. Any nutritional, exercise, or wellness guidance is general in nature and is not a substitute for advice from a qualified medical provider. I have consulted, or will consult, a physician before beginning this program if I have any reason to.
+
+4. RELEASE OF LIABILITY. I, for myself and on behalf of my heirs, assignees, personal representatives, and next of kin, hereby release and hold harmless the trainer and any of their staff, agents, contractors, and venues from any and all claims, demands, or causes of action arising out of my participation, whether caused by ordinary negligence or otherwise, to the fullest extent permitted by law. This release does not apply to gross negligence or willful misconduct.
+
+5. INDEMNIFICATION. I agree to indemnify and hold harmless the trainer for any losses, costs, or damages incurred as a result of my participation, including reasonable attorneys' fees.
+
+6. EMERGENCY MEDICAL CARE. In the event of injury, I authorize the trainer to seek emergency medical care on my behalf and agree to be responsible for any related costs.
+
+7. PHOTOGRAPHY. I consent to having progress photos and measurements stored privately for my own training records. These will not be shared without my express permission.
+
+I HAVE READ THIS WAIVER, FULLY UNDERSTAND ITS TERMS, AND SIGN IT FREELY AND VOLUNTARILY. I UNDERSTAND THAT I AM GIVING UP SUBSTANTIAL RIGHTS BY SIGNING IT.`;
 
 export function IntakePage() {
   const { token } = useParams<{ token: string }>();

@@ -258,6 +258,58 @@ def list_waitlist(user: CurrentUser, limit: int = 500) -> WaitlistResponse:
         return WaitlistResponse(rows=[], total=0)
 
 
+# ─────────────── Feedback ───────────────
+
+
+class FeedbackRow(BaseModel):
+    id: str
+    trainer_id: str | None = None
+    trainer_email: str | None = None
+    category: str
+    message: str
+    user_agent: str | None = None
+    url: str | None = None
+    resolved_at: str | None = None
+    created_at: str | None = None
+
+
+class FeedbackResponse(BaseModel):
+    rows: list[FeedbackRow]
+    total: int
+
+
+@router.get("/feedback", response_model=FeedbackResponse)
+def list_feedback(user: CurrentUser, limit: int = 200) -> FeedbackResponse:
+    _require_admin(user)
+    sb = supabase_admin()
+    try:
+        resp = (
+            sb.table("feedback")
+            .select("*")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        rows = [
+            FeedbackRow(
+                id=r["id"],
+                trainer_id=r.get("trainer_id"),
+                trainer_email=r.get("trainer_email"),
+                category=r.get("category") or "general",
+                message=r.get("message") or "",
+                user_agent=r.get("user_agent"),
+                url=r.get("url"),
+                resolved_at=r.get("resolved_at"),
+                created_at=r.get("created_at"),
+            )
+            for r in (resp.data or [])
+        ]
+        return FeedbackResponse(rows=rows, total=len(rows))
+    except Exception as e:
+        print(f"[admin] feedback select failed: {e}")
+        return FeedbackResponse(rows=[], total=0)
+
+
 # ─────────────── Whoami (used by frontend to show /admin only to admins) ───────────────
 
 
