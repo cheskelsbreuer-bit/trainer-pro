@@ -34,8 +34,10 @@ export function Layout() {
           className="px-6 py-5 border-b border-slate-200"
           style={{ borderTop: `3px solid ${brand}` }}
         >
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">💪</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-blue-600/30">
+              <Dumbbell size={16} strokeWidth={2.5} />
+            </div>
             <h1 className="font-bold text-slate-900">Trainer Pro</h1>
           </div>
         </div>

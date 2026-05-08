@@ -90,7 +90,7 @@ function Hero() {
         <div className="inline-flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium mb-7 shadow-sm">
           <Sparkles size={12} className="text-amber-500" />
           <span className="bg-gradient-to-r from-blue-700 to-emerald-700 bg-clip-text text-transparent font-semibold">
-            Now in beta — free for early trainers
+            Beta launch — 2 months free, then $19/mo locked in
           </span>
         </div>
 
@@ -648,51 +648,75 @@ function EmailCapture() {
 
 /* ─────────────── Final CTA / pricing ─────────────── */
 function FinalCTA() {
+  const features = [
+    'Unlimited clients',
+    'Unlimited workouts & templates',
+    'Stripe payments built-in',
+    'Client portal + public booking page',
+    'Progress tracking + photos',
+    'Studio mode (multi-trainer)',
+    'Google Calendar sync',
+    'No per-client fees, ever',
+  ];
   return (
     <section id="pricing" className="py-20 md:py-28 bg-gradient-to-b from-white to-slate-50">
       <div className="max-w-3xl mx-auto px-6 text-center">
         <p className="text-sm font-semibold text-amber-600 mb-2">Pricing</p>
         <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
-          Free during beta.{' '}
-          <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
-            Locked-in pricing forever.
+          2 months free, then{' '}
+          <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 bg-clip-text text-transparent">
+            $19/month forever.
           </span>
         </h2>
-        <p className="text-slate-600 mb-8 max-w-xl mx-auto">
-          Early trainers lock in free access while we polish things. After beta, simple flat
-          pricing — no per-client fees, no contracts.
+        <p className="text-slate-600 mb-10 max-w-xl mx-auto">
+          Sign up during beta and lock in <strong>50% off our launch price</strong> for life.
+          No per-client fees. No contracts. Cancel anytime.
         </p>
 
-        <div className="bg-white border-2 border-blue-200 rounded-3xl p-8 max-w-md mx-auto shadow-xl shadow-blue-900/10 mb-8">
-          <div className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold mb-3">
-            BETA EARLY ACCESS
+        <div className="relative bg-white border-2 border-blue-200 rounded-3xl p-8 md:p-10 max-w-md mx-auto shadow-2xl shadow-blue-900/10 mb-8">
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold tracking-wide shadow-md">
+            BETA — LIMITED TIME
           </div>
+
+          {/* Strikethrough launch price */}
+          <div className="mb-2 mt-2">
+            <span className="text-sm text-slate-400 line-through">$39/month at launch</span>
+          </div>
+
+          {/* Main price */}
           <div className="flex items-baseline justify-center gap-1 mb-1">
-            <span className="text-5xl font-bold">$0</span>
-            <span className="text-slate-500">/month</span>
+            <span className="text-6xl font-bold bg-gradient-to-br from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+              $19
+            </span>
+            <span className="text-slate-500 text-lg">/month</span>
           </div>
-          <p className="text-sm text-slate-500 mb-6">while in beta · all features included</p>
-          <ul className="text-left space-y-2.5 mb-6">
-            {[
-              'Unlimited clients',
-              'Unlimited workouts',
-              'Stripe payments built-in',
-              'Client portal + booking page',
-              'Progress tracking + photos',
-            ].map((f) => (
+          <p className="text-sm font-medium text-emerald-600 mb-1">Locked in forever</p>
+          <p className="text-xs text-slate-500 mb-6">
+            + your <span className="font-semibold text-slate-900">first 2 months free</span> while we polish
+          </p>
+
+          <ul className="text-left space-y-2.5 mb-7">
+            {features.map((f) => (
               <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
                 <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
                 <span>{f}</span>
               </li>
             ))}
           </ul>
+
           <a
             href={SIGNUP_URL}
             className="block w-full bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white py-3.5 rounded-xl font-semibold shadow-lg shadow-blue-600/30 transition"
           >
-            Claim my free account
+            Start 2 months free
           </a>
+          <p className="text-[11px] text-slate-400 mt-3">No credit card required to start</p>
         </div>
+
+        <p className="text-xs text-slate-500">
+          The $19/month rate is locked for life — even years later, you keep paying $19 while
+          new signups pay $39.
+        </p>
       </div>
     </section>
   );

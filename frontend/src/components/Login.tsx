@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Dumbbell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { isConfigured } from '../lib/supabase';
 
@@ -71,7 +72,9 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">💪</div>
+          <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white items-center justify-center mb-3 shadow-lg shadow-blue-600/30">
+            <Dumbbell size={28} strokeWidth={2.5} />
+          </div>
           <h1 className="text-2xl font-bold text-slate-900">Trainer Pro</h1>
           <p className="text-sm text-slate-500 mt-1">Run your training business in one place.</p>
         </div>
