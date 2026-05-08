@@ -13,7 +13,6 @@ import {
 import { supabase } from '../lib/supabase';
 import { PageHeader } from '../components/PageHeader';
 import { ProgressEntryModal } from '../components/progress/ProgressEntryModal';
-import { useAuth } from '../hooks/useAuth';
 import { initials, formatDate } from '../lib/format';
 import type { Client, ProgressEntry } from '../lib/database.types';
 

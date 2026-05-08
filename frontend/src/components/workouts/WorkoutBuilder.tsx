@@ -379,7 +379,7 @@ function BlockRow({
             <FieldNum
               label="Sets"
               value={block.sets}
-              onChange={(v) => onChange({ sets: v })}
+              onChange={(v) => onChange({ sets: v ?? 1 })}
             />
             <Field
               label="Reps"

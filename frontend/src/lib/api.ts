@@ -6,8 +6,10 @@ import { supabase } from './supabase';
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  status: number;
+  constructor(message: string, status: number) {
     super(message);
+    this.status = status;
   }
 }
 

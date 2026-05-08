@@ -5,7 +5,7 @@ import { Plus, Dumbbell, ClipboardList, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PageHeader } from '../components/PageHeader';
 import { WorkoutBuilder } from '../components/workouts/WorkoutBuilder';
-import type { WorkoutPlan, Client } from '../lib/database.types';
+import type { WorkoutPlan } from '../lib/database.types';
 
 type Tab = 'assigned' | 'templates';
 
