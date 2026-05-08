@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { supabase } from './lib/supabase';
 import { Login } from './components/Login';
 import { Layout } from './components/Layout';
+import { OnboardingWizard } from './components/OnboardingWizard';
+import type { Trainer } from './lib/database.types';
 import { Dashboard } from './pages/Dashboard';
 import { Clients } from './pages/Clients';
 import { ClientDetail } from './pages/ClientDetail';
@@ -30,7 +33,24 @@ const queryClient = new QueryClient({
 
 function ProtectedShell() {
   const { user, loading } = useAuth();
-  if (loading) {
+
+  // Fetch trainer row to check onboarding status. The auth-user trigger creates
+  // this row on signup, so it should always exist for an authed user.
+  const { data: trainer, isLoading: trainerLoading } = useQuery({
+    queryKey: ['trainer', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('trainers')
+        .select('*')
+        .eq('id', user!.id)
+        .single();
+      if (error) throw error;
+      return data as Trainer;
+    },
+    enabled: !!user,
+  });
+
+  if (loading || (user && trainerLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-slate-500">Loading…</div>
@@ -38,6 +58,8 @@ function ProtectedShell() {
     );
   }
   if (!user) return <Login />;
+  // First-time signup: walk them through the wizard before showing the app.
+  if (trainer && !trainer.onboarded_at) return <OnboardingWizard trainer={trainer} />;
   return <Layout />;
 }
 

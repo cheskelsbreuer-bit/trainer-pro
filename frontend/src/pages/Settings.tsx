@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { User, Settings2, Bell, Building2, Globe, Star, Calendar, CreditCard, CalendarDays } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
@@ -60,7 +61,10 @@ export function Settings() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <PageHeader title="Settings" subtitle="Your profile and business preferences." />
+      <PageHeader
+        title="Settings"
+        subtitle="Everything that controls your business — your profile, what clients see, how you get paid, and how we tell you about new sessions."
+      />
 
       <form
         onSubmit={(e) => {
@@ -69,7 +73,12 @@ export function Settings() {
         }}
         className="space-y-6"
       >
-        <Section title="Your profile">
+        <Section
+          icon={<User size={18} />}
+          color="blue"
+          title="About you"
+          description="Your name, business name, and contact info. This shows up on your booking page, in receipts, and on your client portal."
+        >
           <Field label="Full name">
             <input
               type="text"
@@ -105,7 +114,12 @@ export function Settings() {
           </Field>
         </Section>
 
-        <Section title="Preferences">
+        <Section
+          icon={<Settings2 size={18} />}
+          color="purple"
+          title="Preferences"
+          description="Time zone we use for sessions, currency for payments, and your brand color (used on buttons and your client portal)."
+        >
           <div className="grid grid-cols-2 gap-4">
             <Field label="Timezone">
               <input
@@ -144,7 +158,12 @@ export function Settings() {
           </Field>
         </Section>
 
-        <Section title="Notifications">
+        <Section
+          icon={<Bell size={18} />}
+          color="amber"
+          title="What we email you"
+          description="We can send you a daily morning email with today's sessions. Optional SMS reminders for clients are coming soon."
+        >
           <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
             <input
               type="checkbox"
@@ -194,22 +213,143 @@ export function Settings() {
         </div>
       </form>
 
-      <div className="mt-8 space-y-6">
-        <StudioSettingsCard trainer={trainer} />
-        <PublicProfileSettingsCard trainer={trainer} />
-        <TestimonialsManagerCard trainer={trainer} />
-        <BookingSettingsCard trainer={trainer} />
-        <StripeStatusCard />
-        <GoogleCalendarCard trainer={trainer} />
+      <div className="mt-10">
+        <div className="border-t border-slate-200 pt-8 mb-6">
+          <h2 className="text-lg font-bold text-slate-900">Set up the rest of your business</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            These are all optional. Skip any you don't need — you can come back later.
+          </p>
+        </div>
+        <div className="space-y-6">
+          <CardWrapper
+            icon={<Building2 size={18} />}
+            color="cyan"
+            title="Studio mode"
+            description="If you have other trainers working under your business, invite them here. Each gets their own login but you all share clients."
+          >
+            <StudioSettingsCard trainer={trainer} />
+          </CardWrapper>
+
+          <CardWrapper
+            icon={<Globe size={18} />}
+            color="indigo"
+            title="Your public profile"
+            description="A free marketing page at trainerpro.coach/p/your-name. Add your photo, bio, and gallery so people can find you."
+          >
+            <PublicProfileSettingsCard trainer={trainer} />
+          </CardWrapper>
+
+          <CardWrapper
+            icon={<Star size={18} />}
+            color="pink"
+            title="Testimonials"
+            description="Quotes from happy clients. They show up on your public profile to help convince new people to book."
+          >
+            <TestimonialsManagerCard trainer={trainer} />
+          </CardWrapper>
+
+          <CardWrapper
+            icon={<Calendar size={18} />}
+            color="emerald"
+            title="Booking page"
+            description="Lets clients book sessions themselves. Set the hours you're available and how long sessions are."
+          >
+            <BookingSettingsCard trainer={trainer} />
+          </CardWrapper>
+
+          <CardWrapper
+            icon={<CreditCard size={18} />}
+            color="rose"
+            title="Card payments (Stripe)"
+            description="Connect Stripe to take card payments. Without this, you can still log cash and Venmo/Zelle payments by hand."
+          >
+            <StripeStatusCard />
+          </CardWrapper>
+
+          <CardWrapper
+            icon={<CalendarDays size={18} />}
+            color="blue"
+            title="Google Calendar sync"
+            description="Optional: every session you log here automatically appears in your personal Google Calendar."
+          >
+            <GoogleCalendarCard trainer={trainer} />
+          </CardWrapper>
+        </div>
       </div>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function CardWrapper({
+  icon,
+  color,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ReactNode;
+  color: SectionColor;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-start gap-3 mb-2">
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${COLOR_CLASSES[color]}`}>
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-slate-900">{title}</h3>
+          <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">{description}</p>
+        </div>
+      </div>
+      <div className="ml-12">{children}</div>
+    </div>
+  );
+}
+
+type SectionColor = 'blue' | 'purple' | 'amber' | 'cyan' | 'indigo' | 'pink' | 'emerald' | 'rose';
+
+const COLOR_CLASSES: Record<SectionColor, string> = {
+  blue: 'bg-blue-100 text-blue-600',
+  purple: 'bg-purple-100 text-purple-600',
+  amber: 'bg-amber-100 text-amber-600',
+  cyan: 'bg-cyan-100 text-cyan-600',
+  indigo: 'bg-indigo-100 text-indigo-600',
+  pink: 'bg-pink-100 text-pink-600',
+  emerald: 'bg-emerald-100 text-emerald-600',
+  rose: 'bg-rose-100 text-rose-600',
+};
+
+function Section({
+  icon,
+  color,
+  title,
+  description,
+  children,
+}: {
+  icon?: React.ReactNode;
+  color?: SectionColor;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="bg-white border border-slate-200 rounded-xl p-5">
-      <h2 className="font-semibold text-slate-900 mb-4">{title}</h2>
+      <header className="flex items-start gap-3 mb-4">
+        {icon && color && (
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${COLOR_CLASSES[color]}`}>
+            {icon}
+          </div>
+        )}
+        <div className="flex-1">
+          <h2 className="font-semibold text-slate-900">{title}</h2>
+          {description && (
+            <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">{description}</p>
+          )}
+        </div>
+      </header>
       <div className="space-y-3">{children}</div>
     </section>
   );

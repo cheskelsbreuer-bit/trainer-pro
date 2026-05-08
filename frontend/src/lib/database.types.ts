@@ -50,6 +50,17 @@ export interface Trainer {
   studio_role: 'owner' | 'staff' | null;
   // Public marketing profile (added in supabase/12_public_profile.sql)
   public_profile: PublicProfile;
+  // First-run onboarding (added in supabase/15_onboarding.sql)
+  onboarded_at: string | null;
+  client_count_estimate: '0' | '1-5' | '6-15' | '16-30' | '30+' | null;
+  specialty:
+    | 'strength'
+    | 'weight_loss'
+    | 'general_fitness'
+    | 'athletic_performance'
+    | 'mobility_rehab'
+    | 'other'
+    | null;
   created_at: string;
   updated_at: string;
 }

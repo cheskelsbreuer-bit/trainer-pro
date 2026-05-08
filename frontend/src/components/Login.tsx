@@ -5,9 +5,16 @@ import { isConfigured } from '../lib/supabase';
 
 type Mode = 'sign-in' | 'sign-up' | 'magic-link';
 
+function initialModeFromUrl(): Mode {
+  if (typeof window === 'undefined') return 'sign-in';
+  const m = new URLSearchParams(window.location.search).get('mode');
+  if (m === 'sign-up' || m === 'sign-in' || m === 'magic-link') return m;
+  return 'sign-in';
+}
+
 export function Login() {
   const { signIn, signUp, sendMagicLink } = useAuth();
-  const [mode, setMode] = useState<Mode>('sign-in');
+  const [mode, setMode] = useState<Mode>(initialModeFromUrl());
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
