@@ -32,3 +32,9 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Marketing dev artifacts (rendered PDF previews + one-shot diagnostic scripts)
+marketing/_review/
+marketing/debug_clients.py
+marketing/fix_clients_and_recapture.py
+marketing/final_touch.py
