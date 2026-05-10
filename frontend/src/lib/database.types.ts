@@ -57,6 +57,9 @@ export interface Trainer {
   specialties: string[];
   // Custom waiver text the trainer can override (18_custom_waiver.sql)
   custom_waiver_text: string | null;
+  // Public trainer directory (19_directory.sql)
+  service_area: string | null;
+  directory_listed: boolean;
   created_at: string;
   updated_at: string;
 }

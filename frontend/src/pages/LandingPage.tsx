@@ -42,11 +42,11 @@ function Nav() {
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
       <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
         <Logo />
-        <nav className="hidden md:flex items-center gap-7 text-sm text-slate-600">
+        <nav className="hidden md:flex items-center gap-6 text-sm text-slate-600">
           <a href="#how" className="hover:text-slate-900 transition">How it works</a>
           <a href="#features" className="hover:text-slate-900 transition">Features</a>
-          <a href="#why" className="hover:text-slate-900 transition">Why us</a>
           <a href="#pricing" className="hover:text-slate-900 transition">Pricing</a>
+          <a href="/find-trainers" className="hover:text-slate-900 transition">Find a trainer</a>
           <a href={APP_URL} className="hover:text-slate-900 transition">Sign in</a>
         </nav>
         <a
@@ -101,7 +101,8 @@ function Hero() {
         </h1>
         <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-9 leading-relaxed">
           Get a real public profile clients can find and book through. Take card payments. Track
-          workouts and progress. Manage your whole roster — for <strong>$19 a month</strong>.
+          workouts and progress. <strong>Replaces your Calendly + Wix + Trainerize stack</strong> —
+          for $19 a month.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-5">
@@ -373,10 +374,10 @@ function SocialProof() {
           Built by trainers, for trainers
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <Stat n="10 min" label="Average setup time" />
-          <Stat n="$19" label="Flat monthly price" />
+          <Stat n="~5 hrs" label="Saved on admin per week" />
+          <Stat n="$19" label="Flat monthly · no per-client fees" />
           <Stat n="Free" label="Public website included" />
-          <Stat n="∞" label="Clients per account" />
+          <Stat n="10 min" label="From signup to first client" />
         </div>
       </div>
     </section>
@@ -739,7 +740,8 @@ function FinalCTA() {
         </h2>
         <p className="text-slate-600 mb-10 max-w-xl mx-auto">
           Sign up during beta and lock in <strong>50% off our launch price</strong> for life.
-          No per-client fees. No contracts. Cancel anytime.
+          One price, every feature included. No per-client fees, no surprise upgrades, no
+          contracts. Cancel anytime.
         </p>
 
         <div className="relative bg-white border-2 border-blue-200 rounded-3xl p-8 md:p-10 max-w-md mx-auto shadow-2xl shadow-blue-900/10 mb-8">
@@ -802,6 +804,7 @@ function Footer() {
             <a href="#how" className="hover:text-slate-900">How it works</a>
             <a href="#features" className="hover:text-slate-900">Features</a>
             <a href="#pricing" className="hover:text-slate-900">Pricing</a>
+            <a href="/find-trainers" className="hover:text-slate-900">Find a trainer</a>
             <a href={APP_URL} className="hover:text-slate-900">Sign in</a>
             <a href={SIGNUP_URL} className="hover:text-slate-900">Sign up</a>
             <a href="mailto:hello@trainerpro.coach" className="hover:text-slate-900">Contact</a>

@@ -145,10 +145,23 @@ export const PROJECT_STATUS: StatusItem[] = [
   // ─── Soon ─────────────────────────────────────────────────────────
   {
     category: 'soon',
+    title: 'Public trainer directory at trainerpro.coach/find-trainers',
+    detail:
+      'Anyone visiting our marketing site can search trainers by city + specialty. Each trainer card links to their public profile + booking page. Acquisition channel for both sides of the market.',
+  },
+  {
+    category: 'soon',
     title: 'Stripe Connect (real architecture)',
     detail:
       'Each trainer connects their own Stripe — payments go DIRECT to them, not through us. We take a flat $19/month subscription instead.',
     blocker: '4-8 hours of refactor. Ship before second paying customer.',
+  },
+  {
+    category: 'soon',
+    title: 'Real social proof on the landing page',
+    detail:
+      'Testimonials, "Trusted by N coaches" badge, case studies. Wait until we have real customers — never fake numbers.',
+    blocker: 'Need 3-5 real customers first.',
   },
   {
     category: 'soon',
@@ -161,13 +174,45 @@ export const PROJECT_STATUS: StatusItem[] = [
     title: 'PNG app icons for iOS',
     detail: 'Currently using SVG only. iOS may render a screenshot fallback.',
   },
-  {
-    category: 'soon',
-    title: 'Better domain in Resend (full DNS green check)',
-    detail: 'Already verified — emails send from hello@trainerpro.coach.',
-  },
 
   // ─── Ideas / backlog ──────────────────────────────────────────────
+  {
+    category: 'ideas',
+    title: 'Automation rules engine',
+    detail:
+      'Like Trainerize: "client missed a session → auto-text" or "client signed up → 7-day welcome sequence." Real differentiator if we nail it.',
+  },
+  {
+    category: 'ideas',
+    title: 'Habits & accountability tracking',
+    detail: 'Daily check-ins, streaks, simple yes/no habits per client. Boosts retention.',
+  },
+  {
+    category: 'ideas',
+    title: 'Lead capture form trainer can embed on their own site',
+    detail: 'Cheap acquisition feature — they paste a snippet, leads flow into their dashboard.',
+  },
+  {
+    category: 'ideas',
+    title: 'Nutrition module',
+    detail: 'Macros, meal plans, food logging. Everfit has this; we don\'t.',
+  },
+  {
+    category: 'ideas',
+    title: 'Wearable integrations (Whoop, Apple Watch, Garmin)',
+    detail: 'Pull recovery + workout data. Hard to do well — defer until we have a clear winner.',
+  },
+  {
+    category: 'ideas',
+    title: 'Editable copy / CMS for the whole app',
+    detail:
+      'Let admins (you) edit every piece of user-facing text from /admin without code changes. Real refactor — replace every hardcoded string with a key/value lookup. V3.',
+  },
+  {
+    category: 'ideas',
+    title: 'Richer admin tools (mark feedback resolved, broadcast email, edit trainer flags)',
+    detail: 'Beyond what /admin shows today. Layer in as we hit real operational pain.',
+  },
   {
     category: 'ideas',
     title: 'WhatsApp reminders',

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Settings2, Bell, Building2, Globe, Star, Calendar, CreditCard, CalendarDays } from 'lucide-react';
+import { User, Settings2, Bell, Building2, Globe, Star, Calendar, CreditCard, CalendarDays, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
 import { BookingSettingsCard } from '../components/BookingSettingsCard';
+import { DirectorySettingsCard } from '../components/DirectorySettingsCard';
 import { FeedbackCard } from '../components/FeedbackCard';
 import { GoogleCalendarCard } from '../components/GoogleCalendarCard';
 import { StudioSettingsCard } from '../components/StudioSettingsCard';
@@ -238,6 +239,15 @@ export function Settings() {
             description="A free marketing page at trainerpro.coach/p/your-name. Add your photo, bio, and gallery so people can find you."
           >
             <PublicProfileSettingsCard trainer={trainer} />
+          </CardWrapper>
+
+          <CardWrapper
+            icon={<MapPin size={18} />}
+            color="amber"
+            title="Trainer directory listing"
+            description="Anyone visiting trainerpro.coach/find-trainers can search for trainers by city and specialty. Set your service area to attract local clients — or hide your listing if you don't want new leads."
+          >
+            <DirectorySettingsCard trainer={trainer} />
           </CardWrapper>
 
           <CardWrapper

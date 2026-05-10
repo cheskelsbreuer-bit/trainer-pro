@@ -25,6 +25,7 @@ import { PublicProfilePage } from './pages/PublicProfilePage';
 import { LandingPage } from './pages/LandingPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
+import { FindTrainersPage } from './pages/FindTrainersPage';
 import { AdminPage } from './pages/AdminPage';
 import { api, ApiError } from './lib/api';
 
@@ -167,11 +168,13 @@ function isLandingHost() {
 
 export default function App() {
   // Apex / www domain serves the marketing site — no router, no auth, no app shell.
-  // Privacy/Terms are exceptions: legal pages must be reachable on the apex domain too.
+  // Legal pages and the public trainer directory must reach the apex domain too.
   if (isLandingHost()) {
     const path = typeof window !== 'undefined' ? window.location.pathname : '/';
     if (path === '/privacy') return <PrivacyPage />;
     if (path === '/terms') return <TermsPage />;
+    if (path === '/find-trainers' || path.startsWith('/find-trainers/'))
+      return <FindTrainersPage />;
     return <LandingPage />;
   }
 
@@ -180,10 +183,11 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Marketing + legal (work on app subdomain too) */}
+            {/* Marketing + legal + public directory (work on app subdomain too) */}
             <Route path="/welcome" element={<LandingPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
+            <Route path="/find-trainers" element={<FindTrainersPage />} />
 
             {/* Public — no auth required */}
             <Route path="/p/:slug" element={<PublicProfilePage />} />
