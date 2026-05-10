@@ -29,24 +29,29 @@ security definer
 set search_path = public
 as $$
 declare
-  rows jsonb;
+  result_rows jsonb;
 begin
-  select coalesce(jsonb_agg(t order by t.name), '[]'::jsonb) into rows
+  -- Reference the subquery columns by qualifying with `sub` — the previous
+  -- version said `jsonb_agg(t order by t.name)` which Postgres parsed as a
+  -- table reference and threw "missing FROM-clause entry for table t".
+  select coalesce(jsonb_agg(sub.payload order by sub.sort_name), '[]'::jsonb)
+    into result_rows
   from (
-    select jsonb_build_object(
-      'id', tr.id,
-      'slug', tr.slug,
-      'name', tr.business_name,
-      'full_name', tr.full_name,
-      'primary_color', tr.primary_color,
-      'logo_url', tr.logo_url,
-      'service_area', tr.service_area,
-      'specialties', tr.specialties,
-      'headline', tr.public_profile->'hero'->>'title',
-      'photo_url', tr.public_profile->'hero'->>'photo_url',
-      'bio_snippet', left(coalesce(tr.public_profile->'about'->>'body', ''), 180)
-    ) as t,
-    coalesce(tr.business_name, tr.full_name) as name
+    select
+      jsonb_build_object(
+        'id', tr.id,
+        'slug', tr.slug,
+        'name', tr.business_name,
+        'full_name', tr.full_name,
+        'primary_color', tr.primary_color,
+        'logo_url', tr.logo_url,
+        'service_area', tr.service_area,
+        'specialties', tr.specialties,
+        'headline', tr.public_profile->'hero'->>'title',
+        'photo_url', tr.public_profile->'hero'->>'photo_url',
+        'bio_snippet', left(coalesce(tr.public_profile->'about'->>'body', ''), 180)
+      ) as payload,
+      coalesce(tr.business_name, tr.full_name) as sort_name
     from public.trainers tr
     where tr.directory_listed = true
       and tr.slug is not null
@@ -62,7 +67,7 @@ begin
       )
   ) sub;
 
-  return rows;
+  return result_rows;
 end;
 $$;
 

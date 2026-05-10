@@ -167,15 +167,25 @@ function isLandingHost() {
 }
 
 export default function App() {
-  // Apex / www domain serves the marketing site — no router, no auth, no app shell.
-  // Legal pages and the public trainer directory must reach the apex domain too.
+  // Apex / www domain serves the marketing site + public-facing pages.
+  // Wrapped in BrowserRouter so trainer cards on /find-trainers can deep-link
+  // into /p/:slug and /book/:slug — without this, those URLs fall through to
+  // the landing page and the customer goes in circles.
   if (isLandingHost()) {
-    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
-    if (path === '/privacy') return <PrivacyPage />;
-    if (path === '/terms') return <TermsPage />;
-    if (path === '/find-trainers' || path.startsWith('/find-trainers/'))
-      return <FindTrainersPage />;
-    return <LandingPage />;
+    return (
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/find-trainers" element={<FindTrainersPage />} />
+            <Route path="/p/:slug" element={<PublicProfilePage />} />
+            <Route path="/book/:slug" element={<BookingPage />} />
+            <Route path="*" element={<LandingPage />} />
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
+    );
   }
 
   return (

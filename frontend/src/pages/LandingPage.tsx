@@ -89,7 +89,7 @@ function Hero() {
         <div className="inline-flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium mb-7 shadow-sm">
           <Sparkles size={12} className="text-amber-500" />
           <span className="bg-gradient-to-r from-blue-700 to-emerald-700 bg-clip-text text-transparent font-semibold">
-            Beta launch — 2 months free, then $19/mo locked in
+            Beta · Free for the first 2 months
           </span>
         </div>
 
@@ -99,18 +99,25 @@ function Hero() {
             With everything to run it.
           </span>
         </h1>
-        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-9 leading-relaxed">
+        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-7 leading-relaxed">
           Get a real public profile clients can find and book through. Take card payments. Track
-          workouts and progress. <strong>Replaces your Calendly + Wix + Trainerize stack</strong> —
-          for $19 a month.
+          workouts and progress. <strong>Replaces your Calendly + Wix + Trainerize stack.</strong>
         </p>
+
+        {/* Big, unmistakable price tag — no more "ninety nine months" misreads */}
+        <div className="inline-flex items-baseline gap-2 bg-white border-2 border-blue-200 px-5 py-3 rounded-2xl mb-9 shadow-sm">
+          <span className="text-4xl font-extrabold text-blue-700">$19</span>
+          <span className="text-base text-slate-600">per month</span>
+          <span className="text-slate-300 text-xl mx-1">·</span>
+          <span className="text-sm font-semibold text-emerald-600">First 2 months free</span>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-5">
           <a
             href={SIGNUP_URL}
             className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-7 py-3.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-transform hover:-translate-y-0.5"
           >
-            Start 2 months free <ArrowRight size={16} />
+            Start free — no credit card <ArrowRight size={16} />
           </a>
           <a
             href={APP_URL}
@@ -733,9 +740,9 @@ function FinalCTA() {
       <div className="max-w-3xl mx-auto px-6 text-center">
         <p className="text-sm font-semibold text-amber-600 mb-2">Pricing</p>
         <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
-          2 months free, then{' '}
+          Free for 2 months. Then{' '}
           <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 bg-clip-text text-transparent">
-            $19/month forever.
+            just $19 per month — forever.
           </span>
         </h2>
         <p className="text-slate-600 mb-10 max-w-xl mx-auto">

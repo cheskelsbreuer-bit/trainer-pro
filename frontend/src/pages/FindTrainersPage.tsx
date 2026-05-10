@@ -48,7 +48,7 @@ export function FindTrainersPage() {
   const [appliedArea, setAppliedArea] = useState('');
   const [specialty, setSpecialty] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['directory', appliedArea, specialty],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('list_directory_trainers', {
@@ -58,6 +58,7 @@ export function FindTrainersPage() {
       if (error) throw error;
       return (data ?? []) as DirectoryTrainer[];
     },
+    retry: false,
   });
 
   const trainers = useMemo(() => data ?? [], [data]);
@@ -201,6 +202,8 @@ export function FindTrainersPage() {
 
         {isLoading ? (
           <p className="text-slate-500 text-sm">Loading…</p>
+        ) : error ? (
+          <ErrorState message={(error as Error).message} />
         ) : trainers.length === 0 ? (
           <EmptyState appliedArea={appliedArea} hasSpecialty={!!specialty} />
         ) : (
@@ -315,6 +318,30 @@ function TrainerCard({ trainer }: { trainer: DirectoryTrainer }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  // Detect the two common back-end failure modes so the user knows it's a
+  // 30-sec SQL fix, not a "the page is broken" mystery.
+  const missingRpc = /function .* does not exist|404|not found/i.test(message);
+  const sqlBug = /missing FROM-clause|column .* does not exist|relation/i.test(message);
+  return (
+    <div className="text-center py-14 bg-rose-50 rounded-2xl border border-dashed border-rose-200">
+      <p className="text-rose-800 font-medium mb-2">
+        Couldn&rsquo;t load the directory.
+      </p>
+      <p className="text-sm text-rose-700 max-w-lg mx-auto mb-3">
+        {missingRpc
+          ? 'The directory backend isn’t live yet. Run supabase/19_directory.sql in the Supabase SQL editor and refresh.'
+          : sqlBug
+          ? 'The directory SQL function has a bug — re-run the latest supabase/19_directory.sql in the Supabase SQL editor (it’s been patched) and refresh.'
+          : message}
+      </p>
+      <p className="text-xs text-rose-500 font-mono break-all max-w-xl mx-auto">
+        {message}
+      </p>
+    </div>
   );
 }
 
