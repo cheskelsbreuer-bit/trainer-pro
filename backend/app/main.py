@@ -42,24 +42,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Allow:
-#   - any subdomain of trainerpro.coach (production)
-#   - localhost on any port (dev)
-#   - any vercel.app subdomain (preview deploys)
-# Plus whatever FRONTEND_ORIGIN env var says (extra explicit list).
-# Doing it as a regex means we never have to update an env var when we add
-# a new subdomain like admin.trainerpro.coach or staging.trainerpro.coach.
+# Wildcard CORS. Safe here because we don't use cookie auth — every
+# authenticated request carries a Bearer JWT in the Authorization header,
+# which the browser doesn't treat as a "credential" for CORS purposes.
+# `allow_credentials=False` is required when using `*` for allow_origins;
+# the browser would otherwise reject the response.
+#
+# The previous regex-based setup with allow_credentials=True was failing
+# CORS preflights for app.trainerpro.coach in some cases — likely because
+# the regex match was occasionally returning the wrong Vary/Origin
+# combination on cached preflights. Wildcard sidesteps the whole class
+# of issues.
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=(
-        r"^https://([a-z0-9-]+\.)?trainerpro\.coach$"
-        r"|^http://localhost(:\d+)?$"
-        r"|^https://[a-z0-9-]+\.vercel\.app$"
-    ),
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
 
 app.include_router(health.router)
