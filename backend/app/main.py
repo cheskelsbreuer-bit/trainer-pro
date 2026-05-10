@@ -42,8 +42,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Allow:
+#   - any subdomain of trainerpro.coach (production)
+#   - localhost on any port (dev)
+#   - any vercel.app subdomain (preview deploys)
+# Plus whatever FRONTEND_ORIGIN env var says (extra explicit list).
+# Doing it as a regex means we never have to update an env var when we add
+# a new subdomain like admin.trainerpro.coach or staging.trainerpro.coach.
 app.add_middleware(
     CORSMiddleware,
+    allow_origin_regex=(
+        r"^https://([a-z0-9-]+\.)?trainerpro\.coach$"
+        r"|^http://localhost(:\d+)?$"
+        r"|^https://[a-z0-9-]+\.vercel\.app$"
+    ),
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
