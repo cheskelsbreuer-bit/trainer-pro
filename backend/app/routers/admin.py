@@ -306,6 +306,60 @@ def trainer_detail(trainer_id: str, user: CurrentUser) -> TrainerDetail:
     )
 
 
+@router.get("/trainers/{trainer_id}/clients")
+def trainer_clients(trainer_id: str, user: CurrentUser, limit: int = 100) -> dict[str, Any]:
+    _require_admin(user)
+    sb = supabase_admin()
+    try:
+        resp = (
+            sb.table("clients")
+            .select("id,full_name,email,phone,status,package_balance,created_at")
+            .eq("trainer_id", trainer_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return {"rows": resp.data or [], "total": len(resp.data or [])}
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
+
+
+@router.get("/trainers/{trainer_id}/sessions")
+def trainer_sessions(trainer_id: str, user: CurrentUser, limit: int = 50) -> dict[str, Any]:
+    _require_admin(user)
+    sb = supabase_admin()
+    try:
+        resp = (
+            sb.table("sessions")
+            .select("id,starts_at,ends_at,status,session_type,price,paid,client_id")
+            .eq("trainer_id", trainer_id)
+            .order("starts_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return {"rows": resp.data or [], "total": len(resp.data or [])}
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
+
+
+@router.get("/trainers/{trainer_id}/payments")
+def trainer_payments(trainer_id: str, user: CurrentUser, limit: int = 50) -> dict[str, Any]:
+    _require_admin(user)
+    sb = supabase_admin()
+    try:
+        resp = (
+            sb.table("payments")
+            .select("id,amount,currency,payment_type,method,description,paid_at")
+            .eq("trainer_id", trainer_id)
+            .order("paid_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return {"rows": resp.data or [], "total": len(resp.data or [])}
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
+
+
 class TrainerPatch(BaseModel):
     directory_listed: bool | None = None
     booking_enabled: bool | None = None

@@ -43,6 +43,9 @@ interface TrainerRow {
   created_at: string | null;
 }
 
+type SortKey = 'created_at' | 'email' | 'full_name' | 'business_name' | 'onboarded_at';
+type SortDir = 'asc' | 'desc';
+
 interface WaitlistRow {
   id: string;
   email: string;
@@ -69,6 +72,9 @@ export function AdminPage() {
   const { user, signOut } = useAuth();
   const [search, setSearch] = useState('');
   const [openTrainerId, setOpenTrainerId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('created_at');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [filterMode, setFilterMode] = useState<'all' | 'onboarded' | 'pending'>('all');
 
   const overview = useQuery({
     queryKey: ['admin-overview'],
@@ -91,15 +97,33 @@ export function AdminPage() {
     refetchOnWindowFocus: false,
   });
 
-  const filteredTrainers = (trainers.data?.rows ?? []).filter((t) => {
-    if (!search.trim()) return true;
-    const s = search.toLowerCase();
-    return (
-      (t.email ?? '').toLowerCase().includes(s) ||
-      (t.full_name ?? '').toLowerCase().includes(s) ||
-      (t.business_name ?? '').toLowerCase().includes(s)
-    );
-  });
+  const filteredTrainers = (trainers.data?.rows ?? [])
+    .filter((t) => {
+      if (filterMode === 'onboarded' && !t.onboarded_at) return false;
+      if (filterMode === 'pending' && t.onboarded_at) return false;
+      if (!search.trim()) return true;
+      const s = search.toLowerCase();
+      return (
+        (t.email ?? '').toLowerCase().includes(s) ||
+        (t.full_name ?? '').toLowerCase().includes(s) ||
+        (t.business_name ?? '').toLowerCase().includes(s)
+      );
+    })
+    .sort((a, b) => {
+      const av = (a[sortKey] ?? '').toString().toLowerCase();
+      const bv = (b[sortKey] ?? '').toString().toLowerCase();
+      if (av === bv) return 0;
+      const cmp = av < bv ? -1 : 1;
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
 
   const filteredWaitlist = (waitlist.data?.rows ?? []).filter((w) => {
     if (!search.trim()) return true;
@@ -236,14 +260,30 @@ export function AdminPage() {
 
         {/* Trainers table */}
         <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-bold text-slate-900">Trainers</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Showing {filteredTrainers.length} of {trainers.data?.total ?? 0}
+                <span className="text-slate-400"> · click any row to open the trainer drawer</span>
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Status filter pills */}
+              {(['all', 'onboarded', 'pending'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setFilterMode(m)}
+                  className={`text-[11px] px-2.5 py-1 rounded-full border transition ${
+                    filterMode === m
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                  }`}
+                >
+                  {m === 'all' ? 'All' : m === 'onboarded' ? '✓ Onboarded' : '⏳ Pending'}
+                </button>
+              ))}
               <CopyEmailsButton
                 emails={filteredTrainers.map((t) => t.email).filter((e): e is string => !!e)}
                 label="Copy emails"
@@ -266,12 +306,12 @@ export function AdminPage() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
                   <tr>
-                    <th className="text-left px-4 py-2">Email</th>
-                    <th className="text-left px-4 py-2">Name</th>
-                    <th className="text-left px-4 py-2">Business</th>
+                    <SortableHeader k="email" label="Email" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                    <SortableHeader k="full_name" label="Name" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                    <SortableHeader k="business_name" label="Business" current={sortKey} dir={sortDir} onClick={toggleSort} />
                     <th className="text-left px-4 py-2">Specialties</th>
-                    <th className="text-left px-4 py-2">Onboarded</th>
-                    <th className="text-left px-4 py-2">Joined</th>
+                    <SortableHeader k="onboarded_at" label="Onboarded" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                    <SortableHeader k="created_at" label="Joined" current={sortKey} dir={sortDir} onClick={toggleSort} />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -670,6 +710,35 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 /* ─────────────── Helpers ─────────────── */
+function SortableHeader({
+  k,
+  label,
+  current,
+  dir,
+  onClick,
+}: {
+  k: SortKey;
+  label: string;
+  current: SortKey;
+  dir: SortDir;
+  onClick: (k: SortKey) => void;
+}) {
+  const active = current === k;
+  return (
+    <th
+      onClick={() => onClick(k)}
+      className="text-left px-4 py-2 cursor-pointer hover:text-slate-900 select-none"
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active && (
+          <span className="text-slate-400">{dir === 'asc' ? '↑' : '↓'}</span>
+        )}
+      </span>
+    </th>
+  );
+}
+
 function StatCard({
   icon,
   color,

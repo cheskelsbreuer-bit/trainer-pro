@@ -12,6 +12,7 @@ import {
   Users,
   CheckCircle2,
   Save,
+  Activity,
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -38,14 +39,8 @@ interface TrainerDetail {
   last_session_at: string | null;
 }
 
-/**
- * Admin drawer that slides in from the right when a trainer row is clicked.
- * Shows everything we know about that trainer + lets the admin suspend
- * directory listing, suspend bookings, or edit their name/business/area.
- *
- * Patches go through PATCH /admin/trainers/{id}; the drawer reloads + the
- * outer trainers list is invalidated so it picks up changes.
- */
+type TabKey = 'overview' | 'clients' | 'sessions' | 'payments';
+
 export function TrainerDetailDrawer({
   trainerId,
   onClose,
@@ -54,13 +49,14 @@ export function TrainerDetailDrawer({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const [tab, setTab] = useState<TabKey>('overview');
+
   const detail = useQuery({
     queryKey: ['admin-trainer-detail', trainerId],
     queryFn: () => api<TrainerDetail>(`/admin/trainers/${trainerId}`),
     refetchOnWindowFocus: false,
   });
 
-  // Local edit state — initialized from server data, allows tweak before save.
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [serviceArea, setServiceArea] = useState('');
@@ -85,7 +81,6 @@ export function TrainerDetailDrawer({
     },
   });
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -96,41 +91,64 @@ export function TrainerDetailDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
       <button
         type="button"
         onClick={onClose}
         aria-label="Close"
         className="flex-1 bg-slate-900/40 backdrop-blur-sm"
       />
-      {/* Drawer */}
-      <aside className="w-full max-w-xl bg-white shadow-2xl overflow-y-auto">
-        <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">
-              Trainer detail
-            </p>
-            <h3 className="font-bold text-slate-900">
-              {detail.data?.business_name ||
-                detail.data?.full_name ||
-                detail.data?.email ||
-                'Loading…'}
-            </h3>
+      <aside className="w-full max-w-2xl bg-white shadow-2xl overflow-y-auto">
+        {/* Sticky header */}
+        <header className="sticky top-0 z-10 bg-white border-b border-slate-200">
+          <div className="px-5 py-3 flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">
+                Trainer
+              </p>
+              <h3 className="font-bold text-slate-900 truncate">
+                {detail.data?.business_name ||
+                  detail.data?.full_name ||
+                  detail.data?.email ||
+                  'Loading…'}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100"
+              aria-label="Close drawer"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100"
-            aria-label="Close drawer"
-          >
-            <X size={20} />
-          </button>
+          {/* Tab strip */}
+          <nav className="flex border-t border-slate-100 bg-slate-50">
+            {(
+              [
+                { k: 'overview', label: 'Overview' },
+                { k: 'clients', label: 'Clients' },
+                { k: 'sessions', label: 'Sessions' },
+                { k: 'payments', label: 'Payments' },
+              ] as { k: TabKey; label: string }[]
+            ).map(({ k, label }) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setTab(k)}
+                className={`px-4 py-2 text-xs font-semibold border-b-2 transition ${
+                  tab === k
+                    ? 'border-blue-600 text-blue-700 bg-white'
+                    : 'border-transparent text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
         </header>
 
         <div className="p-5 space-y-5">
-          {detail.isLoading && (
-            <p className="text-sm text-slate-500">Loading…</p>
-          )}
+          {detail.isLoading && <p className="text-sm text-slate-500">Loading…</p>}
           {detail.error && (
             <p className="text-sm text-red-600">
               Couldn&rsquo;t load: {(detail.error as Error).message}
@@ -138,169 +156,24 @@ export function TrainerDetailDrawer({
           )}
           {detail.data && (
             <>
-              {/* Stats */}
-              <section className="grid grid-cols-2 gap-2.5">
-                <DetailStat
-                  icon={<Users size={14} />}
-                  color="blue"
-                  label="Clients"
-                  value={detail.data.client_count.toString()}
+              {tab === 'overview' && (
+                <OverviewTab
+                  data={detail.data}
+                  fullName={fullName}
+                  setFullName={setFullName}
+                  businessName={businessName}
+                  setBusinessName={setBusinessName}
+                  serviceArea={serviceArea}
+                  setServiceArea={setServiceArea}
+                  onPatch={(body) => patch.mutate(body)}
+                  patchPending={patch.isPending}
+                  patchError={patch.error as Error | null}
                 />
-                <DetailStat
-                  icon={<Calendar size={14} />}
-                  color="emerald"
-                  label="Sessions"
-                  value={detail.data.session_count.toString()}
-                />
-                <DetailStat
-                  icon={<DollarSign size={14} />}
-                  color="amber"
-                  label="Revenue"
-                  value={`$${detail.data.payment_total.toFixed(0)}`}
-                />
-                <DetailStat
-                  icon={<CheckCircle2 size={14} />}
-                  color="indigo"
-                  label="Onboarded"
-                  value={detail.data.onboarded_at ? '✓ Yes' : 'No'}
-                />
-              </section>
-
-              {/* Quick actions */}
-              <section className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2.5">
-                  Visibility & status
-                </p>
-                <div className="space-y-2.5">
-                  <ToggleRow
-                    label="Listed in public directory"
-                    sub="Appears at trainerpro.coach/find-trainers"
-                    on={detail.data.directory_listed}
-                    onIcon={<Eye size={14} className="text-emerald-600" />}
-                    offIcon={<EyeOff size={14} className="text-slate-400" />}
-                    onChange={(v) => patch.mutate({ directory_listed: v })}
-                    disabled={patch.isPending}
-                  />
-                  <ToggleRow
-                    label="Booking page enabled"
-                    sub="Public link clients use to self-book"
-                    on={detail.data.booking_enabled}
-                    onChange={(v) => patch.mutate({ booking_enabled: v })}
-                    disabled={patch.isPending}
-                  />
-                </div>
-              </section>
-
-              {/* Editable fields */}
-              <section className="bg-white border border-slate-200 rounded-lg p-4">
-                <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-3">
-                  Override fields
-                </p>
-                <div className="space-y-3">
-                  <Field
-                    label="Full name"
-                    value={fullName}
-                    onChange={setFullName}
-                  />
-                  <Field
-                    label="Business name"
-                    value={businessName}
-                    onChange={setBusinessName}
-                  />
-                  <Field
-                    label="Service area"
-                    value={serviceArea}
-                    onChange={setServiceArea}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      patch.mutate({
-                        full_name: fullName || null,
-                        business_name: businessName || null,
-                        service_area: serviceArea || null,
-                      })
-                    }
-                    disabled={patch.isPending}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg"
-                  >
-                    <Save size={13} />
-                    {patch.isPending ? 'Saving…' : 'Save changes'}
-                  </button>
-                  {patch.error && (
-                    <p className="text-xs text-rose-600">
-                      {(patch.error as Error).message}
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              {/* Static info */}
-              <section className="bg-white border border-slate-200 rounded-lg divide-y divide-slate-100 text-sm">
-                <Row label="Email" value={detail.data.email} icon={<Mail size={12} />} />
-                <Row label="Phone" value={detail.data.phone} icon={<Phone size={12} />} />
-                <Row label="Timezone" value={detail.data.timezone} />
-                <Row label="Currency" value={detail.data.currency} />
-                <Row
-                  label="Primary color"
-                  value={detail.data.primary_color}
-                  swatch={detail.data.primary_color ?? undefined}
-                />
-                <Row
-                  label="Specialties"
-                  value={
-                    detail.data.specialties.length
-                      ? detail.data.specialties.map((s) => s.replace(/_/g, ' ')).join(', ')
-                      : '—'
-                  }
-                />
-                <Row label="Self-reported clients" value={detail.data.client_count_estimate} />
-                <Row
-                  label="Joined"
-                  value={
-                    detail.data.created_at
-                      ? new Date(detail.data.created_at).toLocaleString()
-                      : null
-                  }
-                />
-                <Row
-                  label="Last session"
-                  value={
-                    detail.data.last_session_at
-                      ? new Date(detail.data.last_session_at).toLocaleString()
-                      : 'No sessions yet'
-                  }
-                />
-              </section>
-
-              {/* External links */}
-              {detail.data.slug && (
-                <section className="flex flex-wrap gap-2">
-                  <a
-                    href={`/p/${detail.data.slug}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50"
-                  >
-                    Public profile <ExternalLink size={11} />
-                  </a>
-                  <a
-                    href={`/book/${detail.data.slug}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50"
-                  >
-                    Booking page <ExternalLink size={11} />
-                  </a>
-                  {detail.data.email && (
-                    <a
-                      href={`mailto:${detail.data.email}`}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      Email this trainer <Mail size={11} />
-                    </a>
-                  )}
-                </section>
+              )}
+              {tab === 'clients' && <ClientsTab trainerId={trainerId} />}
+              {tab === 'sessions' && <SessionsTab trainerId={trainerId} />}
+              {tab === 'payments' && (
+                <PaymentsTab trainerId={trainerId} currency={detail.data.currency} />
               )}
             </>
           )}
@@ -308,6 +181,343 @@ export function TrainerDetailDrawer({
       </aside>
     </div>
   );
+}
+
+/* ─────────────── Overview tab ─────────────── */
+function OverviewTab({
+  data,
+  fullName,
+  setFullName,
+  businessName,
+  setBusinessName,
+  serviceArea,
+  setServiceArea,
+  onPatch,
+  patchPending,
+  patchError,
+}: {
+  data: TrainerDetail;
+  fullName: string;
+  setFullName: (v: string) => void;
+  businessName: string;
+  setBusinessName: (v: string) => void;
+  serviceArea: string;
+  setServiceArea: (v: string) => void;
+  onPatch: (body: Record<string, unknown>) => void;
+  patchPending: boolean;
+  patchError: Error | null;
+}) {
+  return (
+    <>
+      <section className="grid grid-cols-2 gap-2.5">
+        <DetailStat icon={<Users size={14} />} color="blue" label="Clients" value={data.client_count.toString()} />
+        <DetailStat icon={<Calendar size={14} />} color="emerald" label="Sessions" value={data.session_count.toString()} />
+        <DetailStat icon={<DollarSign size={14} />} color="amber" label="Revenue" value={`$${data.payment_total.toFixed(0)}`} />
+        <DetailStat icon={<CheckCircle2 size={14} />} color="indigo" label="Onboarded" value={data.onboarded_at ? '✓ Yes' : 'No'} />
+      </section>
+
+      <section className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2.5">
+          Visibility & status
+        </p>
+        <div className="space-y-2.5">
+          <ToggleRow
+            label="Listed in public directory"
+            sub="Appears at trainerpro.coach/find-trainers"
+            on={data.directory_listed}
+            onIcon={<Eye size={14} className="text-emerald-600" />}
+            offIcon={<EyeOff size={14} className="text-slate-400" />}
+            onChange={(v) => onPatch({ directory_listed: v })}
+            disabled={patchPending}
+          />
+          <ToggleRow
+            label="Booking page enabled"
+            sub="Public link clients use to self-book"
+            on={data.booking_enabled}
+            onChange={(v) => onPatch({ booking_enabled: v })}
+            disabled={patchPending}
+          />
+        </div>
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-lg p-4">
+        <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-3">
+          Override fields
+        </p>
+        <div className="space-y-3">
+          <Field label="Full name" value={fullName} onChange={setFullName} />
+          <Field label="Business name" value={businessName} onChange={setBusinessName} />
+          <Field label="Service area" value={serviceArea} onChange={setServiceArea} />
+          <button
+            type="button"
+            onClick={() =>
+              onPatch({
+                full_name: fullName || null,
+                business_name: businessName || null,
+                service_area: serviceArea || null,
+              })
+            }
+            disabled={patchPending}
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg"
+          >
+            <Save size={13} />
+            {patchPending ? 'Saving…' : 'Save changes'}
+          </button>
+          {patchError && <p className="text-xs text-rose-600">{patchError.message}</p>}
+        </div>
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-lg divide-y divide-slate-100 text-sm">
+        <Row label="Email" value={data.email} icon={<Mail size={12} />} />
+        <Row label="Phone" value={data.phone} icon={<Phone size={12} />} />
+        <Row label="Timezone" value={data.timezone} />
+        <Row label="Currency" value={data.currency} />
+        <Row label="Primary color" value={data.primary_color} swatch={data.primary_color ?? undefined} />
+        <Row
+          label="Specialties"
+          value={
+            data.specialties.length
+              ? data.specialties.map((s) => s.replace(/_/g, ' ')).join(', ')
+              : '—'
+          }
+        />
+        <Row label="Self-reported clients" value={data.client_count_estimate} />
+        <Row
+          label="Joined"
+          value={data.created_at ? new Date(data.created_at).toLocaleString() : null}
+        />
+        <Row
+          label="Last session"
+          value={
+            data.last_session_at ? new Date(data.last_session_at).toLocaleString() : 'No sessions yet'
+          }
+          icon={<Activity size={12} />}
+        />
+      </section>
+
+      {(data.slug || data.email) && (
+        <section className="flex flex-wrap gap-2">
+          {data.slug && (
+            <>
+              <a
+                href={`/p/${data.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50"
+              >
+                Public profile <ExternalLink size={11} />
+              </a>
+              <a
+                href={`/book/${data.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50"
+              >
+                Booking page <ExternalLink size={11} />
+              </a>
+            </>
+          )}
+          {data.email && (
+            <a
+              href={`mailto:${data.email}`}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Email this trainer <Mail size={11} />
+            </a>
+          )}
+        </section>
+      )}
+    </>
+  );
+}
+
+/* ─────────────── Clients tab ─────────────── */
+function ClientsTab({ trainerId }: { trainerId: string }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['admin-trainer-clients', trainerId],
+    queryFn: () =>
+      api<{ rows: ClientRow[]; total: number }>(`/admin/trainers/${trainerId}/clients`),
+  });
+
+  if (isLoading) return <p className="text-sm text-slate-500">Loading clients…</p>;
+  if (error) return <p className="text-sm text-rose-600">{(error as Error).message}</p>;
+  if (!data?.rows.length)
+    return <EmptyTab text="This trainer hasn't added any clients yet." />;
+
+  return (
+    <ListSection title={`${data.total} client${data.total === 1 ? '' : 's'}`}>
+      {data.rows.map((c) => (
+        <li key={c.id} className="px-3 py-2.5 hover:bg-slate-50 flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900 truncate">{c.full_name}</p>
+            <p className="text-xs text-slate-500 truncate">{c.email ?? c.phone ?? '—'}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {c.package_balance > 0 && (
+              <span className="text-[10px] text-emerald-700 font-medium px-1.5 py-0.5 rounded bg-emerald-50">
+                {c.package_balance} left
+              </span>
+            )}
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                c.status === 'active'
+                  ? 'bg-blue-50 text-blue-700'
+                  : c.status === 'paused'
+                  ? 'bg-amber-50 text-amber-700'
+                  : 'bg-slate-100 text-slate-500'
+              }`}
+            >
+              {c.status}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ListSection>
+  );
+}
+
+/* ─────────────── Sessions tab ─────────────── */
+function SessionsTab({ trainerId }: { trainerId: string }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['admin-trainer-sessions', trainerId],
+    queryFn: () =>
+      api<{ rows: SessionRow[]; total: number }>(`/admin/trainers/${trainerId}/sessions`),
+  });
+
+  if (isLoading) return <p className="text-sm text-slate-500">Loading sessions…</p>;
+  if (error) return <p className="text-sm text-rose-600">{(error as Error).message}</p>;
+  if (!data?.rows.length)
+    return <EmptyTab text="No sessions logged yet." />;
+
+  return (
+    <ListSection title={`${data.total} most recent session${data.total === 1 ? '' : 's'}`}>
+      {data.rows.map((s) => (
+        <li key={s.id} className="px-3 py-2.5 hover:bg-slate-50 flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">
+              {new Date(s.starts_at).toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </p>
+            <p className="text-xs text-slate-500">{s.session_type ?? 'Session'}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {s.price != null && (
+              <span className="text-[11px] text-slate-700 font-medium">${Number(s.price).toFixed(0)}</span>
+            )}
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${STATUS_COLORS[s.status] ?? 'bg-slate-100 text-slate-500'}`}
+            >
+              {s.status.replace('_', ' ')}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ListSection>
+  );
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  scheduled: 'bg-blue-50 text-blue-700',
+  confirmed: 'bg-indigo-50 text-indigo-700',
+  completed: 'bg-emerald-50 text-emerald-700',
+  cancelled: 'bg-rose-50 text-rose-700',
+  no_show: 'bg-amber-50 text-amber-700',
+};
+
+/* ─────────────── Payments tab ─────────────── */
+function PaymentsTab({ trainerId, currency }: { trainerId: string; currency: string | null }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['admin-trainer-payments', trainerId],
+    queryFn: () =>
+      api<{ rows: PaymentRow[]; total: number }>(`/admin/trainers/${trainerId}/payments`),
+  });
+
+  if (isLoading) return <p className="text-sm text-slate-500">Loading payments…</p>;
+  if (error) return <p className="text-sm text-rose-600">{(error as Error).message}</p>;
+  if (!data?.rows.length)
+    return <EmptyTab text="No payments logged yet." />;
+
+  const cur = currency || 'USD';
+  const total = data.rows.reduce((s, p) => s + Number(p.amount || 0), 0);
+
+  return (
+    <ListSection
+      title={`${data.total} payment${data.total === 1 ? '' : 's'} · ${cur} ${total.toFixed(2)} total shown`}
+    >
+      {data.rows.map((p) => (
+        <li key={p.id} className="px-3 py-2.5 hover:bg-slate-50 flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">
+              {p.description || p.payment_type}
+            </p>
+            <p className="text-xs text-slate-500">
+              {new Date(p.paid_at).toLocaleDateString()} · {p.method ?? '—'}
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-slate-900">
+            ${Number(p.amount).toFixed(2)}
+          </span>
+        </li>
+      ))}
+    </ListSection>
+  );
+}
+
+/* ─────────────── Shared bits ─────────────── */
+function EmptyTab({ text }: { text: string }) {
+  return (
+    <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+      <p className="text-sm text-slate-500">{text}</p>
+    </div>
+  );
+}
+
+function ListSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+      <div className="px-3 py-2 border-b border-slate-100 bg-slate-50">
+        <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">
+          {title}
+        </p>
+      </div>
+      <ul className="divide-y divide-slate-100">{children}</ul>
+    </section>
+  );
+}
+
+interface ClientRow {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  status: string;
+  package_balance: number;
+  created_at: string;
+}
+
+interface SessionRow {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  session_type: string | null;
+  price: number | null;
+  paid: boolean;
+  client_id: string;
+}
+
+interface PaymentRow {
+  id: string;
+  amount: number;
+  currency: string;
+  payment_type: string;
+  method: string | null;
+  description: string | null;
+  paid_at: string;
 }
 
 function DetailStat({
