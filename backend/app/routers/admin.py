@@ -271,6 +271,9 @@ class FeedbackRow(BaseModel):
     url: str | None = None
     resolved_at: str | None = None
     created_at: str | None = None
+    admin_reply: str | None = None
+    admin_replied_at: str | None = None
+    admin_reply_seen_at: str | None = None
 
 
 class FeedbackResponse(BaseModel):
@@ -301,6 +304,9 @@ def list_feedback(user: CurrentUser, limit: int = 200) -> FeedbackResponse:
                 url=r.get("url"),
                 resolved_at=r.get("resolved_at"),
                 created_at=r.get("created_at"),
+                admin_reply=r.get("admin_reply"),
+                admin_replied_at=r.get("admin_replied_at"),
+                admin_reply_seen_at=r.get("admin_reply_seen_at"),
             )
             for r in (resp.data or [])
         ]
@@ -308,6 +314,42 @@ def list_feedback(user: CurrentUser, limit: int = 200) -> FeedbackResponse:
     except Exception as e:
         print(f"[admin] feedback select failed: {e}")
         return FeedbackResponse(rows=[], total=0)
+
+
+# ─────────────── Reply to feedback ───────────────
+
+
+class ReplyBody(BaseModel):
+    reply: str
+
+
+@router.post("/feedback/{feedback_id}/reply")
+def reply_to_feedback(feedback_id: str, body: ReplyBody, user: CurrentUser) -> dict[str, Any]:
+    """Write an admin reply onto a feedback row. Trainer reads it via RLS-allowed
+    select on their own feedback rows. Pass an empty string to clear/un-send."""
+    _require_admin(user)
+    text = (body.reply or "").strip()
+    sb = supabase_admin()
+    if not text:
+        # Clear the reply
+        sb.table("feedback").update(
+            {"admin_reply": None, "admin_replied_at": None, "admin_reply_seen_at": None}
+        ).eq("id", feedback_id).execute()
+        return {"ok": True, "cleared": True}
+
+    if len(text) > 5000:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Reply too long (max 5000 chars).")
+
+    sb.table("feedback").update(
+        {
+            "admin_reply": text,
+            "admin_replied_at": datetime.now(timezone.utc).isoformat(),
+            # Reset the seen flag so the trainer's banner re-appears if we
+            # send a follow-up reply on the same feedback row.
+            "admin_reply_seen_at": None,
+        }
+    ).eq("id", feedback_id).execute()
+    return {"ok": True}
 
 
 # ─────────────── Whoami (used by frontend to show /admin only to admins) ───────────────

@@ -10,6 +10,7 @@ import { LastNotesWidget, BirthdayBanner, NoShowStreakWidget } from '../componen
 import { StudioOverviewCard } from '../components/StudioOverviewCard';
 import { RevenueTrendWidget } from '../components/RevenueTrendWidget';
 import { SpecialtyToolkit } from '../components/SpecialtyToolkit';
+import { AdminReplyBanner } from '../components/AdminReplyBanner';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -112,6 +113,7 @@ export function Dashboard() {
     <div className="p-8 max-w-6xl mx-auto">
       <PageHeader title="Dashboard" subtitle="At-a-glance view of your training business." />
 
+      <AdminReplyBanner />
       {trainer && <StudioOverviewCard trainer={trainer} />}
       {trainer && <SpecialtyToolkit trainer={trainer} />}
 

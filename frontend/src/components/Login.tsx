@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dumbbell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { isConfigured } from '../lib/supabase';
+import { isConfigured, supabase } from '../lib/supabase';
 
 type Mode = 'sign-in' | 'sign-up' | 'magic-link';
 
@@ -52,6 +52,26 @@ export function Login() {
     );
   }
 
+  async function handleGoogle() {
+    setError(null);
+    setInfo(null);
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      // On success the browser navigates away to Google's OAuth screen.
+      if (error) setError(error.message);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -84,6 +104,23 @@ export function Login() {
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Trainer Pro</h1>
           <p className="text-sm text-slate-500 mt-1">Run your training business in one place.</p>
+        </div>
+
+        {/* Google sign-in shortcut — works for both sign-in and sign-up. */}
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={busy}
+          className="w-full flex items-center justify-center gap-2.5 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 rounded-lg py-2.5 mb-4 text-sm font-medium text-slate-700 transition disabled:opacity-50"
+        >
+          <GoogleIcon />
+          Continue with Google
+        </button>
+
+        <div className="flex items-center gap-3 mb-4 text-xs text-slate-400">
+          <div className="flex-1 h-px bg-slate-200" />
+          <span>or with email</span>
+          <div className="flex-1 h-px bg-slate-200" />
         </div>
 
         <div className="flex bg-slate-100 rounded-lg p-1 mb-6">
@@ -191,5 +228,29 @@ export function Login() {
         )}
       </div>
     </div>
+  );
+}
+
+function GoogleIcon() {
+  // Inline SVG so we don't pull a new dep — official Google "G" colors.
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#FFC107"
+        d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5c10.8 0 19.5-8.7 19.5-19.5 0-1.3-.1-2.3-.4-3.5z"
+      />
+      <path
+        fill="#FF3D00"
+        d="M6.3 14.7l6.6 4.8C14.7 15.6 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 16.3 4.5 9.7 8.7 6.3 14.7z"
+      />
+      <path
+        fill="#4CAF50"
+        d="M24 43.5c5.5 0 10.4-2 14.1-5.4l-6.5-5.5C29.6 34 26.9 35 24 35c-5.3 0-9.7-3.4-11.3-8L6 31.6C9.4 38 16.1 43.5 24 43.5z"
+      />
+      <path
+        fill="#1976D2"
+        d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.6l6.5 5.5c-.5.4 7-5.1 7-15.1 0-1.3-.1-2.3-.4-3.5z"
+      />
+    </svg>
   );
 }

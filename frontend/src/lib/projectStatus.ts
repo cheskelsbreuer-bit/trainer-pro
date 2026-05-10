@@ -21,6 +21,30 @@ export const PROJECT_STATUS: StatusItem[] = [
   // ─── Shipped & live ───────────────────────────────────────────────
   {
     category: 'shipped',
+    title: 'Public trainer directory',
+    detail:
+      'trainerpro.coach/find-trainers — clients search by city + multi-select specialties. Trainers control listing from Settings.',
+  },
+  {
+    category: 'shipped',
+    title: 'Specialty-driven dashboard toolkit',
+    detail:
+      'Trainer dashboard surfaces different mini-apps based on specialties (martial arts → belt tracker, group classes → group scheduler, etc.).',
+  },
+  {
+    category: 'shipped',
+    title: 'Two-way feedback messaging',
+    detail:
+      'Admin can reply to feedback from /admin → trainer sees it as a banner on dashboard + full thread in Settings → marked seen automatically.',
+  },
+  {
+    category: 'shipped',
+    title: 'Sign in with Google',
+    detail:
+      'OAuth provider on the Login page. Requires enabling Google in Supabase Auth + configuring an OAuth client in Google Cloud Console.',
+  },
+  {
+    category: 'shipped',
     title: 'Marketing landing page',
     detail: 'trainerpro.coach + www — hero, features, pricing, email capture, mock UI.',
   },
@@ -143,12 +167,6 @@ export const PROJECT_STATUS: StatusItem[] = [
   },
 
   // ─── Soon ─────────────────────────────────────────────────────────
-  {
-    category: 'soon',
-    title: 'Public trainer directory at trainerpro.coach/find-trainers',
-    detail:
-      'Anyone visiting our marketing site can search trainers by city + specialty. Each trainer card links to their public profile + booking page. Acquisition channel for both sides of the market.',
-  },
   {
     category: 'soon',
     title: 'Stripe Connect (real architecture)',

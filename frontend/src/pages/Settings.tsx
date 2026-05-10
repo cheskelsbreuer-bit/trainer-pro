@@ -7,6 +7,7 @@ import { PageHeader } from '../components/PageHeader';
 import { BookingSettingsCard } from '../components/BookingSettingsCard';
 import { DirectorySettingsCard } from '../components/DirectorySettingsCard';
 import { FeedbackCard } from '../components/FeedbackCard';
+import { AdminRepliesCard } from '../components/AdminRepliesCard';
 import { GoogleCalendarCard } from '../components/GoogleCalendarCard';
 import { StudioSettingsCard } from '../components/StudioSettingsCard';
 import { StripeStatusCard } from '../components/StripeStatusCard';
@@ -290,10 +291,13 @@ export function Settings() {
         <div className="border-t border-slate-200 pt-8 mt-10 mb-6">
           <h2 className="text-lg font-bold text-slate-900">Talk to us</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Your feedback shapes what we build next.
+            Your feedback shapes what we build next — and we reply.
           </p>
         </div>
-        <FeedbackCard />
+        <div className="space-y-5">
+          <AdminRepliesCard />
+          <FeedbackCard />
+        </div>
       </div>
     </div>
   );

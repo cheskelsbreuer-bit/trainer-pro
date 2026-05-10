@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
   Mail,
@@ -13,6 +13,8 @@ import {
   ExternalLink,
   MessageSquare,
   ListChecks,
+  Send,
+  Reply as ReplyIcon,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -57,6 +59,9 @@ interface FeedbackRow {
   url: string | null;
   resolved_at: string | null;
   created_at: string | null;
+  admin_reply: string | null;
+  admin_replied_at: string | null;
+  admin_reply_seen_at: string | null;
 }
 
 export function AdminPage() {
@@ -393,33 +398,7 @@ export function AdminPage() {
           ) : (
             <ul className="divide-y divide-slate-100">
               {(feedback.data?.rows ?? []).map((f) => (
-                <li key={f.id} className="p-4 hover:bg-slate-50">
-                  <div className="flex items-center gap-2 mb-1.5 text-xs">
-                    <span className={CATEGORY_COLORS[f.category] ?? CATEGORY_COLORS.general}>
-                      {CATEGORY_LABELS[f.category] ?? f.category}
-                    </span>
-                    <span className="text-slate-500 font-mono">
-                      {f.trainer_email ?? 'unknown'}
-                    </span>
-                    <span className="text-slate-300">·</span>
-                    <span className="text-slate-500">
-                      {f.created_at
-                        ? new Date(f.created_at).toLocaleString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : '—'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
-                    {f.message}
-                  </p>
-                  {f.url && (
-                    <p className="text-[11px] text-slate-400 mt-1 truncate">From: {f.url}</p>
-                  )}
-                </li>
+                <FeedbackItem key={f.id} feedback={f} />
               ))}
             </ul>
           )}
@@ -433,6 +412,129 @@ export function AdminPage() {
         </p>
       </main>
     </div>
+  );
+}
+
+function FeedbackItem({ feedback: f }: { feedback: FeedbackRow }) {
+  const qc = useQueryClient();
+  const [draft, setDraft] = useState(f.admin_reply ?? '');
+  const [open, setOpen] = useState(!f.admin_reply); // collapsed once a reply exists
+
+  const send = useMutation({
+    mutationFn: () =>
+      api(`/admin/feedback/${f.id}/reply`, {
+        method: 'POST',
+        body: JSON.stringify({ reply: draft }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-feedback'] });
+      setOpen(false);
+    },
+  });
+
+  return (
+    <li className="p-4 hover:bg-slate-50">
+      <div className="flex items-center gap-2 mb-1.5 text-xs">
+        <span className={CATEGORY_COLORS[f.category] ?? CATEGORY_COLORS.general}>
+          {CATEGORY_LABELS[f.category] ?? f.category}
+        </span>
+        <span className="text-slate-500 font-mono">{f.trainer_email ?? 'unknown'}</span>
+        <span className="text-slate-300">·</span>
+        <span className="text-slate-500">
+          {f.created_at
+            ? new Date(f.created_at).toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '—'}
+        </span>
+        {f.admin_reply && (
+          <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold">
+            {f.admin_reply_seen_at ? '✓ seen' : 'replied'}
+          </span>
+        )}
+      </div>
+      <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{f.message}</p>
+      {f.url && <p className="text-[11px] text-slate-400 mt-1 truncate">From: {f.url}</p>}
+
+      {/* Existing reply collapsed view */}
+      {f.admin_reply && !open && (
+        <div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
+          <div className="flex items-center justify-between text-[11px] text-blue-700 mb-1">
+            <span className="font-semibold flex items-center gap-1">
+              <ReplyIcon size={11} /> Your reply
+              {f.admin_replied_at && (
+                <span className="text-blue-500 font-normal ml-1">
+                  ·{' '}
+                  {new Date(f.admin_replied_at).toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="text-blue-600 hover:text-blue-900 underline"
+            >
+              Edit
+            </button>
+          </div>
+          <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+            {f.admin_reply}
+          </p>
+        </div>
+      )}
+
+      {/* Reply composer */}
+      {open && (
+        <div className="mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 mb-2 flex items-center gap-1">
+            <ReplyIcon size={11} /> Reply to {f.trainer_email ?? 'trainer'}
+          </p>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            placeholder="Hey — thanks for flagging this. I just shipped a fix…"
+            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+          />
+          <div className="flex items-center justify-between gap-2 mt-2">
+            <p className="text-[10px] text-slate-400">
+              They&rsquo;ll see this in their dashboard banner + Settings.
+            </p>
+            <div className="flex items-center gap-2">
+              {f.admin_reply && (
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="text-xs text-slate-500 hover:text-slate-900 px-2 py-1.5 rounded"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => send.mutate()}
+                disabled={send.isPending || !draft.trim()}
+                className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg"
+              >
+                <Send size={11} />
+                {send.isPending ? 'Sending…' : f.admin_reply ? 'Update reply' : 'Send reply'}
+              </button>
+            </div>
+          </div>
+          {send.error && (
+            <p className="text-xs text-red-600 mt-1">{(send.error as Error).message}</p>
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 

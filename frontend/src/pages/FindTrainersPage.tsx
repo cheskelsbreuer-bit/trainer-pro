@@ -30,14 +30,16 @@ interface DirectoryTrainer {
 export function FindTrainersPage() {
   const [areaInput, setAreaInput] = useState('');
   const [appliedArea, setAppliedArea] = useState('');
-  const [specialty, setSpecialty] = useState<string | null>(null);
+  // Multi-select: empty array = no filter (show all). Toggling a pill
+  // adds/removes; the "All" pill clears the array.
+  const [selected, setSelected] = useState<string[]>([]);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['directory', appliedArea, specialty],
+    queryKey: ['directory', appliedArea, selected.slice().sort().join(',')],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('list_directory_trainers', {
         p_area: appliedArea || null,
-        p_specialty: specialty,
+        p_specialties: selected.length > 0 ? selected : null,
       });
       if (error) throw error;
       return (data ?? []) as DirectoryTrainer[];
@@ -121,39 +123,49 @@ export function FindTrainersPage() {
             </button>
           </form>
 
-          {/* Specialty filter pills */}
+          {/* Specialty filter pills (multi-select) */}
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-1.5 justify-center text-xs text-slate-500 mb-2">
               <Filter size={12} />
-              <span>Filter by what they train:</span>
+              <span>
+                Filter by what they train
+                {selected.length > 0 ? ` · ${selected.length} picked` : ' · pick any'}
+              </span>
             </div>
             <div className="flex flex-wrap gap-1.5 justify-center">
               <button
                 type="button"
-                onClick={() => setSpecialty(null)}
+                onClick={() => setSelected([])}
                 className={`text-xs px-2.5 py-1 rounded-full border transition ${
-                  specialty === null
+                  selected.length === 0
                     ? 'bg-slate-900 text-white border-slate-900'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
                 }`}
               >
                 All
               </button>
-              {SPECIALTIES.map((info) => (
-                <button
-                  key={info.val}
-                  type="button"
-                  onClick={() => setSpecialty(info.val === specialty ? null : info.val)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition ${
-                    specialty === info.val
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-                  }`}
-                >
-                  <span className="mr-1">{info.emoji}</span>
-                  {info.label}
-                </button>
-              ))}
+              {SPECIALTIES.map((info) => {
+                const isOn = selected.includes(info.val);
+                return (
+                  <button
+                    key={info.val}
+                    type="button"
+                    onClick={() =>
+                      setSelected((curr) =>
+                        isOn ? curr.filter((v) => v !== info.val) : [...curr, info.val],
+                      )
+                    }
+                    className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                      isOn
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                    }`}
+                  >
+                    <span className="mr-1">{info.emoji}</span>
+                    {info.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -167,15 +179,24 @@ export function FindTrainersPage() {
               ? 'Searching…'
               : `${trainers.length} trainer${trainers.length === 1 ? '' : 's'}${
                   appliedArea ? ` in "${appliedArea}"` : ''
-                }${specialty ? ` · ${SPECIALTIES_BY_VAL[specialty]?.label ?? specialty}` : ''}`}
+                }${
+                  selected.length > 0
+                    ? ` · ${selected
+                        .map((s) => SPECIALTIES_BY_VAL[s]?.label ?? s)
+                        .slice(0, 3)
+                        .join(' or ')}${
+                        selected.length > 3 ? ` (+${selected.length - 3})` : ''
+                      }`
+                    : ''
+                }`}
           </p>
-          {(appliedArea || specialty) && (
+          {(appliedArea || selected.length > 0) && (
             <button
               type="button"
               onClick={() => {
                 setAreaInput('');
                 setAppliedArea('');
-                setSpecialty(null);
+                setSelected([]);
               }}
               className="text-xs text-slate-500 hover:text-slate-900 underline"
             >
@@ -189,7 +210,7 @@ export function FindTrainersPage() {
         ) : error ? (
           <ErrorState message={(error as Error).message} />
         ) : trainers.length === 0 ? (
-          <EmptyState appliedArea={appliedArea} hasSpecialty={!!specialty} />
+          <EmptyState appliedArea={appliedArea} hasSpecialty={selected.length > 0} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {trainers.map((t) => (
