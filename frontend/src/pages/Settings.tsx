@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Settings2, Bell, Building2, Globe, Star, Calendar, CreditCard, CalendarDays, MapPin } from 'lucide-react';
+import { User, Settings2, Bell, Building2, Globe, Star, Calendar, CreditCard, CalendarDays, MapPin, Wrench } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
 import { BookingSettingsCard } from '../components/BookingSettingsCard';
 import { DirectorySettingsCard } from '../components/DirectorySettingsCard';
+import { SpecialtyToolkit } from '../components/SpecialtyToolkit';
 import { FeedbackCard } from '../components/FeedbackCard';
 import { AdminRepliesCard } from '../components/AdminRepliesCard';
 import { GoogleCalendarCard } from '../components/GoogleCalendarCard';
@@ -249,6 +250,15 @@ export function Settings() {
             description="Anyone visiting trainerpro.coach/find-trainers can search for trainers by city and specialty. Set your service area to attract local clients — or hide your listing if you don't want new leads."
           >
             <DirectorySettingsCard trainer={trainer} />
+          </CardWrapper>
+
+          <CardWrapper
+            icon={<Wrench size={18} />}
+            color="emerald"
+            title="Your toolkit"
+            description="The mini-apps unlocked by the specialties you picked above. Available tools work right now; coming-soon tools have a thumbs-up button — clicking it tells us to prioritize that one for you."
+          >
+            <SpecialtyToolkit trainer={trainer} />
           </CardWrapper>
 
           <CardWrapper

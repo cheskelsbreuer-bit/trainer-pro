@@ -9,7 +9,6 @@ import type { Session, Client, Payment, Trainer } from '../lib/database.types';
 import { LastNotesWidget, BirthdayBanner, NoShowStreakWidget } from '../components/DashboardExtras';
 import { StudioOverviewCard } from '../components/StudioOverviewCard';
 import { RevenueTrendWidget } from '../components/RevenueTrendWidget';
-import { SpecialtyToolkit } from '../components/SpecialtyToolkit';
 import { AdminReplyBanner } from '../components/AdminReplyBanner';
 
 export function Dashboard() {
@@ -115,7 +114,6 @@ export function Dashboard() {
 
       <AdminReplyBanner />
       {trainer && <StudioOverviewCard trainer={trainer} />}
-      {trainer && <SpecialtyToolkit trainer={trainer} />}
 
       <BirthdayBanner />
       <NoShowStreakWidget />

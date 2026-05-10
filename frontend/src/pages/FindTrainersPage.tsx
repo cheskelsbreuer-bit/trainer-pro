@@ -37,12 +37,28 @@ export function FindTrainersPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['directory', appliedArea, selected.slice().sort().join(',')],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('list_directory_trainers', {
+      // Try the new array signature first. If migration 21 hasn't run on
+      // this Supabase project yet, PostgREST returns "function not found"
+      // — fall back to the singular-text version (migration 19) so the
+      // page works regardless of which migrations are deployed.
+      const tryNew = await supabase.rpc('list_directory_trainers', {
         p_area: appliedArea || null,
         p_specialties: selected.length > 0 ? selected : null,
       });
-      if (error) throw error;
-      return (data ?? []) as DirectoryTrainer[];
+      if (!tryNew.error) return (tryNew.data ?? []) as DirectoryTrainer[];
+
+      const looksLikeMissing = /find the function|schema cache|does not exist|404/i.test(
+        tryNew.error.message,
+      );
+      if (looksLikeMissing) {
+        const fallback = await supabase.rpc('list_directory_trainers', {
+          p_area: appliedArea || null,
+          p_specialty: selected[0] ?? null, // singular fallback only takes one
+        });
+        if (!fallback.error) return (fallback.data ?? []) as DirectoryTrainer[];
+        throw fallback.error;
+      }
+      throw tryNew.error;
     },
     retry: false,
   });
@@ -327,18 +343,20 @@ function TrainerCard({ trainer }: { trainer: DirectoryTrainer }) {
 }
 
 function ErrorState({ message }: { message: string }) {
-  // Detect the two common back-end failure modes so the user knows it's a
-  // 30-sec SQL fix, not a "the page is broken" mystery.
-  const missingRpc = /function .* does not exist|404|not found/i.test(message);
+  // Detect the common back-end failure modes so the user knows the exact fix.
+  const missingRpc = /function .* does not exist|find the function|schema cache|404|not found/i.test(message);
   const sqlBug = /missing FROM-clause|column .* does not exist|relation/i.test(message);
+  const networkFail = /Failed to fetch|TypeError|NetworkError|ERR_/i.test(message);
   return (
     <div className="text-center py-14 bg-rose-50 rounded-2xl border border-dashed border-rose-200">
       <p className="text-rose-800 font-medium mb-2">
         Couldn&rsquo;t load the directory.
       </p>
-      <p className="text-sm text-rose-700 max-w-lg mx-auto mb-3">
-        {missingRpc
-          ? 'The directory backend isn’t live yet. Run supabase/19_directory.sql in the Supabase SQL editor and refresh.'
+      <p className="text-sm text-rose-700 max-w-xl mx-auto mb-3 leading-relaxed">
+        {networkFail
+          ? "Browser couldn't reach Supabase. Most likely causes: (1) your Supabase free-tier project paused after a week of inactivity — open your Supabase dashboard and click 'Restore project'; (2) an ad blocker or browser extension is blocking *.supabase.co; (3) you're offline. The error came from the network layer, not from the database."
+          : missingRpc
+          ? 'The directory function isn’t in this database yet. Run supabase/19_directory.sql AND supabase/21_directory_multi_specialty.sql in the Supabase SQL editor, then refresh.'
           : sqlBug
           ? 'The directory SQL function has a bug — re-run the latest supabase/19_directory.sql in the Supabase SQL editor (it’s been patched) and refresh.'
           : message}
