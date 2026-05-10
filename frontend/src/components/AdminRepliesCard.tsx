@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Mail, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
