@@ -9,6 +9,7 @@ import type { Session, Client, Payment, Trainer } from '../lib/database.types';
 import { LastNotesWidget, BirthdayBanner, NoShowStreakWidget } from '../components/DashboardExtras';
 import { StudioOverviewCard } from '../components/StudioOverviewCard';
 import { RevenueTrendWidget } from '../components/RevenueTrendWidget';
+import { SpecialtyToolkit } from '../components/SpecialtyToolkit';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -112,6 +113,7 @@ export function Dashboard() {
       <PageHeader title="Dashboard" subtitle="At-a-glance view of your training business." />
 
       {trainer && <StudioOverviewCard trainer={trainer} />}
+      {trainer && <SpecialtyToolkit trainer={trainer} />}
 
       <BirthdayBanner />
       <NoShowStreakWidget />

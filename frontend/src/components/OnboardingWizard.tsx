@@ -17,6 +17,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
+import { SPECIALTIES } from '../lib/specialties';
 
 type ClientCount = '0' | '1-5' | '6-15' | '16-30' | '30+';
 
@@ -25,23 +26,6 @@ interface Props {
 }
 
 const TOTAL_STEPS = 7;
-
-const SPECIALTIES = [
-  { val: 'strength', label: 'Strength training', emoji: '🏋️' },
-  { val: 'weight_loss', label: 'Weight loss', emoji: '⚖️' },
-  { val: 'general_fitness', label: 'General fitness', emoji: '💪' },
-  { val: 'bodybuilding', label: 'Bodybuilding', emoji: '💯' },
-  { val: 'athletic_performance', label: 'Athletic performance', emoji: '🏃' },
-  { val: 'mobility_rehab', label: 'Mobility & rehab', emoji: '🧘' },
-  { val: 'yoga_pilates', label: 'Yoga / pilates', emoji: '🪷' },
-  { val: 'group_classes', label: 'Group classes', emoji: '👥' },
-  { val: 'sports_specific', label: 'Sports-specific', emoji: '⚽' },
-  { val: 'martial_arts', label: 'Martial arts', emoji: '🥋' },
-  { val: 'boxing_kickboxing', label: 'Boxing / kickboxing', emoji: '🥊' },
-  { val: 'senior_fitness', label: 'Senior fitness', emoji: '🌿' },
-  { val: 'pre_postnatal', label: 'Pre / postnatal', emoji: '🤱' },
-  { val: 'nutrition_coaching', label: 'Nutrition coaching', emoji: '🥗' },
-];
 
 export function OnboardingWizard({ trainer }: Props) {
   const { user } = useAuth();
@@ -441,6 +425,28 @@ function StepSpecialties({
             </button>
           );
         })}
+      </div>
+      <div className="max-w-xl mx-auto mt-5 p-3 rounded-xl bg-blue-50/60 border border-blue-100 text-xs text-blue-900 leading-relaxed">
+        <div className="font-semibold mb-0.5">Two things this controls:</div>
+        <ul className="list-disc ml-4 space-y-0.5">
+          <li>
+            How clients searching{' '}
+            <a
+              href="/find-trainers"
+              target="_blank"
+              rel="noreferrer"
+              className="underline font-medium"
+            >
+              trainerpro.coach/find-trainers
+            </a>{' '}
+            filter to find you.
+          </li>
+          <li>
+            Which mini-apps appear in your dashboard. Pick "group classes" and
+            you get the group scheduler. Pick "nutrition coaching" and you get
+            meal plans. You can change this anytime in Settings.
+          </li>
+        </ul>
       </div>
     </div>
   );

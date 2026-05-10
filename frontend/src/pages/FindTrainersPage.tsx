@@ -11,6 +11,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { SPECIALTIES, SPECIALTIES_BY_VAL } from '../lib/specialties';
 
 interface DirectoryTrainer {
   id: string;
@@ -25,23 +26,6 @@ interface DirectoryTrainer {
   photo_url: string | null;
   bio_snippet: string | null;
 }
-
-const SPECIALTY_LABELS: Record<string, { label: string; emoji: string }> = {
-  strength: { label: 'Strength', emoji: '🏋️' },
-  weight_loss: { label: 'Weight loss', emoji: '⚖️' },
-  general_fitness: { label: 'General fitness', emoji: '💪' },
-  bodybuilding: { label: 'Bodybuilding', emoji: '💯' },
-  athletic_performance: { label: 'Athletic performance', emoji: '🏃' },
-  mobility_rehab: { label: 'Mobility & rehab', emoji: '🧘' },
-  yoga_pilates: { label: 'Yoga / pilates', emoji: '🪷' },
-  group_classes: { label: 'Group classes', emoji: '👥' },
-  sports_specific: { label: 'Sports-specific', emoji: '⚽' },
-  martial_arts: { label: 'Martial arts', emoji: '🥋' },
-  boxing_kickboxing: { label: 'Boxing / kickboxing', emoji: '🥊' },
-  senior_fitness: { label: 'Senior fitness', emoji: '🌿' },
-  pre_postnatal: { label: 'Pre / postnatal', emoji: '🤱' },
-  nutrition_coaching: { label: 'Nutrition coaching', emoji: '🥗' },
-};
 
 export function FindTrainersPage() {
   const [areaInput, setAreaInput] = useState('');
@@ -155,13 +139,13 @@ export function FindTrainersPage() {
               >
                 All
               </button>
-              {Object.entries(SPECIALTY_LABELS).map(([val, info]) => (
+              {SPECIALTIES.map((info) => (
                 <button
-                  key={val}
+                  key={info.val}
                   type="button"
-                  onClick={() => setSpecialty(val === specialty ? null : val)}
+                  onClick={() => setSpecialty(info.val === specialty ? null : info.val)}
                   className={`text-xs px-2.5 py-1 rounded-full border transition ${
-                    specialty === val
+                    specialty === info.val
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
                   }`}
@@ -183,7 +167,7 @@ export function FindTrainersPage() {
               ? 'Searching…'
               : `${trainers.length} trainer${trainers.length === 1 ? '' : 's'}${
                   appliedArea ? ` in "${appliedArea}"` : ''
-                }${specialty ? ` · ${SPECIALTY_LABELS[specialty]?.label ?? specialty}` : ''}`}
+                }${specialty ? ` · ${SPECIALTIES_BY_VAL[specialty]?.label ?? specialty}` : ''}`}
           </p>
           {(appliedArea || specialty) && (
             <button
@@ -295,7 +279,7 @@ function TrainerCard({ trainer }: { trainer: DirectoryTrainer }) {
         {trainer.specialties && trainer.specialties.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-3">
             {trainer.specialties.slice(0, 3).map((s) => {
-              const info = SPECIALTY_LABELS[s];
+              const info = SPECIALTIES_BY_VAL[s];
               return (
                 <span
                   key={s}

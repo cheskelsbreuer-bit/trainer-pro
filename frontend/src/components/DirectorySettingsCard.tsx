@@ -1,25 +1,40 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MapPin, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { MapPin, Eye, EyeOff, CheckCircle2, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
+import { SPECIALTIES } from '../lib/specialties';
 
 /**
  * Settings card: control whether the trainer appears in the public
- * trainerpro.coach/find-trainers directory and what city/region they cover.
+ * trainerpro.coach/find-trainers directory, what city/region they cover,
+ * AND which specialties power their directory listing + dashboard toolkit.
+ *
+ * Specialties drive two things:
+ *   1. Filter pills on /find-trainers so the right clients find them
+ *   2. The "Your toolkit" widget on Dashboard — different mini-apps surface
+ *      based on what they coach (group classes → group scheduler, etc.)
  */
 export function DirectorySettingsCard({ trainer }: { trainer: Trainer }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [area, setArea] = useState(trainer.service_area ?? '');
   const [listed, setListed] = useState(trainer.directory_listed ?? true);
+  const [specialties, setSpecialties] = useState<string[]>(trainer.specialties ?? []);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     setArea(trainer.service_area ?? '');
     setListed(trainer.directory_listed ?? true);
+    setSpecialties(trainer.specialties ?? []);
   }, [trainer]);
+
+  const toggleSpecialty = (val: string) => {
+    setSpecialties((curr) =>
+      curr.includes(val) ? curr.filter((v) => v !== val) : [...curr, val],
+    );
+  };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -28,6 +43,7 @@ export function DirectorySettingsCard({ trainer }: { trainer: Trainer }) {
         .update({
           service_area: area.trim() || null,
           directory_listed: listed,
+          specialties,
         })
         .eq('id', user!.id);
       if (error) throw error;
@@ -40,7 +56,8 @@ export function DirectorySettingsCard({ trainer }: { trainer: Trainer }) {
   });
 
   return (
-    <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+    <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-5">
+      {/* ── Service area ── */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
           <MapPin size={14} className="text-slate-400" /> Service area
@@ -57,6 +74,49 @@ export function DirectorySettingsCard({ trainer }: { trainer: Trainer }) {
         </p>
       </div>
 
+      {/* ── Specialties ── */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+          <Sparkles size={14} className="text-slate-400" /> What you train people for
+          <span className="text-slate-400 font-normal">
+            {specialties.length > 0 && ` · ${specialties.length} selected`}
+          </span>
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+          {SPECIALTIES.map((o) => {
+            const selected = specialties.includes(o.val);
+            return (
+              <button
+                key={o.val}
+                type="button"
+                onClick={() => toggleSpecialty(o.val)}
+                className={`relative px-2.5 py-2 rounded-lg border text-left text-xs font-medium transition ${
+                  selected
+                    ? 'border-blue-500 bg-blue-50 text-blue-900 shadow-sm'
+                    : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
+                }`}
+              >
+                {selected && (
+                  <CheckCircle2
+                    size={12}
+                    className="absolute top-1 right-1 text-blue-600"
+                    fill="white"
+                  />
+                )}
+                <span className="mr-1">{o.emoji}</span>
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+          Drives both your directory filters and the mini-apps that show on
+          your dashboard. Pick "group classes" → you get a group scheduler.
+          Pick "nutrition coaching" → you get meal plans. Change anytime.
+        </p>
+      </div>
+
+      {/* ── Public listing toggle ── */}
       <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
         <input
           type="checkbox"
@@ -91,6 +151,7 @@ export function DirectorySettingsCard({ trainer }: { trainer: Trainer }) {
         </div>
       </label>
 
+      {/* ── Save bar ── */}
       <div className="flex items-center gap-3">
         <button
           type="button"
