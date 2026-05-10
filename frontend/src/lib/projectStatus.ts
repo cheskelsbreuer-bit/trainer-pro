@@ -1,0 +1,213 @@
+// Single source of truth for the /admin "Project Status" view.
+// Edit this file to update what's shown — no DB required.
+//
+// Categories:
+//   - shipped: live in production, working
+//   - testing: shipped but waiting on real-world validation
+//   - thisWeek: actively being built or queued for the next 7 days
+//   - soon: planned but not yet started
+//   - ideas: parking lot, may or may not happen
+
+export type StatusCategory = 'shipped' | 'testing' | 'thisWeek' | 'soon' | 'ideas';
+
+export interface StatusItem {
+  category: StatusCategory;
+  title: string;
+  detail?: string;
+  blocker?: string;
+}
+
+export const PROJECT_STATUS: StatusItem[] = [
+  // ─── Shipped & live ───────────────────────────────────────────────
+  {
+    category: 'shipped',
+    title: 'Marketing landing page',
+    detail: 'trainerpro.coach + www — hero, features, pricing, email capture, mock UI.',
+  },
+  {
+    category: 'shipped',
+    title: 'Sign up + sign in (Supabase auth)',
+    detail: 'Email/password, magic link, sign-up CTA from landing.',
+  },
+  {
+    category: 'shipped',
+    title: '7-step onboarding wizard',
+    detail:
+      'Welcome → name → client count → multi-select specialties → brand color → booking page → public profile.',
+  },
+  {
+    category: 'shipped',
+    title: 'Trainer dashboard',
+    detail: 'Stats, today\'s sessions, recent activity, branded sidebar with their initials.',
+  },
+  {
+    category: 'shipped',
+    title: 'Client management',
+    detail: 'Profiles, intake forms with PAR-Q, signed waivers, emergency contacts.',
+  },
+  {
+    category: 'shipped',
+    title: 'Workout builder',
+    detail: 'Templates and per-client plans. Sets, reps, weights, notes.',
+  },
+  {
+    category: 'shipped',
+    title: 'Session calendar (1-on-1)',
+    detail: 'Day/week/month views, conflict detection, recurring sessions.',
+  },
+  {
+    category: 'shipped',
+    title: 'Progress tracking',
+    detail: 'Weight, body comp, PRs, progress photos, line charts per metric.',
+  },
+  {
+    category: 'shipped',
+    title: 'Public profile (free trainer website)',
+    detail: 'trainerpro.coach/p/your-name with photo, bio, testimonials, gallery.',
+  },
+  {
+    category: 'shipped',
+    title: 'Public booking page',
+    detail: 'Clients pick a time slot, trainer gets an email.',
+  },
+  {
+    category: 'shipped',
+    title: 'Client portal',
+    detail: 'Each client gets a private page: workouts, sessions, payments, photos.',
+  },
+  {
+    category: 'shipped',
+    title: 'Email reminders (Resend)',
+    detail: 'Sent from hello@trainerpro.coach via verified domain.',
+  },
+  {
+    category: 'shipped',
+    title: 'PWA / "Add to Home Screen"',
+    detail:
+      'Manifest, theme color, fullscreen launch. Installs as an app icon on phone home screen.',
+  },
+  {
+    category: 'shipped',
+    title: 'Privacy Policy + Terms of Service',
+    detail: '/privacy and /terms — covers data, providers, retention, NY governing law.',
+  },
+  {
+    category: 'shipped',
+    title: 'In-app feedback button',
+    detail: 'Settings page → form → submissions appear in /admin.',
+  },
+  {
+    category: 'shipped',
+    title: 'Admin dashboard (this page!)',
+    detail:
+      'Stats, all signups, waitlist, feedback. Magic-link sign-in required every browser tab.',
+  },
+
+  // ─── Testing / waiting on real-world validation ───────────────────
+  {
+    category: 'testing',
+    title: 'SMS reminders (Twilio trial)',
+    detail:
+      'Code is live. Trial-mode limitation: trainer can only text phone numbers verified in Twilio console.',
+    blocker: 'Verify each tester\'s phone in Twilio, OR upgrade Twilio (~$20) for production SMS.',
+  },
+  {
+    category: 'testing',
+    title: 'Stripe payments (test mode)',
+    detail: 'Wired and working with Stripe test cards. Real money requires Stripe Connect refactor.',
+    blocker: 'See "Stripe Connect" under Soon.',
+  },
+
+  // ─── This week ────────────────────────────────────────────────────
+  {
+    category: 'thisWeek',
+    title: 'Group sessions',
+    detail:
+      'Schedule one session with multiple attendees. Per-attendee package billing.',
+  },
+  {
+    category: 'thisWeek',
+    title: 'Google Calendar two-way sync',
+    detail:
+      'OAuth flow, sync each session to trainer\'s personal Google Cal. Block booking page when busy.',
+  },
+  {
+    category: 'thisWeek',
+    title: 'Daily morning email to trainer',
+    detail: '"Today\'s sessions" digest at 7am local time, only if they have any.',
+  },
+  {
+    category: 'thisWeek',
+    title: 'A2P 10DLC SMS registration (production SMS)',
+    blocker: 'Twilio paperwork: business name, EIN, sample messages. 1-3 days carrier approval.',
+  },
+
+  // ─── Soon ─────────────────────────────────────────────────────────
+  {
+    category: 'soon',
+    title: 'Stripe Connect (real architecture)',
+    detail:
+      'Each trainer connects their own Stripe — payments go DIRECT to them, not through us. We take a flat $19/month subscription instead.',
+    blocker: '4-8 hours of refactor. Ship before second paying customer.',
+  },
+  {
+    category: 'soon',
+    title: 'Custom waiver per trainer',
+    detail:
+      'Database column already added. Need a Settings UI for trainers to paste their own waiver text.',
+  },
+  {
+    category: 'soon',
+    title: 'PNG app icons for iOS',
+    detail: 'Currently using SVG only. iOS may render a screenshot fallback.',
+  },
+  {
+    category: 'soon',
+    title: 'Better domain in Resend (full DNS green check)',
+    detail: 'Already verified — emails send from hello@trainerpro.coach.',
+  },
+
+  // ─── Ideas / backlog ──────────────────────────────────────────────
+  {
+    category: 'ideas',
+    title: 'WhatsApp reminders',
+    detail: 'Bypasses A2P 10DLC entirely. Most clients prefer WhatsApp anyway.',
+  },
+  {
+    category: 'ideas',
+    title: 'AI workout generation (Anthropic Claude)',
+    detail: 'Trainer types "12-week strength program for 40-year-old beginner" → gets a draft.',
+  },
+  {
+    category: 'ideas',
+    title: 'Native mobile apps',
+    detail:
+      'Real iOS/Android apps via React Native or Capacitor. Months of work + App Store review.',
+  },
+  {
+    category: 'ideas',
+    title: 'Sentry error tracking',
+    detail: 'Catch crashes before users tell us about them.',
+  },
+  {
+    category: 'ideas',
+    title: 'Stripe subscriptions for the $19/month platform fee',
+    detail: 'Trainers pay us monthly. Currently free during beta.',
+  },
+  {
+    category: 'ideas',
+    title: 'Customer support inbox',
+    detail: 'Beyond the feedback form — a real chat widget like Intercom or Crisp.',
+  },
+];
+
+export const STATUS_META: Record<
+  StatusCategory,
+  { label: string; emoji: string; color: string; order: number }
+> = {
+  shipped: { label: 'Live & working', emoji: '✅', color: 'emerald', order: 0 },
+  testing: { label: 'Live but in trial / testing', emoji: '🧪', color: 'amber', order: 1 },
+  thisWeek: { label: 'Building this week', emoji: '🚧', color: 'blue', order: 2 },
+  soon: { label: 'Coming soon', emoji: '📅', color: 'indigo', order: 3 },
+  ideas: { label: 'Ideas / backlog', emoji: '💡', color: 'slate', order: 4 },
+};

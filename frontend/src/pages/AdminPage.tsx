@@ -12,9 +12,11 @@ import {
   ShieldCheck,
   ExternalLink,
   MessageSquare,
+  ListChecks,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { PROJECT_STATUS, STATUS_META, type StatusCategory } from '../lib/projectStatus';
 
 interface OverviewStats {
   total_trainers: number;
@@ -423,12 +425,119 @@ export function AdminPage() {
           )}
         </section>
 
+        {/* Project status — your private build tracker */}
+        <ProjectStatusSection />
+
         <p className="text-center text-xs text-slate-400 pt-4">
           Admin tools · Trainer Pro
         </p>
       </main>
     </div>
   );
+}
+
+function ProjectStatusSection() {
+  const grouped = PROJECT_STATUS.reduce<Record<StatusCategory, typeof PROJECT_STATUS>>(
+    (acc, item) => {
+      (acc[item.category] ??= []).push(item);
+      return acc;
+    },
+    {} as Record<StatusCategory, typeof PROJECT_STATUS>,
+  );
+
+  const orderedCategories = (Object.keys(STATUS_META) as StatusCategory[]).sort(
+    (a, b) => STATUS_META[a].order - STATUS_META[b].order,
+  );
+
+  const totalShipped = (grouped.shipped ?? []).length;
+  const totalAll = PROJECT_STATUS.length;
+
+  return (
+    <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-200 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <ListChecks size={18} className="text-blue-600" />
+          <div>
+            <h2 className="font-bold text-slate-900">Project status</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {totalShipped} of {totalAll} items live · everything we've built, broken, and
+              planning. Edit{' '}
+              <code className="text-[10px] bg-slate-100 px-1 py-0.5 rounded">
+                frontend/src/lib/projectStatus.ts
+              </code>{' '}
+              to update.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="p-5 space-y-6">
+        {orderedCategories.map((cat) => {
+          const items = grouped[cat] ?? [];
+          if (items.length === 0) return null;
+          const meta = STATUS_META[cat];
+          return (
+            <div key={cat}>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-base">{meta.emoji}</span>
+                <h3 className="font-semibold text-slate-800 text-sm">{meta.label}</h3>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${categoryBadge(cat)}`}
+                >
+                  {items.length}
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {items.map((it, i) => (
+                  <li
+                    key={`${cat}-${i}`}
+                    className={`p-3 rounded-lg border ${categoryBg(cat)}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900">{it.title}</p>
+                        {it.detail && (
+                          <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                            {it.detail}
+                          </p>
+                        )}
+                        {it.blocker && (
+                          <p className="text-xs text-amber-700 mt-1.5 leading-relaxed">
+                            <span className="font-semibold">Blocker:</span> {it.blocker}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function categoryBadge(cat: StatusCategory): string {
+  const map: Record<StatusCategory, string> = {
+    shipped: 'bg-emerald-100 text-emerald-700',
+    testing: 'bg-amber-100 text-amber-700',
+    thisWeek: 'bg-blue-100 text-blue-700',
+    soon: 'bg-indigo-100 text-indigo-700',
+    ideas: 'bg-slate-200 text-slate-700',
+  };
+  return map[cat];
+}
+
+function categoryBg(cat: StatusCategory): string {
+  const map: Record<StatusCategory, string> = {
+    shipped: 'bg-emerald-50/40 border-emerald-100',
+    testing: 'bg-amber-50/40 border-amber-100',
+    thisWeek: 'bg-blue-50/40 border-blue-100',
+    soon: 'bg-indigo-50/40 border-indigo-100',
+    ideas: 'bg-slate-50 border-slate-200',
+  };
+  return map[cat];
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
