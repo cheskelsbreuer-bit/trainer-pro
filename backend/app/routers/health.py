@@ -17,6 +17,9 @@ def health() -> dict:
         "integrations": {
             "supabase": bool(settings.SUPABASE_URL and settings.SUPABASE_ANON_KEY),
             "supabase_jwt": bool(settings.SUPABASE_JWT_SECRET),
+            # Service-role key is required for ALL /admin/* endpoints.
+            # If false, "Couldn't load trainers" + feedback reply both fail.
+            "supabase_service_role": bool(settings.SUPABASE_SERVICE_ROLE_KEY),
             "anthropic": bool(settings.ANTHROPIC_API_KEY),
             "twilio": bool(
                 settings.TWILIO_ACCOUNT_SID
