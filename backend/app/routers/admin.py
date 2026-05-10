@@ -31,6 +31,15 @@ def _require_admin(user: CurrentUser) -> None:
     """404 (not 403) if the caller isn't an admin — hides the endpoint's existence."""
     if not user.email or user.email.lower() not in _admin_emails():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not Found")
+    # Service-role key is required for /admin/* to read across tenants.
+    # Without it, every endpoint here would crash with RuntimeError → 500.
+    # Surface a clear message so the frontend "Couldn't load" hint is actionable.
+    if not settings.SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Admin tools unavailable: SUPABASE_SERVICE_ROLE_KEY env var is not set "
+            "on the backend. Add it in Render → Environment, then redeploy.",
+        )
 
 
 # ─────────────── Overview ───────────────
