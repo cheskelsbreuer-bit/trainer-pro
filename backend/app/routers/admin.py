@@ -173,16 +173,17 @@ class TrainersResponse(BaseModel):
 
 @router.get("/trainers", response_model=TrainersResponse)
 def list_trainers(user: CurrentUser, limit: int = 500) -> TrainersResponse:
-    """List EVERY signed-up user, joined with their trainer profile if any.
+    """List signed-up trainers from the trainers table directly.
 
-    auth.users is the source of truth — even if the auto-create-trainers
-    trigger failed at some point, we still want to see who signed up.
+    Previously joined with auth.admin.list_users() but that API is slow on
+    Render's free tier — first call after an idle worker would 30-sec
+    timeout, frontend showed "Failed to fetch". Trainers table has email
+    in it (populated by the auth-user signup trigger), so we just read
+    that and skip the auth.users round-trip entirely.
     """
     _require_admin(user)
     sb = supabase_admin()
-
-    auth_users = _list_auth_users(sb)
-    trainers_by_id = {t.get("id"): t for t in _safe_select_trainers(sb)}
+    trainers = _safe_select_trainers(sb)
 
     def _to_iso(v: Any) -> str | None:
         if not v:
@@ -191,37 +192,140 @@ def list_trainers(user: CurrentUser, limit: int = 500) -> TrainersResponse:
             return v.isoformat()
         return str(v)
 
-    rows: list[TrainerRow] = []
-    for u in auth_users:
-        uid = getattr(u, "id", None) or (u.get("id") if isinstance(u, dict) else None)
-        if not uid:
-            continue
-        t = trainers_by_id.get(uid, {})
-        email = (
-            getattr(u, "email", None)
-            or (u.get("email") if isinstance(u, dict) else None)
-            or t.get("email")
+    rows: list[TrainerRow] = [
+        TrainerRow(
+            id=str(t.get("id")),
+            full_name=t.get("full_name"),
+            business_name=t.get("business_name"),
+            email=t.get("email"),
+            onboarded_at=t.get("onboarded_at"),
+            client_count_estimate=t.get("client_count_estimate"),
+            specialties=t.get("specialties") or [],
+            created_at=_to_iso(t.get("created_at")),
         )
-        created_at = (
-            getattr(u, "created_at", None)
-            or (u.get("created_at") if isinstance(u, dict) else None)
-            or t.get("created_at")
-        )
-        rows.append(
-            TrainerRow(
-                id=str(uid),
-                full_name=t.get("full_name"),
-                business_name=t.get("business_name"),
-                email=email,
-                onboarded_at=t.get("onboarded_at"),
-                client_count_estimate=t.get("client_count_estimate"),
-                specialties=t.get("specialties") or [],
-                created_at=_to_iso(created_at),
-            )
-        )
-
+        for t in trainers
+        if t.get("id")
+    ]
     rows.sort(key=lambda r: r.created_at or "", reverse=True)
     return TrainersResponse(rows=rows[:limit], total=len(rows))
+
+
+# ─────────────── Trainer detail (drilldown) ───────────────
+
+
+class TrainerDetail(BaseModel):
+    id: str
+    full_name: str | None = None
+    business_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    timezone: str | None = None
+    currency: str | None = None
+    primary_color: str | None = None
+    slug: str | None = None
+    booking_enabled: bool = False
+    onboarded_at: str | None = None
+    client_count_estimate: str | None = None
+    specialties: list[str] = []
+    service_area: str | None = None
+    directory_listed: bool = True
+    created_at: str | None = None
+    # Computed counts so the admin sees real activity, not just signup state.
+    client_count: int = 0
+    session_count: int = 0
+    payment_total: float = 0.0
+    last_session_at: str | None = None
+
+
+@router.get("/trainers/{trainer_id}", response_model=TrainerDetail)
+def trainer_detail(trainer_id: str, user: CurrentUser) -> TrainerDetail:
+    _require_admin(user)
+    sb = supabase_admin()
+    try:
+        resp = sb.table("trainers").select("*").eq("id", trainer_id).single().execute()
+        t = resp.data or {}
+    except Exception as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Trainer not found: {e}")
+
+    def _safe_count(table: str) -> int:
+        try:
+            return (
+                sb.table(table)
+                .select("id", count="exact", head=True)
+                .eq("trainer_id", trainer_id)
+                .execute()
+                .count
+                or 0
+            )
+        except Exception:
+            return 0
+
+    payment_total = 0.0
+    try:
+        pay = sb.table("payments").select("amount").eq("trainer_id", trainer_id).execute()
+        payment_total = sum(float(p.get("amount") or 0) for p in (pay.data or []))
+    except Exception:
+        pass
+
+    last_session_at: str | None = None
+    try:
+        last = (
+            sb.table("sessions")
+            .select("starts_at")
+            .eq("trainer_id", trainer_id)
+            .order("starts_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if last.data:
+            last_session_at = last.data[0].get("starts_at")
+    except Exception:
+        pass
+
+    return TrainerDetail(
+        id=str(t.get("id") or trainer_id),
+        full_name=t.get("full_name"),
+        business_name=t.get("business_name"),
+        email=t.get("email"),
+        phone=t.get("phone"),
+        timezone=t.get("timezone"),
+        currency=t.get("currency"),
+        primary_color=t.get("primary_color"),
+        slug=t.get("slug"),
+        booking_enabled=bool(t.get("booking_enabled")),
+        onboarded_at=t.get("onboarded_at"),
+        client_count_estimate=t.get("client_count_estimate"),
+        specialties=t.get("specialties") or [],
+        service_area=t.get("service_area"),
+        directory_listed=bool(t.get("directory_listed", True)),
+        created_at=t.get("created_at"),
+        client_count=_safe_count("clients"),
+        session_count=_safe_count("sessions"),
+        payment_total=round(payment_total, 2),
+        last_session_at=last_session_at,
+    )
+
+
+class TrainerPatch(BaseModel):
+    directory_listed: bool | None = None
+    booking_enabled: bool | None = None
+    full_name: str | None = None
+    business_name: str | None = None
+    service_area: str | None = None
+
+
+@router.patch("/trainers/{trainer_id}", response_model=TrainerDetail)
+def patch_trainer(trainer_id: str, body: TrainerPatch, user: CurrentUser) -> TrainerDetail:
+    """Admin can suspend/edit a trainer. Only fields explicitly set on the
+    body are written — None means leave alone. Returns the fresh detail."""
+    _require_admin(user)
+    sb = supabase_admin()
+    update: dict[str, Any] = {}
+    for field, value in body.model_dump(exclude_none=True).items():
+        update[field] = value
+    if update:
+        sb.table("trainers").update(update).eq("id", trainer_id).execute()
+    return trainer_detail(trainer_id, user)
 
 
 # ─────────────── Waitlist ───────────────

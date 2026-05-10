@@ -19,6 +19,7 @@ import {
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { PROJECT_STATUS, STATUS_META, type StatusCategory } from '../lib/projectStatus';
+import { TrainerDetailDrawer } from '../components/TrainerDetailDrawer';
 
 interface OverviewStats {
   total_trainers: number;
@@ -67,6 +68,7 @@ interface FeedbackRow {
 export function AdminPage() {
   const { user, signOut } = useAuth();
   const [search, setSearch] = useState('');
+  const [openTrainerId, setOpenTrainerId] = useState<string | null>(null);
 
   const overview = useQuery({
     queryKey: ['admin-overview'],
@@ -274,7 +276,12 @@ export function AdminPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredTrainers.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50">
+                    <tr
+                      key={t.id}
+                      onClick={() => setOpenTrainerId(t.id)}
+                      className="hover:bg-blue-50 cursor-pointer transition"
+                      title="Click to view + edit this trainer"
+                    >
                       <td className="px-4 py-2.5 font-mono text-slate-900">{t.email ?? '—'}</td>
                       <td className="px-4 py-2.5 text-slate-700">{t.full_name ?? '—'}</td>
                       <td className="px-4 py-2.5 text-slate-700">{t.business_name ?? '—'}</td>
@@ -411,6 +418,13 @@ export function AdminPage() {
           Admin tools · Trainer Pro
         </p>
       </main>
+
+      {openTrainerId && (
+        <TrainerDetailDrawer
+          trainerId={openTrainerId}
+          onClose={() => setOpenTrainerId(null)}
+        />
+      )}
     </div>
   );
 }

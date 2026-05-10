@@ -1,6 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Settings2, Bell, Building2, Globe, Star, Calendar, CreditCard, CalendarDays, MapPin, Wrench } from 'lucide-react';
+import {
+  User,
+  Bell,
+  Building2,
+  Globe,
+  Star,
+  Calendar,
+  CreditCard,
+  CalendarDays,
+  MapPin,
+  Wrench,
+  ChevronRight,
+  ArrowLeft,
+  Briefcase,
+  Megaphone,
+  Wallet,
+  LifeBuoy,
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/PageHeader';
@@ -16,11 +33,14 @@ import { PublicProfileSettingsCard } from '../components/PublicProfileSettingsCa
 import { TestimonialsManagerCard } from '../components/TestimonialsManagerCard';
 import type { Trainer } from '../lib/database.types';
 
+type Section = 'business' | 'public' | 'booking' | 'support' | null;
+
 export function Settings() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [form, setForm] = useState<Partial<Trainer>>({});
   const [saved, setSaved] = useState(false);
+  const [section, setSection] = useState<Section>(null);
 
   const { data: trainer } = useQuery({
     queryKey: ['trainer', user?.id],
@@ -63,168 +83,192 @@ export function Settings() {
 
   if (!trainer) return <div className="p-8">Loading…</div>;
 
+  // ─── Hub view ──────────────────────────────────────────────────────
+  if (section === null) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto">
+        <PageHeader
+          title="Settings"
+          subtitle="Pick a category to set up. Everything's optional — set up what you need now, come back for the rest."
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <HubTile
+            onClick={() => setSection('business')}
+            icon={<Briefcase size={22} />}
+            color="blue"
+            title="Your business"
+            description="Profile, branding, notifications, studio team."
+            items={['About you', 'Notifications', 'Studio mode']}
+          />
+          <HubTile
+            onClick={() => setSection('public')}
+            icon={<Megaphone size={22} />}
+            color="indigo"
+            title="What clients see"
+            description="Your public website, directory listing, testimonials, and the toolkit unlocked by your specialties."
+            items={[
+              'Public profile',
+              'Directory listing & specialties',
+              'Your toolkit (mini-apps)',
+              'Testimonials',
+            ]}
+          />
+          <HubTile
+            onClick={() => setSection('booking')}
+            icon={<Wallet size={22} />}
+            color="amber"
+            title="Booking & money"
+            description="How clients book and how you get paid."
+            items={['Booking page', 'Stripe payments', 'Google Calendar sync']}
+          />
+          <HubTile
+            onClick={() => setSection('support')}
+            icon={<LifeBuoy size={22} />}
+            color="rose"
+            title="Talk to us"
+            description="Send feedback, see replies from the Trainer Pro team."
+            items={['Messages from Trainer Pro', 'Send feedback']}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Section drilldown ─────────────────────────────────────────────
+  const sectionMeta: Record<Exclude<Section, null>, { title: string; sub: string }> = {
+    business: {
+      title: 'Your business',
+      sub: 'Your name, business name, contact info, branding, and team.',
+    },
+    public: {
+      title: 'What clients see',
+      sub: 'Your public-facing presence on Trainer Pro.',
+    },
+    booking: {
+      title: 'Booking & money',
+      sub: 'Self-serve booking, card payments, calendar integration.',
+    },
+    support: {
+      title: 'Talk to us',
+      sub: 'Your feedback shapes what we build next — and we reply.',
+    },
+  };
+
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <PageHeader
-        title="Settings"
-        subtitle="Everything that controls your business — your profile, what clients see, how you get paid, and how we tell you about new sessions."
-      />
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          update.mutate();
-        }}
-        className="space-y-6"
+      <button
+        type="button"
+        onClick={() => setSection(null)}
+        className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 mb-4"
       >
-        <Section
-          icon={<User size={18} />}
-          color="blue"
-          title="About you"
-          description="Your name, business name, and contact info. This shows up on your booking page, in receipts, and on your client portal."
-        >
-          <Field label="Full name">
-            <input
-              type="text"
-              value={form.full_name ?? ''}
-              onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </Field>
-          <Field label="Business name">
-            <input
-              type="text"
-              value={form.business_name ?? ''}
-              onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-              placeholder="Optional"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </Field>
-          <Field label="Phone">
-            <input
-              type="tel"
-              value={form.phone ?? ''}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </Field>
-          <Field label="Email">
-            <input
-              type="email"
-              value={trainer.email ?? user?.email ?? ''}
-              disabled
-              className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500"
-            />
-          </Field>
-        </Section>
+        <ArrowLeft size={14} /> Back to Settings
+      </button>
+      <PageHeader title={sectionMeta[section].title} subtitle={sectionMeta[section].sub} />
 
-        <Section
-          icon={<Settings2 size={18} />}
-          color="purple"
-          title="Preferences"
-          description="Time zone we use for sessions, currency for payments, and your brand color (used on buttons and your client portal)."
-        >
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Timezone">
-              <input
-                type="text"
-                value={form.timezone ?? ''}
-                onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                placeholder="America/New_York"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </Field>
-            <Field label="Currency">
-              <select
-                value={form.currency ?? 'USD'}
-                onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="CAD">CAD ($)</option>
-                <option value="AUD">AUD ($)</option>
-                <option value="ILS">ILS (₪)</option>
-              </select>
-            </Field>
-          </div>
-          <Field label="Brand color">
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={form.primary_color ?? '#2d6a9f'}
-                onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
-                className="h-10 w-16 border border-slate-300 rounded-lg cursor-pointer"
-              />
-              <span className="text-sm text-slate-500 font-mono">{form.primary_color}</span>
-            </div>
-          </Field>
-        </Section>
-
-        <Section
-          icon={<Bell size={18} />}
-          color="amber"
-          title="What we email you"
-          description="We can send you a daily morning email with today's sessions. Optional SMS reminders for clients are coming soon."
-        >
-          <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-            <input
-              type="checkbox"
-              checked={form.notify_email ?? true}
-              onChange={(e) => setForm({ ...form, notify_email: e.target.checked })}
-              className="w-4 h-4"
-            />
-            <div>
-              <p className="text-sm font-medium text-slate-900">Email reminders</p>
-              <p className="text-xs text-slate-500">Send me an email summary each morning of today's sessions.</p>
-            </div>
-          </label>
-          <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-            <input
-              type="checkbox"
-              checked={form.notify_sms ?? false}
-              onChange={(e) => setForm({ ...form, notify_sms: e.target.checked })}
-              className="w-4 h-4"
-            />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-slate-900">SMS reminders (Phase 2)</p>
-              <p className="text-xs text-slate-500">Text my clients before each session. Requires Twilio setup.</p>
-            </div>
-          </label>
-          {form.notify_sms && (
-            <Field label="SMS sender phone">
-              <input
-                type="tel"
-                value={form.sms_phone ?? ''}
-                onChange={(e) => setForm({ ...form, sms_phone: e.target.value })}
-                placeholder="+1 555 555 5555"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </Field>
-          )}
-        </Section>
-
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={update.isPending}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white px-6 py-2 rounded-lg font-medium"
-          >
-            {update.isPending ? 'Saving…' : 'Save changes'}
-          </button>
-          {saved && <span className="text-sm text-emerald-600">✓ Saved</span>}
-        </div>
-      </form>
-
-      <div className="mt-10">
-        <div className="border-t border-slate-200 pt-8 mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Set up the rest of your business</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            These are all optional. Skip any you don't need — you can come back later.
-          </p>
-        </div>
+      {section === 'business' && (
         <div className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              update.mutate();
+            }}
+            className="space-y-6"
+          >
+            <CardWrapper
+              icon={<User size={18} />}
+              color="blue"
+              title="About you"
+              description="Your name, business name, and contact info. This shows up on your booking page, in receipts, and on your client portal."
+            >
+              <div className="space-y-4">
+                <Field label="Full name">
+                  <input
+                    type="text"
+                    value={form.full_name ?? ''}
+                    onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </Field>
+                <Field label="Business name (optional)">
+                  <input
+                    type="text"
+                    value={form.business_name ?? ''}
+                    onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </Field>
+                <Field label="Phone (optional)">
+                  <input
+                    type="tel"
+                    value={form.phone ?? ''}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </Field>
+                <Field label="Brand color">
+                  <input
+                    type="color"
+                    value={form.primary_color ?? '#2563eb'}
+                    onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                    className="h-10 w-20 border border-slate-300 rounded-lg cursor-pointer"
+                  />
+                </Field>
+              </div>
+            </CardWrapper>
+
+            <CardWrapper
+              icon={<Bell size={18} />}
+              color="amber"
+              title="Notifications"
+              description="How we tell you about new bookings, cancellations, and reminders. Email is on by default."
+            >
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!form.notify_email}
+                    onChange={(e) => setForm({ ...form, notify_email: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm font-medium text-slate-900">
+                    Email notifications
+                  </span>
+                </label>
+                <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!form.notify_sms}
+                    onChange={(e) => setForm({ ...form, notify_sms: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm font-medium text-slate-900">SMS notifications</span>
+                </label>
+                {form.notify_sms && (
+                  <Field label="SMS phone number">
+                    <input
+                      type="tel"
+                      value={form.sms_phone ?? ''}
+                      onChange={(e) => setForm({ ...form, sms_phone: e.target.value })}
+                      placeholder="+1 555 555 5555"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </Field>
+                )}
+              </div>
+            </CardWrapper>
+
+            <div className="flex items-center gap-3 pt-2 ml-12">
+              <button
+                type="submit"
+                disabled={update.isPending}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white px-6 py-2 rounded-lg font-medium"
+              >
+                {update.isPending ? 'Saving…' : 'Save profile changes'}
+              </button>
+              {saved && <span className="text-sm text-emerald-600">✓ Saved</span>}
+            </div>
+          </form>
+
           <CardWrapper
             icon={<Building2 size={18} />}
             color="cyan"
@@ -233,7 +277,11 @@ export function Settings() {
           >
             <StudioSettingsCard trainer={trainer} />
           </CardWrapper>
+        </div>
+      )}
 
+      {section === 'public' && (
+        <div className="space-y-6">
           <CardWrapper
             icon={<Globe size={18} />}
             color="indigo"
@@ -247,7 +295,7 @@ export function Settings() {
             icon={<MapPin size={18} />}
             color="amber"
             title="Trainer directory listing"
-            description="Anyone visiting trainerpro.coach/find-trainers can search for trainers by city and specialty. Set your service area to attract local clients — or hide your listing if you don't want new leads."
+            description="Anyone visiting trainerpro.coach/find-trainers can search for trainers by city and specialty. Set your service area + pick what you train; uncheck to hide."
           >
             <DirectorySettingsCard trainer={trainer} />
           </CardWrapper>
@@ -256,7 +304,7 @@ export function Settings() {
             icon={<Wrench size={18} />}
             color="emerald"
             title="Your toolkit"
-            description="The mini-apps unlocked by the specialties you picked above. Available tools work right now; coming-soon tools have a thumbs-up button — clicking it tells us to prioritize that one for you."
+            description="The mini-apps unlocked by the specialties you picked above. Coming-soon tools have a thumbs-up button — clicking it tells us to prioritize that one for you."
           >
             <SpecialtyToolkit trainer={trainer} />
           </CardWrapper>
@@ -269,7 +317,11 @@ export function Settings() {
           >
             <TestimonialsManagerCard trainer={trainer} />
           </CardWrapper>
+        </div>
+      )}
 
+      {section === 'booking' && (
+        <div className="space-y-6">
           <CardWrapper
             icon={<Calendar size={18} />}
             color="emerald"
@@ -292,24 +344,85 @@ export function Settings() {
             icon={<CalendarDays size={18} />}
             color="blue"
             title="Google Calendar sync"
-            description="Optional: every session you log here automatically appears in your personal Google Calendar. Coming this week."
+            description="Optional: every session you log here automatically appears in your personal Google Calendar."
           >
             <GoogleCalendarCard trainer={trainer} />
           </CardWrapper>
         </div>
+      )}
 
-        <div className="border-t border-slate-200 pt-8 mt-10 mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Talk to us</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Your feedback shapes what we build next — and we reply.
-          </p>
-        </div>
+      {section === 'support' && (
         <div className="space-y-5">
           <AdminRepliesCard />
           <FeedbackCard />
         </div>
-      </div>
+      )}
     </div>
+  );
+}
+
+/* ─────────────── Hub tile ─────────────── */
+function HubTile({
+  icon,
+  color,
+  title,
+  description,
+  items,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  color: 'blue' | 'indigo' | 'amber' | 'rose';
+  title: string;
+  description: string;
+  items: string[];
+  onClick: () => void;
+}) {
+  const colors: Record<string, string> = {
+    blue: 'from-blue-50 to-sky-50 border-blue-200 text-blue-700',
+    indigo: 'from-indigo-50 to-violet-50 border-indigo-200 text-indigo-700',
+    amber: 'from-amber-50 to-orange-50 border-amber-200 text-amber-700',
+    rose: 'from-rose-50 to-pink-50 border-rose-200 text-rose-700',
+  };
+  const iconBg: Record<string, string> = {
+    blue: 'bg-blue-600',
+    indigo: 'bg-indigo-600',
+    amber: 'bg-amber-500',
+    rose: 'bg-rose-600',
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group bg-gradient-to-br ${colors[color]} border-2 rounded-2xl p-6 text-left hover:shadow-lg hover:-translate-y-0.5 transition-all`}
+    >
+      <div className="flex items-start gap-4 mb-3">
+        <div
+          className={`w-12 h-12 rounded-xl ${iconBg[color]} text-white flex items-center justify-center shadow-md flex-shrink-0`}
+        >
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-1.5">
+            {title}
+            <ChevronRight
+              size={16}
+              className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+            />
+          </h3>
+          <p className="text-sm text-slate-600 mt-0.5 leading-snug">{description}</p>
+        </div>
+      </div>
+      <ul className="space-y-1 ml-1 mt-2">
+        {items.map((item) => (
+          <li
+            key={item}
+            className="text-xs text-slate-600 flex items-center gap-1.5 before:content-['·'] before:text-slate-400 before:font-bold"
+          >
+            {item}
+          </li>
+        ))}
+      </ul>
+    </button>
   );
 }
 
@@ -329,7 +442,9 @@ function CardWrapper({
   return (
     <div>
       <div className="flex items-start gap-3 mb-2">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${COLOR_CLASSES[color]}`}>
+        <div
+          className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${COLOR_CLASSES[color]}`}
+        >
           {icon}
         </div>
         <div className="flex-1">
@@ -345,54 +460,27 @@ function CardWrapper({
 type SectionColor = 'blue' | 'purple' | 'amber' | 'cyan' | 'indigo' | 'pink' | 'emerald' | 'rose';
 
 const COLOR_CLASSES: Record<SectionColor, string> = {
-  blue: 'bg-blue-100 text-blue-600',
-  purple: 'bg-purple-100 text-purple-600',
-  amber: 'bg-amber-100 text-amber-600',
-  cyan: 'bg-cyan-100 text-cyan-600',
-  indigo: 'bg-indigo-100 text-indigo-600',
-  pink: 'bg-pink-100 text-pink-600',
-  emerald: 'bg-emerald-100 text-emerald-600',
-  rose: 'bg-rose-100 text-rose-600',
+  blue: 'bg-blue-100 text-blue-700',
+  purple: 'bg-purple-100 text-purple-700',
+  amber: 'bg-amber-100 text-amber-700',
+  cyan: 'bg-cyan-100 text-cyan-700',
+  indigo: 'bg-indigo-100 text-indigo-700',
+  pink: 'bg-pink-100 text-pink-700',
+  emerald: 'bg-emerald-100 text-emerald-700',
+  rose: 'bg-rose-100 text-rose-700',
 };
 
-function Section({
-  icon,
-  color,
-  title,
-  description,
+function Field({
+  label,
   children,
 }: {
-  icon?: React.ReactNode;
-  color?: SectionColor;
-  title: string;
-  description?: string;
+  label: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-white border border-slate-200 rounded-xl p-5">
-      <header className="flex items-start gap-3 mb-4">
-        {icon && color && (
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${COLOR_CLASSES[color]}`}>
-            {icon}
-          </div>
-        )}
-        <div className="flex-1">
-          <h2 className="font-semibold text-slate-900">{title}</h2>
-          {description && (
-            <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">{description}</p>
-          )}
-        </div>
-      </header>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="block text-sm font-medium text-slate-700 mb-1">{label}</span>
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
       {children}
-    </label>
+    </div>
   );
 }
