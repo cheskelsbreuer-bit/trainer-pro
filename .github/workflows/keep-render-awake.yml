@@ -1,0 +1,37 @@
+# Keep the Render free-tier backend warm.
+#
+# Render spins down free-tier workers after 15 minutes of inactivity.
+# First request to a sleeping worker takes 30-60 seconds — long enough
+# for browser fetches to time out and show "Failed to fetch", which
+# the admin/dashboard pages then misreport as a real error.
+#
+# This workflow pings /health every 14 minutes (just under the sleep
+# threshold) so the worker never goes idle. Free on GitHub Actions for
+# public + private repos under reasonable limits.
+#
+# If you ever upgrade to Render's paid Starter plan, delete this file —
+# paid workers don't sleep.
+
+name: Keep Render backend warm
+
+on:
+  schedule:
+    # Every 14 minutes. Cron uses UTC; minute-only granularity.
+    - cron: '*/14 * * * *'
+  # Allow manual trigger from the Actions tab if you want to wake it now.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping /health
+        run: |
+          # -f fails the step on HTTP error so the run shows red if the
+          # backend is genuinely down (vs just slow). --max-time 90 gives
+          # the worker time to fully wake up before we give up.
+          curl -fsS --max-time 90 https://api.trainerpro.coach/health \
+            | head -c 500
+          echo
+          echo "Pinged at $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
