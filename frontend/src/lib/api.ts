@@ -62,15 +62,34 @@ async function fetchWithColdStartRetry(
   throw lastErr ?? new Error('Unknown fetch error');
 }
 
+async function getAccessToken(): Promise<string | null> {
+  // Try the in-memory session first.
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData.session?.access_token) return sessionData.session.access_token;
+  // No session in cache — try a refresh. Covers the case where Supabase's
+  // background refresh hasn't run yet but localStorage has a valid
+  // refresh_token. Cheap (no network if not needed).
+  try {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    return refreshed.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!BASE) throw new ApiError('Backend URL not configured (VITE_API_URL)', 0);
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
+  const token = await getAccessToken();
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  } else {
+    // eslint-disable-next-line no-console
+    console.warn('[api] no Supabase session for', path, '— request will 401');
+  }
 
   const url = `${BASE}${path.startsWith('/') ? path : '/' + path}`;
   let res: Response;
