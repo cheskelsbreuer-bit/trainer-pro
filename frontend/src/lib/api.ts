@@ -1,9 +1,21 @@
-// Tiny wrapper around the Python backend at VITE_API_URL.
+// Tiny wrapper around the Python backend.
 // Adds the Supabase access token automatically. Returns parsed JSON.
+//
+// In production we route through Vercel's same-origin rewrite at /api/* so
+// the browser never makes a cross-origin request — eliminates CORS entirely.
+// See frontend/vercel.json for the rewrite that proxies /api/* to
+// https://api.trainerpro.coach/*.
+//
+// In dev VITE_API_URL still points at localhost:8000 (or wherever) so we
+// fall back to it when set.
 
 import { supabase } from './supabase';
 
-const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+const ENV_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '');
+// Use Vercel proxy in browser when no explicit dev URL is set. /api gets
+// rewritten by Vercel to https://api.trainerpro.coach/ — same-origin from
+// the browser's perspective, no CORS.
+const BASE = ENV_BASE && ENV_BASE.startsWith('http://localhost') ? ENV_BASE : '/api';
 
 export class ApiError extends Error {
   status: number;
