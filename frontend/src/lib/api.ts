@@ -17,6 +17,14 @@ const ENV_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/
 // the browser's perspective, no CORS.
 const BASE = ENV_BASE && ENV_BASE.startsWith('http://localhost') ? ENV_BASE : '/api';
 
+// Log the resolved base ONCE so we can debug deploy/bundle staleness from
+// the user's console without round-trips. Look for "[api] base=" in
+// DevTools → Console immediately after page load.
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line no-console
+  console.info('[api] base=', BASE, 'build=v3-api-proxy');
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
