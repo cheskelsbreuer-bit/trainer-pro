@@ -19,7 +19,7 @@ truststore.inject_into_ssl()
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from .config import settings
 from .routers import admin, analytics, health, reminders, reports, stripe_checkout, workouts_ai
@@ -42,49 +42,41 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Wildcard CORS. Safe here because we don't use cookie auth — every
-# authenticated request carries a Bearer JWT in the Authorization header,
-# which the browser doesn't treat as a "credential" for CORS purposes.
-# `allow_credentials=False` is required when using `*` for allow_origins;
-# the browser would otherwise reject the response.
-#
-# The previous regex-based setup with allow_credentials=True was failing
-# CORS preflights for app.trainerpro.coach in some cases — likely because
-# the regex match was occasionally returning the wrong Vary/Origin
-# combination on cached preflights. Wildcard sidesteps the whole class
-# of issues.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    max_age=600,
-)
+# Hand-rolled CORS. We previously used Starlette's CORSMiddleware but
+# requests from app.trainerpro.coach kept getting CORS-rejected in the
+# browser — the responses landed without the Access-Control-Allow-Origin
+# header for reasons we couldn't pin down (possibly Render's proxy
+# stripping them, possibly a Starlette+Render edge-case). This middleware
+# is dead simple: every response gets the wildcard origin, every OPTIONS
+# preflight gets short-circuited with a 204. We also stamp a marker
+# header so we can verify from DevTools that this code is actually running.
+_CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Expose-Headers": "*",
+    "Access-Control-Max-Age": "600",
+    "X-Cors-Source": "manual-v3",
+}
 
 
-# Belt-and-suspenders: a manual middleware that ALWAYS adds CORS headers,
-# even on responses that bypass CORSMiddleware for whatever reason
-# (validation errors, exception handlers, etc.). Some Render proxy setups
-# also seem to drop CORS headers on certain non-2xx paths — this guarantees
-# they're present.
 @app.middleware("http")
-async def force_cors_headers(request, call_next):
+async def cors_middleware(request, call_next):
     if request.method == "OPTIONS":
-        # Short-circuit any remaining preflight that wasn't caught above.
-        from fastapi.responses import Response
+        return Response(status_code=204, headers=_CORS_HEADERS)
+    try:
+        response = await call_next(request)
+    except Exception as exc:  # noqa: BLE001 — last-resort CORS on crash
+        # Even if a route crashes, return a CORS-headered 500 so the
+        # frontend sees a real error instead of an opaque CORS rejection.
         return Response(
-            status_code=204,
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "*",
-                "Access-Control-Max-Age": "600",
-            },
+            content=f'{{"detail":"Internal error: {type(exc).__name__}"}}',
+            status_code=500,
+            media_type="application/json",
+            headers=_CORS_HEADERS,
         )
-    response = await call_next(request)
-    response.headers.setdefault("Access-Control-Allow-Origin", "*")
-    response.headers.setdefault("Access-Control-Expose-Headers", "*")
+    for key, value in _CORS_HEADERS.items():
+        response.headers[key] = value
     return response
 
 app.include_router(health.router)

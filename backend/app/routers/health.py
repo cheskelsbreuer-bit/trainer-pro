@@ -15,7 +15,7 @@ def health() -> dict:
         "service": "trainer-pro-backend",
         # Bump this any time CORS / middleware / envvar handling changes so
         # we can tell from /health which commit Render is actually running.
-        "version": "0.2.0-cors-wildcard",
+        "version": "0.3.0-cors-manual",
         "integrations": {
             "supabase": bool(settings.SUPABASE_URL and settings.SUPABASE_ANON_KEY),
             "supabase_jwt": bool(settings.SUPABASE_JWT_SECRET),
