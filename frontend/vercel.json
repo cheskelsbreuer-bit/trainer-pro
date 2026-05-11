@@ -9,6 +9,9 @@
       "source": "/api/:path*",
       "destination": "https://api.trainerpro.coach/:path*"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }
