@@ -45,7 +45,10 @@ export function OnboardingWizard({ trainer }: Props) {
   );
   const [specialties, setSpecialties] = useState<string[]>(trainer.specialties ?? []);
   const [description, setDescription] = useState('');
-  const [templateSlug, setTemplateSlug] = useState<string | null>(null);
+  // Multi-pick: a trainer who does martial arts + yoga + memberships
+  // should be able to stack all three templates so their packages list
+  // contains every relevant package out of the gate.
+  const [templateSlugs, setTemplateSlugs] = useState<string[]>([]);
   const [brand, setBrand] = useState(trainer.primary_color ?? '#2563eb');
   const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
   const [profileHeadline, setProfileHeadline] = useState(
@@ -90,31 +93,48 @@ export function OnboardingWizard({ trainer }: Props) {
         onboarded_at: new Date().toISOString(),
       };
 
-      // Apply template defaults — only fields the template explicitly set,
-      // and only if the trainer hasn't already customized them. Picking
-      // a template should give the trainer a head start, not overwrite
-      // their work.
-      const picked = templateSlug ? TEMPLATES_BY_SLUG[templateSlug] : null;
-      if (picked) {
-        if (
-          picked.defaults.packages &&
-          (!trainer.default_packages || trainer.default_packages.length === 0)
-        ) {
-          update.default_packages = picked.defaults.packages;
+      // Apply template defaults — STACK across every picked template.
+      // Trainers running e.g. martial arts + yoga + gym membership get
+      // every relevant package combined into one default_packages list,
+      // de-duplicated by name. Only applied if trainer.default_packages
+      // is empty (never overwrite work the trainer already did).
+      const pickedTemplates = templateSlugs
+        .map((s) => TEMPLATES_BY_SLUG[s])
+        .filter(Boolean);
+      if (pickedTemplates.length > 0) {
+        if (!trainer.default_packages || trainer.default_packages.length === 0) {
+          const seenNames = new Set<string>();
+          const combinedPackages = [];
+          for (const t of pickedTemplates) {
+            for (const pkg of t.defaults.packages ?? []) {
+              if (seenNames.has(pkg.name)) continue;
+              seenNames.add(pkg.name);
+              combinedPackages.push(pkg);
+            }
+          }
+          if (combinedPackages.length > 0) {
+            update.default_packages = combinedPackages;
+          }
         }
-        if (picked.defaults.booking_settings) {
+
+        // Booking settings: take the FIRST picked template's settings as
+        // a base, then layer the trainer's existing settings on top
+        // (existing wins). Booking enabled is true if ANY picked
+        // template wants it on.
+        const firstWithBooking = pickedTemplates.find(
+          (t) => t.defaults.booking_settings,
+        );
+        if (firstWithBooking?.defaults.booking_settings) {
           update.booking_settings = {
+            ...firstWithBooking.defaults.booking_settings,
             ...(trainer.booking_settings ?? {}),
-            ...picked.defaults.booking_settings,
           };
         }
-        // Template can suggest booking_enabled but the trainer's explicit
-        // pick on the booking step wins.
         if (
           bookingEnabled === null &&
-          picked.defaults.booking_enabled !== undefined
+          pickedTemplates.some((t) => t.defaults.booking_enabled)
         ) {
-          update.booking_enabled = picked.defaults.booking_enabled;
+          update.booking_enabled = true;
         }
       }
 
@@ -185,8 +205,8 @@ export function OnboardingWizard({ trainer }: Props) {
             <StepTemplate
               specialties={specialties}
               description={description}
-              picked={templateSlug}
-              onPick={setTemplateSlug}
+              picked={templateSlugs}
+              onPick={setTemplateSlugs}
             />
           )}
           {step === 7 && (
@@ -537,7 +557,7 @@ function StepDescription({
   );
 }
 
-/* ─────────────── Step 6: Template pick ─────────────── */
+/* ─────────────── Step 6: Template pick (multi-select, stackable) ─────────────── */
 function StepTemplate({
   specialties,
   description,
@@ -546,36 +566,53 @@ function StepTemplate({
 }: {
   specialties: string[];
   description: string;
-  picked: string | null;
-  onPick: (slug: string | null) => void;
+  picked: string[];
+  onPick: (slugs: string[]) => void;
 }) {
   const recommendations = useMemo(
     () => recommendTemplates(specialties, description),
     [specialties, description],
   );
-  // Also let the trainer see the full set if none of the recs feel right.
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(recommendations.length < 2);
   const shown: Template[] = showAll ? TEMPLATES : recommendations;
+
+  const toggle = (slug: string) => {
+    if (picked.includes(slug)) onPick(picked.filter((s) => s !== slug));
+    else onPick([...picked, slug]);
+  };
+
+  // Preview of every package the trainer will get if they finish with the
+  // current pick — combined + de-duped across templates.
+  const previewPackages = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { name: string; price: number; from: string }[] = [];
+    for (const slug of picked) {
+      const t = TEMPLATES_BY_SLUG[slug];
+      if (!t) continue;
+      for (const pkg of t.defaults.packages ?? []) {
+        if (seen.has(pkg.name)) continue;
+        seen.add(pkg.name);
+        out.push({ name: pkg.name, price: pkg.price, from: t.emoji });
+      }
+    }
+    return out;
+  }, [picked]);
 
   return (
     <div>
       <StepHeader
         eyebrow="Step 5 of 8"
-        title="Pick a starting template."
-        subtitle={
-          recommendations.length === 1 && !showAll
-            ? `Based on what you told us, here's the closest match. Fully customizable later — this just saves you from setting up packages and booking from scratch.`
-            : `Based on what you told us, here are the closest matches. Fully customizable later.`
-        }
+        title="Pick the templates that fit you."
+        subtitle="Mix and match — if you run a gym AND teach yoga AND coach BJJ, pick all three. We'll combine their packages so you start with everything in one list."
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
         {shown.map((t) => {
-          const isOn = picked === t.slug;
+          const isOn = picked.includes(t.slug);
           return (
             <button
               key={t.slug}
               type="button"
-              onClick={() => onPick(isOn ? null : t.slug)}
+              onClick={() => toggle(t.slug)}
               className={`text-left p-4 rounded-2xl border-2 transition relative ${
                 isOn
                   ? 'border-blue-500 bg-blue-50 shadow-md'
@@ -626,6 +663,7 @@ function StepTemplate({
           );
         })}
       </div>
+
       <div className="text-center mt-4">
         <button
           type="button"
@@ -633,13 +671,44 @@ function StepTemplate({
           className="text-xs text-slate-500 hover:text-slate-900 underline"
         >
           {showAll
-            ? `Show only the ${recommendations.length} recommended`
+            ? recommendations.length > 0
+              ? `Show only the ${recommendations.length} recommended for me`
+              : 'Showing all templates'
             : `Don't see a fit? See all ${TEMPLATES.length} templates`}
         </button>
       </div>
+
+      {/* Live combined-packages preview so the trainer can see what
+          they're committing to before clicking Continue. */}
+      {previewPackages.length > 0 && (
+        <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 max-w-2xl mx-auto">
+          <p className="text-xs font-semibold text-blue-900 mb-2 flex items-center gap-1.5">
+            <CheckCircle2 size={13} />
+            You'll start with {previewPackages.length} package
+            {previewPackages.length === 1 ? '' : 's'} from{' '}
+            {picked.length} template{picked.length === 1 ? '' : 's'}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {previewPackages.map((p) => (
+              <span
+                key={p.name}
+                className="text-[11px] px-2 py-1 rounded-full bg-white border border-blue-100 text-slate-700"
+              >
+                <span className="mr-1">{p.from}</span>
+                {p.name} · ${p.price}
+              </span>
+            ))}
+          </div>
+          <p className="text-[10px] text-blue-700/80 mt-2 leading-snug">
+            All of these will appear in your packages list. Rename or delete any
+            you don't want — nothing is locked in.
+          </p>
+        </div>
+      )}
+
       <p className="text-[11px] text-slate-400 text-center mt-4 max-w-md mx-auto">
-        Picking a template pre-fills your packages and booking settings. You can
-        skip this step and configure everything manually in Settings.
+        You can also skip this step entirely and build packages by hand later
+        from Settings.
       </p>
     </div>
   );
