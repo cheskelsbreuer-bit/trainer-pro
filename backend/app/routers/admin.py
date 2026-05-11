@@ -20,7 +20,7 @@ from ..auth import CurrentUser
 from ..config import settings
 from ..db import supabase_admin
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/chesky", tags=["chesky"])
 
 
 def _admin_emails() -> set[str]:

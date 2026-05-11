@@ -53,7 +53,7 @@ export function TrainerDetailDrawer({
 
   const detail = useQuery({
     queryKey: ['admin-trainer-detail', trainerId],
-    queryFn: () => api<TrainerDetail>(`/admin/trainers/${trainerId}`),
+    queryFn: () => api<TrainerDetail>(`/chesky/trainers/${trainerId}`),
     refetchOnWindowFocus: false,
   });
 
@@ -71,7 +71,7 @@ export function TrainerDetailDrawer({
 
   const patch = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
-      api<TrainerDetail>(`/admin/trainers/${trainerId}`, {
+      api<TrainerDetail>(`/chesky/trainers/${trainerId}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
@@ -336,7 +336,7 @@ function ClientsTab({ trainerId }: { trainerId: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-trainer-clients', trainerId],
     queryFn: () =>
-      api<{ rows: ClientRow[]; total: number }>(`/admin/trainers/${trainerId}/clients`),
+      api<{ rows: ClientRow[]; total: number }>(`/chesky/trainers/${trainerId}/clients`),
   });
 
   if (isLoading) return <p className="text-sm text-slate-500">Loading clients…</p>;
@@ -381,7 +381,7 @@ function SessionsTab({ trainerId }: { trainerId: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-trainer-sessions', trainerId],
     queryFn: () =>
-      api<{ rows: SessionRow[]; total: number }>(`/admin/trainers/${trainerId}/sessions`),
+      api<{ rows: SessionRow[]; total: number }>(`/chesky/trainers/${trainerId}/sessions`),
   });
 
   if (isLoading) return <p className="text-sm text-slate-500">Loading sessions…</p>;
@@ -433,7 +433,7 @@ function PaymentsTab({ trainerId, currency }: { trainerId: string; currency: str
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-trainer-payments', trainerId],
     queryFn: () =>
-      api<{ rows: PaymentRow[]; total: number }>(`/admin/trainers/${trainerId}/payments`),
+      api<{ rows: PaymentRow[]; total: number }>(`/chesky/trainers/${trainerId}/payments`),
   });
 
   if (isLoading) return <p className="text-sm text-slate-500">Loading payments…</p>;

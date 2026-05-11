@@ -78,22 +78,22 @@ export function AdminPage() {
 
   const overview = useQuery({
     queryKey: ['admin-overview'],
-    queryFn: () => api<OverviewStats>('/admin/overview'),
+    queryFn: () => api<OverviewStats>('/chesky/overview'),
     refetchOnWindowFocus: false,
   });
   const trainers = useQuery({
     queryKey: ['admin-trainers'],
-    queryFn: () => api<{ rows: TrainerRow[]; total: number }>('/admin/trainers'),
+    queryFn: () => api<{ rows: TrainerRow[]; total: number }>('/chesky/trainers'),
     refetchOnWindowFocus: false,
   });
   const waitlist = useQuery({
     queryKey: ['admin-waitlist'],
-    queryFn: () => api<{ rows: WaitlistRow[]; total: number }>('/admin/waitlist'),
+    queryFn: () => api<{ rows: WaitlistRow[]; total: number }>('/chesky/waitlist'),
     refetchOnWindowFocus: false,
   });
   const feedback = useQuery({
     queryKey: ['admin-feedback'],
-    queryFn: () => api<{ rows: FeedbackRow[]; total: number }>('/admin/feedback'),
+    queryFn: () => api<{ rows: FeedbackRow[]; total: number }>('/chesky/feedback'),
     refetchOnWindowFocus: false,
   });
 
@@ -476,7 +476,7 @@ function FeedbackItem({ feedback: f }: { feedback: FeedbackRow }) {
 
   const send = useMutation({
     mutationFn: () =>
-      api(`/admin/feedback/${f.id}/reply`, {
+      api(`/chesky/feedback/${f.id}/reply`, {
         method: 'POST',
         body: JSON.stringify({ reply: draft }),
       }),

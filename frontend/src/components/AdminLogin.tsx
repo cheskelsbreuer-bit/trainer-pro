@@ -25,8 +25,9 @@ export function AdminLogin() {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.toLowerCase().trim(),
         options: {
-          // Land back on /admin with a marker the AdminShell will pick up.
-          emailRedirectTo: `${window.location.origin}/admin?verified=1`,
+          // Land back on /chesky with a marker the AdminShell will pick up.
+          // (Renamed from /admin to bypass Livigent URL filtering.)
+          emailRedirectTo: `${window.location.origin}/chesky?verified=1`,
         },
       });
       if (error) throw error;

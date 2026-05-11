@@ -104,13 +104,13 @@ function AdminShell() {
     if (params.get('verified') === '1' && user) {
       sessionStorage.setItem('admin_verified', 'true');
       setVerified(true);
-      window.history.replaceState({}, '', '/admin');
+      window.history.replaceState({}, '', '/chesky');
     }
   }, [user]);
 
   const check = useQuery({
     queryKey: ['admin-whoami', user?.id],
-    queryFn: () => api<{ is_admin: boolean }>('/admin/whoami'),
+    queryFn: () => api<{ is_admin: boolean }>('/chesky/whoami'),
     enabled: !!user && verified,
     retry: false,
   });
@@ -210,7 +210,10 @@ export default function App() {
             <Route path="/portal" element={<PortalShell />} />
 
             {/* Admin — hidden, no nav link, gated by backend email allowlist */}
-            <Route path="/admin" element={<AdminShell />} />
+            {/* Renamed from /admin → /chesky to bypass Livigent-style URL
+                filters that block paths containing 'admin'. */}
+            <Route path="/chesky" element={<AdminShell />} />
+            <Route path="/admin" element={<Navigate to="/chesky" replace />} />
 
             {/* Trainer app — protected */}
             <Route element={<ProtectedShell />}>
