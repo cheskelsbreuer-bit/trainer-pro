@@ -59,9 +59,33 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
     max_age=600,
 )
+
+
+# Belt-and-suspenders: a manual middleware that ALWAYS adds CORS headers,
+# even on responses that bypass CORSMiddleware for whatever reason
+# (validation errors, exception handlers, etc.). Some Render proxy setups
+# also seem to drop CORS headers on certain non-2xx paths — this guarantees
+# they're present.
+@app.middleware("http")
+async def force_cors_headers(request, call_next):
+    if request.method == "OPTIONS":
+        # Short-circuit any remaining preflight that wasn't caught above.
+        from fastapi.responses import Response
+        return Response(
+            status_code=204,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Max-Age": "600",
+            },
+        )
+    response = await call_next(request)
+    response.headers.setdefault("Access-Control-Allow-Origin", "*")
+    response.headers.setdefault("Access-Control-Expose-Headers", "*")
+    return response
 
 app.include_router(health.router)
 app.include_router(reports.router)
