@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Sparkles,
@@ -13,11 +13,14 @@ import {
   Globe,
   SkipForward,
   Instagram,
+  LayoutTemplate,
+  MessageSquareText,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
 import { SPECIALTIES } from '../lib/specialties';
+import { TEMPLATES, TEMPLATES_BY_SLUG, recommendTemplates, type Template } from '../lib/templates';
 
 type ClientCount = '0' | '1-5' | '6-15' | '16-30' | '30+';
 
@@ -25,7 +28,10 @@ interface Props {
   trainer: Trainer;
 }
 
-const TOTAL_STEPS = 7;
+// Added 2 new steps: free-form description (4) and template pick (5).
+// Previous step 4 (specialties) moves to step 3.5 — kept as step 4 visually
+// for simplicity (we renumber the StepHeader labels per step).
+const TOTAL_STEPS = 9;
 
 export function OnboardingWizard({ trainer }: Props) {
   const { user } = useAuth();
@@ -38,6 +44,8 @@ export function OnboardingWizard({ trainer }: Props) {
     (trainer.client_count_estimate as ClientCount | null) ?? null,
   );
   const [specialties, setSpecialties] = useState<string[]>(trainer.specialties ?? []);
+  const [description, setDescription] = useState('');
+  const [templateSlug, setTemplateSlug] = useState<string | null>(null);
   const [brand, setBrand] = useState(trainer.primary_color ?? '#2563eb');
   const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
   const [profileHeadline, setProfileHeadline] = useState(
@@ -82,7 +90,35 @@ export function OnboardingWizard({ trainer }: Props) {
         onboarded_at: new Date().toISOString(),
       };
 
-      // Only flip booking_enabled if they made an explicit choice
+      // Apply template defaults — only fields the template explicitly set,
+      // and only if the trainer hasn't already customized them. Picking
+      // a template should give the trainer a head start, not overwrite
+      // their work.
+      const picked = templateSlug ? TEMPLATES_BY_SLUG[templateSlug] : null;
+      if (picked) {
+        if (
+          picked.defaults.packages &&
+          (!trainer.default_packages || trainer.default_packages.length === 0)
+        ) {
+          update.default_packages = picked.defaults.packages;
+        }
+        if (picked.defaults.booking_settings) {
+          update.booking_settings = {
+            ...(trainer.booking_settings ?? {}),
+            ...picked.defaults.booking_settings,
+          };
+        }
+        // Template can suggest booking_enabled but the trainer's explicit
+        // pick on the booking step wins.
+        if (
+          bookingEnabled === null &&
+          picked.defaults.booking_enabled !== undefined
+        ) {
+          update.booking_enabled = picked.defaults.booking_enabled;
+        }
+      }
+
+      // Only flip booking_enabled if they made an explicit choice on the step
       if (bookingEnabled !== null) {
         update.booking_enabled = bookingEnabled;
       }
@@ -102,10 +138,12 @@ export function OnboardingWizard({ trainer }: Props) {
     if (step === 2) return fullName.trim().length > 0;
     if (step === 3) return clientCount !== null;
     if (step === 4) return specialties.length > 0;
+    // Step 5 (description) and step 6 (template pick) are advisory but
+    // not required — we can always recommend something based on specialties.
     return true;
   })();
 
-  const isOptionalStep = step >= 6; // booking + public profile are skippable
+  const isOptionalStep = step >= 8; // booking + public profile are skippable
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -141,16 +179,27 @@ export function OnboardingWizard({ trainer }: Props) {
             <StepSpecialties value={specialties} onChange={setSpecialties} />
           )}
           {step === 5 && (
+            <StepDescription value={description} onChange={setDescription} />
+          )}
+          {step === 6 && (
+            <StepTemplate
+              specialties={specialties}
+              description={description}
+              picked={templateSlug}
+              onPick={setTemplateSlug}
+            />
+          )}
+          {step === 7 && (
             <StepBrand
               brand={brand}
               setBrand={setBrand}
               businessName={businessName || fullName || 'Your business'}
             />
           )}
-          {step === 6 && (
+          {step === 8 && (
             <StepBooking value={bookingEnabled} onChange={setBookingEnabled} />
           )}
-          {step === 7 && (
+          {step === 9 && (
             <StepPublicProfile
               headline={profileHeadline}
               setHeadline={setProfileHeadline}
@@ -244,10 +293,12 @@ function StepWelcome() {
         A few quick questions and we'll have your dashboard, booking page, and public profile
         ready to share.
       </p>
-      <div className="mt-7 grid grid-cols-3 sm:grid-cols-6 gap-3 max-w-xl mx-auto">
+      <div className="mt-7 grid grid-cols-4 sm:grid-cols-8 gap-2 max-w-2xl mx-auto">
         {[
           { icon: <Users size={14} />, label: 'You' },
           { icon: <Target size={14} />, label: 'Focus' },
+          { icon: <MessageSquareText size={14} />, label: 'Describe' },
+          { icon: <LayoutTemplate size={14} />, label: 'Template' },
           { icon: <Palette size={14} />, label: 'Brand' },
           { icon: <Calendar size={14} />, label: 'Booking' },
           { icon: <Globe size={14} />, label: 'Website' },
@@ -283,7 +334,7 @@ function StepBusiness({
   return (
     <div>
       <StepHeader
-        eyebrow="Step 1 of 6"
+        eyebrow="Step 1 of 8"
         title="What should clients call you?"
         subtitle="This shows up on your booking page and in receipts."
       />
@@ -339,7 +390,7 @@ function StepClientCount({
   return (
     <div>
       <StepHeader
-        eyebrow="Step 2 of 6"
+        eyebrow="Step 2 of 8"
         title="How many clients do you train right now?"
         subtitle="Just a rough number. Helps us suggest the right setup."
       />
@@ -389,7 +440,7 @@ function StepSpecialties({
   return (
     <div>
       <StepHeader
-        eyebrow="Step 3 of 6"
+        eyebrow="Step 3 of 8"
         title="What do you train people for?"
         subtitle={`Pick everything that applies — no limit. ${
           value.length > 0
@@ -452,7 +503,149 @@ function StepSpecialties({
   );
 }
 
-/* ─────────────── Step 5: Brand color ─────────────── */
+/* ─────────────── Step 5: Free-form description ─────────────── */
+function StepDescription({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <StepHeader
+        eyebrow="Step 4 of 8"
+        title="In a few words, describe what you do."
+        subtitle="A sentence or two is plenty. We use this + your specialties above to recommend the best starting template on the next step."
+      />
+      <div className="max-w-xl mx-auto">
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={4}
+          autoFocus
+          placeholder="e.g. I run a small neighborhood gym in Brooklyn with about 60 monthly members. Mix of strength + classes. / I'm an online coach with 8-week strength programs sold as packages. / I run a BJJ academy with belt progression for adults + kids."
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+        />
+        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+          Mention things like: membership vs. session-pack billing, group classes
+          vs. 1-on-1, online vs. in-person, age groups, business size. The more
+          specific you are, the better our template match.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────── Step 6: Template pick ─────────────── */
+function StepTemplate({
+  specialties,
+  description,
+  picked,
+  onPick,
+}: {
+  specialties: string[];
+  description: string;
+  picked: string | null;
+  onPick: (slug: string | null) => void;
+}) {
+  const recommendations = useMemo(
+    () => recommendTemplates(specialties, description),
+    [specialties, description],
+  );
+  // Also let the trainer see the full set if none of the recs feel right.
+  const [showAll, setShowAll] = useState(false);
+  const shown: Template[] = showAll ? TEMPLATES : recommendations;
+
+  return (
+    <div>
+      <StepHeader
+        eyebrow="Step 5 of 8"
+        title="Pick a starting template."
+        subtitle={
+          recommendations.length === 1 && !showAll
+            ? `Based on what you told us, here's the closest match. Fully customizable later — this just saves you from setting up packages and booking from scratch.`
+            : `Based on what you told us, here are the closest matches. Fully customizable later.`
+        }
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
+        {shown.map((t) => {
+          const isOn = picked === t.slug;
+          return (
+            <button
+              key={t.slug}
+              type="button"
+              onClick={() => onPick(isOn ? null : t.slug)}
+              className={`text-left p-4 rounded-2xl border-2 transition relative ${
+                isOn
+                  ? 'border-blue-500 bg-blue-50 shadow-md'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+              }`}
+            >
+              {isOn && (
+                <CheckCircle2
+                  size={18}
+                  className="absolute top-2 right-2 text-blue-600"
+                  fill="white"
+                />
+              )}
+              <div className="flex items-start gap-2.5 mb-2">
+                <span className="text-3xl flex-shrink-0">{t.emoji}</span>
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-900 leading-tight">{t.name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{t.tagline}</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                {t.description}
+              </p>
+              <ul className="space-y-0.5">
+                {t.bestFor.slice(0, 3).map((b) => (
+                  <li
+                    key={b}
+                    className="text-[11px] text-slate-500 flex items-start gap-1.5"
+                  >
+                    <span className="text-slate-300 mt-0.5">•</span>
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+              {t.defaults.packages && t.defaults.packages.length > 0 && (
+                <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap gap-1">
+                  {t.defaults.packages.slice(0, 3).map((p) => (
+                    <span
+                      key={p.name}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700"
+                    >
+                      {p.name} · ${p.price}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <div className="text-center mt-4">
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="text-xs text-slate-500 hover:text-slate-900 underline"
+        >
+          {showAll
+            ? `Show only the ${recommendations.length} recommended`
+            : `Don't see a fit? See all ${TEMPLATES.length} templates`}
+        </button>
+      </div>
+      <p className="text-[11px] text-slate-400 text-center mt-4 max-w-md mx-auto">
+        Picking a template pre-fills your packages and booking settings. You can
+        skip this step and configure everything manually in Settings.
+      </p>
+    </div>
+  );
+}
+
+/* ─────────────── Step 7: Brand color ─────────────── */
 function StepBrand({
   brand,
   setBrand,
@@ -470,7 +663,7 @@ function StepBrand({
   return (
     <div>
       <StepHeader
-        eyebrow="Step 4 of 6"
+        eyebrow="Step 6 of 8"
         title="Pick your brand color."
         subtitle="Buttons, highlights, and your client portal will use this."
       />
@@ -533,7 +726,7 @@ function StepBooking({
   return (
     <div>
       <StepHeader
-        eyebrow="Step 5 of 6 · Optional"
+        eyebrow="Step 7 of 8 · Optional"
         title="Want clients to book sessions on your site?"
         subtitle="Turn on a public booking page where clients pick a time and you get an email. Easy to change later."
       />
@@ -602,7 +795,7 @@ function StepPublicProfile({
   return (
     <div>
       <StepHeader
-        eyebrow="Step 6 of 6 · Optional"
+        eyebrow="Step 8 of 8 · Optional"
         title="Last bit — your public profile."
         subtitle="You get a free trainer website at trainerpro.coach/p/your-name. Fill this in now or skip and edit later."
       />
