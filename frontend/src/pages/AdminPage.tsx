@@ -16,7 +16,7 @@ import {
   Send,
   Reply as ReplyIcon,
 } from 'lucide-react';
-import { api } from '../lib/api';
+import { adminRpc } from '../lib/adminRpc';
 import { useAuth } from '../hooks/useAuth';
 import { PROJECT_STATUS, STATUS_META, type StatusCategory } from '../lib/projectStatus';
 import { TrainerDetailDrawer } from '../components/TrainerDetailDrawer';
@@ -78,22 +78,31 @@ export function AdminPage() {
 
   const overview = useQuery({
     queryKey: ['admin-overview'],
-    queryFn: () => api<OverviewStats>('/chesky/overview'),
+    queryFn: () => adminRpc.overview(),
     refetchOnWindowFocus: false,
   });
   const trainers = useQuery({
     queryKey: ['admin-trainers'],
-    queryFn: () => api<{ rows: TrainerRow[]; total: number }>('/chesky/trainers'),
+    queryFn: async () => {
+      const rows = await adminRpc.trainers();
+      return { rows: rows as TrainerRow[], total: rows.length };
+    },
     refetchOnWindowFocus: false,
   });
   const waitlist = useQuery({
     queryKey: ['admin-waitlist'],
-    queryFn: () => api<{ rows: WaitlistRow[]; total: number }>('/chesky/waitlist'),
+    queryFn: async () => {
+      const rows = await adminRpc.waitlist();
+      return { rows: rows as WaitlistRow[], total: rows.length };
+    },
     refetchOnWindowFocus: false,
   });
   const feedback = useQuery({
     queryKey: ['admin-feedback'],
-    queryFn: () => api<{ rows: FeedbackRow[]; total: number }>('/chesky/feedback'),
+    queryFn: async () => {
+      const rows = await adminRpc.feedback();
+      return { rows: rows as FeedbackRow[], total: rows.length };
+    },
     refetchOnWindowFocus: false,
   });
 
@@ -475,11 +484,7 @@ function FeedbackItem({ feedback: f }: { feedback: FeedbackRow }) {
   const [open, setOpen] = useState(!f.admin_reply); // collapsed once a reply exists
 
   const send = useMutation({
-    mutationFn: () =>
-      api(`/chesky/feedback/${f.id}/reply`, {
-        method: 'POST',
-        body: JSON.stringify({ reply: draft }),
-      }),
+    mutationFn: () => adminRpc.feedbackReply(f.id, draft),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-feedback'] });
       setOpen(false);

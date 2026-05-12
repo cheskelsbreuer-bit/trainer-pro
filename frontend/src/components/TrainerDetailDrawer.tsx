@@ -14,7 +14,7 @@ import {
   Save,
   Activity,
 } from 'lucide-react';
-import { api } from '../lib/api';
+import { adminRpc } from '../lib/adminRpc';
 
 interface TrainerDetail {
   id: string;
@@ -53,7 +53,7 @@ export function TrainerDetailDrawer({
 
   const detail = useQuery({
     queryKey: ['admin-trainer-detail', trainerId],
-    queryFn: () => api<TrainerDetail>(`/chesky/trainers/${trainerId}`),
+    queryFn: () => adminRpc.trainerDetail(trainerId) as Promise<TrainerDetail>,
     refetchOnWindowFocus: false,
   });
 
@@ -71,10 +71,7 @@ export function TrainerDetailDrawer({
 
   const patch = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
-      api<TrainerDetail>(`/chesky/trainers/${trainerId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      }),
+      adminRpc.trainerPatch(trainerId, body) as Promise<TrainerDetail>,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-trainer-detail', trainerId] });
       qc.invalidateQueries({ queryKey: ['admin-trainers'] });
@@ -335,8 +332,10 @@ function OverviewTab({
 function ClientsTab({ trainerId }: { trainerId: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-trainer-clients', trainerId],
-    queryFn: () =>
-      api<{ rows: ClientRow[]; total: number }>(`/chesky/trainers/${trainerId}/clients`),
+    queryFn: async () => {
+      const rows = (await adminRpc.trainerClients(trainerId)) as ClientRow[];
+      return { rows, total: rows.length };
+    },
   });
 
   if (isLoading) return <p className="text-sm text-slate-500">Loading clients…</p>;
@@ -380,8 +379,10 @@ function ClientsTab({ trainerId }: { trainerId: string }) {
 function SessionsTab({ trainerId }: { trainerId: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-trainer-sessions', trainerId],
-    queryFn: () =>
-      api<{ rows: SessionRow[]; total: number }>(`/chesky/trainers/${trainerId}/sessions`),
+    queryFn: async () => {
+      const rows = (await adminRpc.trainerSessions(trainerId)) as SessionRow[];
+      return { rows, total: rows.length };
+    },
   });
 
   if (isLoading) return <p className="text-sm text-slate-500">Loading sessions…</p>;
@@ -432,8 +433,10 @@ const STATUS_COLORS: Record<string, string> = {
 function PaymentsTab({ trainerId, currency }: { trainerId: string; currency: string | null }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-trainer-payments', trainerId],
-    queryFn: () =>
-      api<{ rows: PaymentRow[]; total: number }>(`/chesky/trainers/${trainerId}/payments`),
+    queryFn: async () => {
+      const rows = (await adminRpc.trainerPayments(trainerId)) as PaymentRow[];
+      return { rows, total: rows.length };
+    },
   });
 
   if (isLoading) return <p className="text-sm text-slate-500">Loading payments…</p>;

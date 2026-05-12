@@ -27,7 +27,7 @@ import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
 import { FindTrainersPage } from './pages/FindTrainersPage';
 import { AdminPage } from './pages/AdminPage';
-import { api, ApiError } from './lib/api';
+import { adminRpc } from './lib/adminRpc';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,7 +110,7 @@ function AdminShell() {
 
   const check = useQuery({
     queryKey: ['admin-whoami', user?.id],
-    queryFn: () => api<{ is_admin: boolean }>('/chesky/whoami'),
+    queryFn: () => adminRpc.whoami(),
     enabled: !!user && verified,
     retry: false,
   });
@@ -133,8 +133,8 @@ function AdminShell() {
     sessionStorage.removeItem('admin_verified');
     return <AdminLogin />;
   }
-  // Treat any error or non-admin as 404 — don't reveal /admin exists.
-  if (check.error instanceof ApiError || !check.data?.is_admin) {
+  // Treat any error or non-admin as 404 — don't reveal /chesky exists.
+  if (check.error || !check.data?.is_admin) {
     return <NotFound />;
   }
   return <AdminPage />;
