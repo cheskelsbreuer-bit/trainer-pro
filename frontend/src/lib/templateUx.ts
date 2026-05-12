@@ -13,16 +13,19 @@
 import { TEMPLATES_BY_SLUG } from './templates';
 
 // Which Dashboard layout to render for this template. Each variant is a
-// fundamentally different page — not just relabeled words. 'martial' is
-// the first variant that swaps the ENTIRE app shell (sidebar, theme,
-// vocabulary, page set) rather than just the dashboard page.
+// fundamentally different page — not just relabeled words. 'martial' and
+// 'boxing' both swap the ENTIRE app shell (sidebar, theme, vocabulary,
+// page set) rather than just the dashboard page.
 //   - 'private': solo trainer logging individual sessions (the current default)
 //   - 'studio':  group-class studio — recurring weekly groups, monthly billing,
 //                "who owes money" focus (mom's-gym pattern)
 //   - 'martial': martial arts dojo — full separate app under src/dojo/
 //                with dark theme, belt-rank tracking, dojo vocabulary
+//   - 'boxing':  boxing/kickboxing gym — full separate app under src/boxing/
+//                with red corner / blue corner theme, fighter W-L-D record,
+//                round-based training, tier system instead of belts
 // Other slugs map to the closest built variant until their own is built.
-export type DashboardVariant = 'private' | 'studio' | 'martial';
+export type DashboardVariant = 'private' | 'studio' | 'martial' | 'boxing';
 
 export interface TemplateUx {
   slug: string;
@@ -80,6 +83,20 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     // Full separate app — mounts the src/dojo/ module instead of the
     // standard trainer Layout. Dark theme, belt-rank-centric workflow.
     dashboardVariant: 'martial',
+  },
+  boxing_gym: {
+    slug: 'boxing_gym',
+    clientNoun: 'fighter',
+    clientNounPlural: 'fighters',
+    dashboardHeadline: 'Your gym at a glance',
+    dashboardSubtitle:
+      "Today's rounds, the fight card, your fighters by tier — all in one place.",
+    spaceNoun: 'gym',
+    primaryCtaLabel: 'Log rounds',
+    primaryCtaPath: '/training',
+    // Full separate app — mounts the src/boxing/ module. Red corner /
+    // blue corner aesthetic, fighter records, tier system.
+    dashboardVariant: 'boxing',
   },
   yoga_studio: {
     slug: 'yoga_studio',

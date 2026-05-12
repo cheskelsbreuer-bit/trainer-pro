@@ -68,3 +68,56 @@
   --dojo-warn: #B45309;
   --dojo-danger: #B91C1C;
 }
+
+/* Boxing / kickboxing theme — red corner / blue corner palette. */
+.boxing-theme-dark {
+  --boxing-bg-page: #050608;
+  --boxing-bg-panel: #0F1115;
+  --boxing-bg-panel-hover: #181B22;
+  --boxing-bg-inset: #0A0C10;
+  --boxing-divider: #1F2330;
+  --boxing-text-primary: #F5F5F4;
+  --boxing-text-secondary: #A1A1AA;
+  --boxing-text-muted: #71717A;
+  /* Red corner = brand */
+  --boxing-red: #DC2626;
+  --boxing-red-soft: #7F1D1D;
+  --boxing-red-ring: rgba(220, 38, 38, 0.4);
+  /* Blue corner = secondary brand */
+  --boxing-blue: #2563EB;
+  --boxing-blue-soft: #1E3A8A;
+  --boxing-blue-ring: rgba(37, 99, 235, 0.4);
+  /* Championship gold for W-L-D record + accents */
+  --boxing-gold: #EAB308;
+  --boxing-gold-soft: #713F12;
+  --boxing-on-red: #FFFFFF;
+  --boxing-on-blue: #FFFFFF;
+  --boxing-on-gold: #1A1208;
+  --boxing-ok: #10B981;
+  --boxing-warn: #F59E0B;
+  --boxing-danger: #EF4444;
+}
+.boxing-theme-light {
+  --boxing-bg-page: #FAFAF7;
+  --boxing-bg-panel: #FFFFFF;
+  --boxing-bg-panel-hover: #F4F4F5;
+  --boxing-bg-inset: #F4F4F5;
+  --boxing-divider: #E4E4E7;
+  --boxing-text-primary: #0A0A0B;
+  --boxing-text-secondary: #52525B;
+  --boxing-text-muted: #71717A;
+  --boxing-red: #B91C1C;
+  --boxing-red-soft: #FEE2E2;
+  --boxing-red-ring: rgba(185, 28, 28, 0.25);
+  --boxing-blue: #1D4ED8;
+  --boxing-blue-soft: #DBEAFE;
+  --boxing-blue-ring: rgba(29, 78, 216, 0.25);
+  --boxing-gold: #B45309;
+  --boxing-gold-soft: #FEF3C7;
+  --boxing-on-red: #FFFFFF;
+  --boxing-on-blue: #FFFFFF;
+  --boxing-on-gold: #FFFFFF;
+  --boxing-ok: #047857;
+  --boxing-warn: #B45309;
+  --boxing-danger: #B91C1C;
+}

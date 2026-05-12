@@ -30,6 +30,7 @@ import { AdminPage } from './pages/AdminPage';
 import { adminRpc } from './lib/adminRpc';
 import { pickTemplateUx } from './lib/templateUx';
 import { DojoApp } from './dojo/DojoApp';
+import { BoxingApp } from './boxing/BoxingApp';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,11 +70,12 @@ function ProtectedShell() {
   if (!user) return <Login />;
   // First-time signup: walk them through the wizard before showing the app.
   if (trainer && !trainer.onboarded_at) return <OnboardingWizard trainer={trainer} />;
-  // Template-driven app fork. Martial-arts trainers get an entirely
-  // separate app — dark dojo theme, belt-rank pages, dojo vocabulary —
-  // mounted from src/dojo/. Other variants keep the standard Layout.
+  // Template-driven app fork. Each combat / boxing template mounts its
+  // own complete app (dark theme, dedicated pages, sport-specific
+  // vocabulary). Other variants keep the standard Layout.
   const variant = pickTemplateUx(trainer?.template_slugs).dashboardVariant;
   if (variant === 'martial') return <DojoApp trainer={trainer} />;
+  if (variant === 'boxing') return <BoxingApp trainer={trainer} />;
   return <Layout />;
 }
 
