@@ -21,17 +21,6 @@ import { useAuth } from '../hooks/useAuth';
 import { PROJECT_STATUS, STATUS_META, type StatusCategory } from '../lib/projectStatus';
 import { TrainerDetailDrawer } from '../components/TrainerDetailDrawer';
 
-interface OverviewStats {
-  total_trainers: number;
-  onboarded_trainers: number;
-  new_trainers_this_week: number;
-  new_trainers_this_month: number;
-  total_clients: number;
-  total_sessions: number;
-  total_payments_amount: number;
-  waitlist_count: number;
-}
-
 interface TrainerRow {
   id: string;
   full_name: string | null;
