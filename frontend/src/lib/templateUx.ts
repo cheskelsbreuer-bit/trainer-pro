@@ -1,6 +1,6 @@
 // Per-template UX overlays. Each entry tells the rest of the app how to
-// rebrand language, what hero message to show on the Dashboard, and
-// (eventually) which template-specific widgets to mount.
+// rebrand language, which Dashboard variant to mount, and (eventually)
+// which template-specific widgets to use elsewhere.
 //
 // This file is meant to grow — every new "this trainer's app should look
 // different" customization gets a new field here.
@@ -11,6 +11,14 @@
 // trainer template if nothing matches.
 
 import { TEMPLATES_BY_SLUG } from './templates';
+
+// Which Dashboard layout to render for this template. Each variant is a
+// fundamentally different page — not just relabeled words.
+//   - 'private': solo trainer logging individual sessions (the current default)
+//   - 'studio':  group-class studio — recurring weekly groups, monthly billing,
+//                "who owes money" focus (mom's-gym pattern)
+// Other slugs map to the closest built variant until their own is built.
+export type DashboardVariant = 'private' | 'studio';
 
 export interface TemplateUx {
   slug: string;
@@ -26,6 +34,9 @@ export interface TemplateUx {
   // Primary CTA pattern on dashboard.
   primaryCtaLabel: string;
   primaryCtaPath: string;
+  // Which dashboard layout to render — drives a different page entirely,
+  // not just labels. See DashboardVariant.
+  dashboardVariant: DashboardVariant;
 }
 
 const FALLBACK: TemplateUx = {
@@ -37,6 +48,7 @@ const FALLBACK: TemplateUx = {
   spaceNoun: 'practice',
   primaryCtaLabel: 'Log a session',
   primaryCtaPath: '/sessions',
+  dashboardVariant: 'private',
 };
 
 const TEMPLATE_UX: Record<string, TemplateUx> = {
@@ -50,6 +62,7 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     spaceNoun: 'gym',
     primaryCtaLabel: 'Add a member',
     primaryCtaPath: '/clients',
+    dashboardVariant: 'studio',
   },
   martial_arts: {
     slug: 'martial_arts',
@@ -60,6 +73,9 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     spaceNoun: 'dojo',
     primaryCtaLabel: 'Schedule a class',
     primaryCtaPath: '/sessions',
+    // Martial arts is group-class based; closest built variant is studio
+    // until we ship a real belt-progression dashboard.
+    dashboardVariant: 'studio',
   },
   yoga_studio: {
     slug: 'yoga_studio',
@@ -70,6 +86,7 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     spaceNoun: 'studio',
     primaryCtaLabel: 'Schedule a class',
     primaryCtaPath: '/sessions',
+    dashboardVariant: 'studio',
   },
   athletic_performance: {
     slug: 'athletic_performance',
@@ -80,6 +97,7 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     spaceNoun: 'program',
     primaryCtaLabel: 'Log a session',
     primaryCtaPath: '/sessions',
+    dashboardVariant: 'private',
   },
   online_coach: {
     slug: 'online_coach',
@@ -90,6 +108,7 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     spaceNoun: 'practice',
     primaryCtaLabel: 'Send a check-in',
     primaryCtaPath: '/clients',
+    dashboardVariant: 'private',
   },
   nutrition_coach: {
     slug: 'nutrition_coach',
@@ -100,6 +119,7 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     spaceNoun: 'practice',
     primaryCtaLabel: 'Build a meal plan',
     primaryCtaPath: '/workouts',
+    dashboardVariant: 'private',
   },
 };
 
