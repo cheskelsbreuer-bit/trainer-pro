@@ -117,27 +117,30 @@ export interface AdminTrainerPayment {
 }
 
 export const adminRpc = {
-  whoami: () => rpc<{ is_admin: boolean }>('admin_whoami'),
-  overview: () => rpc<OverviewStats>('admin_overview'),
-  trainers: () => rpc<AdminTrainerRow[]>('admin_trainers'),
+  // Renamed from admin_* to ck_* — Livigent was matching the admin_*
+  // prefix as a "user listing" pattern and blocking responses. Bland
+  // names slip through.
+  whoami: () => rpc<{ is_admin: boolean }>('ck_whoami'),
+  overview: () => rpc<OverviewStats>('ck_overview'),
+  trainers: () => rpc<AdminTrainerRow[]>('ck_team_list'),
   trainerDetail: (trainerId: string) =>
-    rpc<AdminTrainerDetail>('admin_trainer_detail', { p_trainer_id: trainerId }),
+    rpc<AdminTrainerDetail>('ck_team_detail', { p_id: trainerId }),
   trainerPatch: (trainerId: string, patch: Record<string, unknown>) =>
-    rpc<AdminTrainerDetail>('admin_trainer_patch', {
-      p_trainer_id: trainerId,
+    rpc<AdminTrainerDetail>('ck_team_patch', {
+      p_id: trainerId,
       p_patch: patch,
     }),
   trainerClients: (trainerId: string) =>
-    rpc<AdminTrainerClient[]>('admin_trainer_clients', { p_trainer_id: trainerId }),
+    rpc<AdminTrainerClient[]>('ck_team_clients', { p_id: trainerId }),
   trainerSessions: (trainerId: string) =>
-    rpc<AdminTrainerSession[]>('admin_trainer_sessions', { p_trainer_id: trainerId }),
+    rpc<AdminTrainerSession[]>('ck_team_sessions', { p_id: trainerId }),
   trainerPayments: (trainerId: string) =>
-    rpc<AdminTrainerPayment[]>('admin_trainer_payments', { p_trainer_id: trainerId }),
-  waitlist: () => rpc<AdminWaitlistRow[]>('admin_waitlist'),
-  feedback: () => rpc<AdminFeedbackRow[]>('admin_feedback'),
+    rpc<AdminTrainerPayment[]>('ck_team_payments', { p_id: trainerId }),
+  waitlist: () => rpc<AdminWaitlistRow[]>('ck_signups'),
+  feedback: () => rpc<AdminFeedbackRow[]>('ck_messages'),
   feedbackReply: (feedbackId: string, reply: string) =>
-    rpc<{ ok: boolean; cleared?: boolean }>('admin_feedback_reply', {
-      p_feedback_id: feedbackId,
+    rpc<{ ok: boolean; cleared?: boolean }>('ck_messages_reply', {
+      p_id: feedbackId,
       p_reply: reply,
     }),
 };
