@@ -12,12 +12,15 @@
 -- ============================================================================
 
 -- Helper: take any jsonb and return {"b64": "..."} wrapper
+-- Uses convert_to(text, 'UTF8') instead of text::bytea — the direct cast
+-- fails ("invalid input syntax for type bytea") on strings containing
+-- backslashes or other characters Postgres reads as escape sequences.
 create or replace function public.ck_pack(p_data jsonb)
 returns jsonb
 language sql
 immutable
 as $$
-  select jsonb_build_object('b64', encode(p_data::text::bytea, 'base64'));
+  select jsonb_build_object('b64', encode(convert_to(p_data::text, 'UTF8'), 'base64'));
 $$;
 
 -- q1 — trainers list (was ck_team_list / admin_trainers)
