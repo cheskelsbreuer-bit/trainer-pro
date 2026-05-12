@@ -28,6 +28,8 @@ import { TermsPage } from './pages/TermsPage';
 import { FindTrainersPage } from './pages/FindTrainersPage';
 import { AdminPage } from './pages/AdminPage';
 import { adminRpc } from './lib/adminRpc';
+import { pickTemplateUx } from './lib/templateUx';
+import { DojoApp } from './dojo/DojoApp';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +69,11 @@ function ProtectedShell() {
   if (!user) return <Login />;
   // First-time signup: walk them through the wizard before showing the app.
   if (trainer && !trainer.onboarded_at) return <OnboardingWizard trainer={trainer} />;
+  // Template-driven app fork. Martial-arts trainers get an entirely
+  // separate app — dark dojo theme, belt-rank pages, dojo vocabulary —
+  // mounted from src/dojo/. Other variants keep the standard Layout.
+  const variant = pickTemplateUx(trainer?.template_slugs).dashboardVariant;
+  if (variant === 'martial') return <DojoApp trainer={trainer} />;
   return <Layout />;
 }
 

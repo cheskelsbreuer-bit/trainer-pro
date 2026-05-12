@@ -13,12 +13,16 @@
 import { TEMPLATES_BY_SLUG } from './templates';
 
 // Which Dashboard layout to render for this template. Each variant is a
-// fundamentally different page — not just relabeled words.
+// fundamentally different page — not just relabeled words. 'martial' is
+// the first variant that swaps the ENTIRE app shell (sidebar, theme,
+// vocabulary, page set) rather than just the dashboard page.
 //   - 'private': solo trainer logging individual sessions (the current default)
 //   - 'studio':  group-class studio — recurring weekly groups, monthly billing,
 //                "who owes money" focus (mom's-gym pattern)
+//   - 'martial': martial arts dojo — full separate app under src/dojo/
+//                with dark theme, belt-rank tracking, dojo vocabulary
 // Other slugs map to the closest built variant until their own is built.
-export type DashboardVariant = 'private' | 'studio';
+export type DashboardVariant = 'private' | 'studio' | 'martial';
 
 export interface TemplateUx {
   slug: string;
@@ -73,9 +77,9 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     spaceNoun: 'dojo',
     primaryCtaLabel: 'Schedule a class',
     primaryCtaPath: '/sessions',
-    // Martial arts is group-class based; closest built variant is studio
-    // until we ship a real belt-progression dashboard.
-    dashboardVariant: 'studio',
+    // Full separate app — mounts the src/dojo/ module instead of the
+    // standard trainer Layout. Dark theme, belt-rank-centric workflow.
+    dashboardVariant: 'martial',
   },
   yoga_studio: {
     slug: 'yoga_studio',
