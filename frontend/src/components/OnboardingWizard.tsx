@@ -88,6 +88,9 @@ export function OnboardingWizard({ trainer }: Props) {
         business_name: businessName.trim() || null,
         client_count_estimate: clientCount,
         specialties,
+        // Persist the picked templates so Dashboard/UI can customize per
+        // template post-onboarding (gym membership UI, martial arts UI, etc.)
+        template_slugs: templateSlugs,
         primary_color: brand,
         public_profile: mergedProfile,
         onboarded_at: new Date().toISOString(),

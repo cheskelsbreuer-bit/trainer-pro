@@ -10,6 +10,7 @@ import { LastNotesWidget, BirthdayBanner, NoShowStreakWidget } from '../componen
 import { StudioOverviewCard } from '../components/StudioOverviewCard';
 import { RevenueTrendWidget } from '../components/RevenueTrendWidget';
 import { AdminReplyBanner } from '../components/AdminReplyBanner';
+import { pickTemplateUx } from '../lib/templateUx';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -110,7 +111,12 @@ export function Dashboard() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <PageHeader title="Dashboard" subtitle="At-a-glance view of your training business." />
+      {(() => {
+        const ux = pickTemplateUx(trainer?.template_slugs);
+        return (
+          <PageHeader title={ux.dashboardHeadline} subtitle={ux.dashboardSubtitle} />
+        );
+      })()}
 
       <AdminReplyBanner />
       {trainer && <StudioOverviewCard trainer={trainer} />}
@@ -178,9 +184,15 @@ export function Dashboard() {
           )}
         </Card>
 
-        <Card title="Recent clients" link="/clients" linkText="See all →">
+        <Card
+          title={`Recent ${pickTemplateUx(trainer?.template_slugs).clientNounPlural}`}
+          link="/clients"
+          linkText="See all →"
+        >
           {!recentClients?.length ? (
-            <EmptyState text="No clients yet. Add your first one!" />
+            <EmptyState
+              text={`No ${pickTemplateUx(trainer?.template_slugs).clientNounPlural} yet. Add your first one!`}
+            />
           ) : (
             <ul className="divide-y divide-slate-100">
               {recentClients.map((c) => (

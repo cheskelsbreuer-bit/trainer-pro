@@ -14,32 +14,11 @@ import {
   Save,
   Activity,
 } from 'lucide-react';
-import { adminRpc } from '../lib/adminRpc';
+import { adminRpc, type AdminTrainerDetail, type AdminTrainerActivity } from '../lib/adminRpc';
 
-interface TrainerDetail {
-  id: string;
-  full_name: string | null;
-  business_name: string | null;
-  email: string | null;
-  phone: string | null;
-  timezone: string | null;
-  currency: string | null;
-  primary_color: string | null;
-  slug: string | null;
-  booking_enabled: boolean;
-  onboarded_at: string | null;
-  client_count_estimate: string | null;
-  specialties: string[];
-  service_area: string | null;
-  directory_listed: boolean;
-  created_at: string | null;
-  client_count: number;
-  session_count: number;
-  payment_total: number;
-  last_session_at: string | null;
-}
+type TrainerDetail = AdminTrainerDetail;
 
-type TabKey = 'overview' | 'clients' | 'sessions' | 'payments';
+type TabKey = 'overview' | 'activity' | 'clients' | 'sessions' | 'payments';
 
 export function TrainerDetailDrawer({
   trainerId,
@@ -123,6 +102,7 @@ export function TrainerDetailDrawer({
             {(
               [
                 { k: 'overview', label: 'Overview' },
+                { k: 'activity', label: 'Activity' },
                 { k: 'clients', label: 'Clients' },
                 { k: 'sessions', label: 'Sessions' },
                 { k: 'payments', label: 'Payments' },
@@ -167,6 +147,7 @@ export function TrainerDetailDrawer({
                   patchError={patch.error as Error | null}
                 />
               )}
+              {tab === 'activity' && <ActivityTab trainerId={trainerId} />}
               {tab === 'clients' && <ClientsTab trainerId={trainerId} />}
               {tab === 'sessions' && <SessionsTab trainerId={trainerId} />}
               {tab === 'payments' && (
@@ -212,6 +193,10 @@ function OverviewTab({
         <DetailStat icon={<DollarSign size={14} />} color="amber" label="Revenue" value={`$${data.payment_total.toFixed(0)}`} />
         <DetailStat icon={<CheckCircle2 size={14} />} color="indigo" label="Onboarded" value={data.onboarded_at ? '✓ Yes' : 'No'} />
       </section>
+
+      <OnboardingProgressCard data={data} />
+
+      <LastActivityCard data={data} />
 
       <section className="bg-slate-50 border border-slate-200 rounded-lg p-4">
         <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2.5">
@@ -325,6 +310,148 @@ function OverviewTab({
         </section>
       )}
     </>
+  );
+}
+
+/* ─────────────── Onboarding progress card ─────────────── */
+function OnboardingProgressCard({ data }: { data: TrainerDetail }) {
+  const total = data.onboarding_total_steps || 8;
+  const done = data.onboarding_step_count || 0;
+  const pct = Math.round((done / total) * 100);
+  const isDone = !!data.onboarded_at;
+  const firstUnfinished = (data.onboarding_steps || []).findIndex((s) => !s.done);
+  const stuckAt =
+    !isDone && firstUnfinished >= 0
+      ? `Stuck at step ${firstUnfinished + 1}: ${data.onboarding_steps[firstUnfinished].label}`
+      : null;
+  return (
+    <section
+      className={`border rounded-lg p-4 ${
+        isDone
+          ? 'bg-emerald-50 border-emerald-200'
+          : 'bg-amber-50 border-amber-200'
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">
+          Onboarding
+        </p>
+        <span
+          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+            isDone ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+          }`}
+        >
+          {done}/{total}
+        </span>
+      </div>
+      {stuckAt && (
+        <p className="text-xs text-amber-800 font-medium mb-2">⏳ {stuckAt}</p>
+      )}
+      {isDone && data.onboarded_at && (
+        <p className="text-xs text-emerald-800 font-medium mb-2">
+          ✓ Completed {new Date(data.onboarded_at).toLocaleDateString()}
+        </p>
+      )}
+      <div className="h-1.5 bg-white rounded-full overflow-hidden mb-3">
+        <div
+          className={`h-full transition-all rounded-full ${
+            isDone ? 'bg-emerald-500' : 'bg-amber-500'
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <ul className="space-y-1">
+        {(data.onboarding_steps || []).map((s, idx) => (
+          <li
+            key={idx}
+            className="flex items-center gap-2 text-xs"
+          >
+            {s.done ? (
+              <CheckCircle2 size={12} className="text-emerald-600 flex-shrink-0" />
+            ) : (
+              <span className="w-3 h-3 rounded-full border border-slate-300 flex-shrink-0" />
+            )}
+            <span className={s.done ? 'text-slate-700 line-through opacity-70' : 'text-slate-900'}>
+              {idx + 1}. {s.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function LastActivityCard({ data }: { data: TrainerDetail }) {
+  if (!data.last_activity_at) {
+    return (
+      <section className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-500">
+        No activity yet.
+      </section>
+    );
+  }
+  const when = new Date(data.last_activity_at);
+  const daysAgo = Math.floor((Date.now() - when.getTime()) / (1000 * 60 * 60 * 24));
+  return (
+    <section className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 mb-0.5">
+        Last seen
+      </p>
+      <p className="text-sm text-slate-900">
+        {daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`}
+        <span className="text-slate-500 font-normal"> · {data.last_activity_kind ?? '—'}</span>
+      </p>
+      <p className="text-[11px] text-slate-400 mt-0.5">
+        {when.toLocaleString()}
+      </p>
+    </section>
+  );
+}
+
+/* ─────────────── Activity tab ─────────────── */
+function ActivityTab({ trainerId }: { trainerId: string }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['admin-trainer-activity', trainerId],
+    queryFn: () => adminRpc.trainerActivity(trainerId),
+  });
+  if (isLoading) return <p className="text-sm text-slate-500">Loading activity…</p>;
+  if (error) return <p className="text-sm text-rose-600">{(error as Error).message}</p>;
+  const rows = (data ?? []) as AdminTrainerActivity[];
+  if (rows.length === 0) return <EmptyTab text="No activity yet." />;
+  const kindColor: Record<string, string> = {
+    profile: 'bg-slate-100 text-slate-700',
+    session: 'bg-blue-50 text-blue-700',
+    payment: 'bg-amber-50 text-amber-700',
+    client: 'bg-emerald-50 text-emerald-700',
+    feedback: 'bg-violet-50 text-violet-700',
+  };
+  return (
+    <ListSection title={`${rows.length} most recent`}>
+      {rows.map((a, i) => (
+        <li
+          key={i}
+          className="px-3 py-2.5 hover:bg-slate-50 flex items-start justify-between gap-3"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">{a.label}</p>
+            {a.detail && (
+              <p className="text-xs text-slate-500 truncate">{a.detail}</p>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider ${
+                kindColor[a.kind] ?? 'bg-slate-100 text-slate-500'
+              }`}
+            >
+              {a.kind}
+            </span>
+            <span className="text-[10px] text-slate-400">
+              {new Date(a.ts).toLocaleDateString()}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ListSection>
   );
 }
 

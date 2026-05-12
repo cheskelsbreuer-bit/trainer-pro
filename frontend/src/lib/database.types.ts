@@ -60,6 +60,10 @@ export interface Trainer {
   // Public trainer directory (19_directory.sql)
   service_area: string | null;
   directory_listed: boolean;
+  // Onboarding templates the trainer picked (25_admin_progress_and_activity.sql).
+  // Drives Dashboard customization, public profile layout, terminology
+  // ("members" vs "clients" vs "students"), etc.
+  template_slugs: string[];
   created_at: string;
   updated_at: string;
 }

@@ -96,13 +96,28 @@ export interface AdminTrainerDetail {
   onboarded_at: string | null;
   client_count_estimate: string | null;
   specialties: string[];
+  template_slugs: string[];
   service_area: string | null;
   directory_listed: boolean;
   created_at: string | null;
+  updated_at: string | null;
   client_count: number;
   session_count: number;
   payment_total: number;
   last_session_at: string | null;
+  // Onboarding progress (added migration 25)
+  onboarding_steps: { label: string; done: boolean }[];
+  onboarding_step_count: number;
+  onboarding_total_steps: number;
+  last_activity_at: string | null;
+  last_activity_kind: string | null;
+}
+
+export interface AdminTrainerActivity {
+  ts: string;
+  kind: 'profile' | 'session' | 'payment' | 'client' | 'feedback';
+  label: string;
+  detail: string | null;
 }
 
 export interface AdminTrainerClient {
@@ -157,6 +172,8 @@ export const adminRpc = {
     rpc<AdminTrainerSession[]>('ck_q5', { p_id: trainerId }),
   trainerPayments: (trainerId: string) =>
     rpc<AdminTrainerPayment[]>('ck_q6', { p_id: trainerId }),
+  trainerActivity: (trainerId: string) =>
+    rpc<AdminTrainerActivity[]>('ck_q10', { p_id: trainerId }),
   waitlist: () => rpc<AdminWaitlistRow[]>('ck_q7'),
   feedback: () => rpc<AdminFeedbackRow[]>('ck_q8'),
   feedbackReply: (feedbackId: string, reply: string) =>
