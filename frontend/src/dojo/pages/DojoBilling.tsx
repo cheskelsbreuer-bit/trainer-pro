@@ -195,9 +195,9 @@ export function DojoBilling() {
           emphasis="brand"
         />
         <DojoStatTile
-          label="Students behind"
+          label="Inactive this cycle"
           value={studentsBehind.length}
-          sublabel="zero attendance this cycle"
+          sublabel="0 classes since last promotion"
         />
       </div>
 
@@ -252,7 +252,7 @@ export function DojoBilling() {
         <DojoCard accent="brand">
           <DojoSectionHeader
             icon={<AlertTriangle size={14} />}
-            title="Behind on dues"
+            title="Hasn't attended yet"
             hint={`${studentsBehind.length}`}
           />
           {studentsBehind.length === 0 ? (

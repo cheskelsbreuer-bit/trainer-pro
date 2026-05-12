@@ -13,7 +13,6 @@
 // concept from the trainer side — but with belt + family fields).
 
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
@@ -27,11 +26,11 @@ import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
 import {
   DOJO_COLORS,
-  DEFAULT_BELT_SYSTEM,
   BELT_SYSTEMS,
   readBeltFromTags,
   readFamilyFromTags,
   BELT_TAG_PREFIX,
+  useActiveBeltSystem,
   type BeltSystemId,
 } from '../theme';
 import {
@@ -46,8 +45,7 @@ import { BeltChip } from '../components/BeltChip';
 export function DojoStudents() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const navigate = useNavigate();
-  const system: BeltSystemId = DEFAULT_BELT_SYSTEM;
+  const [system] = useActiveBeltSystem();
 
   const [q, setQ] = useState('');
   const [beltFilter, setBeltFilter] = useState<string>('');
@@ -104,7 +102,11 @@ export function DojoStudents() {
       const currentBelt = readBeltFromTags(student.tags, system);
       const belts = BELT_SYSTEMS[system].belts;
       const idx = currentBelt ? belts.findIndex((b) => b.id === currentBelt.id) : -1;
-      const nextBelt = belts[idx + 1] ?? belts[0];
+      const nextBelt = belts[idx + 1];
+      if (!nextBelt) {
+        // Don't silently wrap to white belt — refuse and let the UI explain.
+        throw new Error('Already at the highest rank in this system.');
+      }
       const newTags = (student.tags ?? []).filter(
         (t) => !t.startsWith(BELT_TAG_PREFIX),
       );
@@ -122,6 +124,13 @@ export function DojoStudents() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dojo-students-all'] }),
   });
+
+  function atMaxRank(tags: string[] | null | undefined): boolean {
+    const belts = BELT_SYSTEMS[system].belts;
+    const currentBelt = readBeltFromTags(tags, system);
+    if (!currentBelt) return false;
+    return belts[belts.length - 1].id === currentBelt.id;
+  }
 
   return (
     <DojoPage>
@@ -232,80 +241,81 @@ export function DojoStudents() {
                   </td>
                 </tr>
               ) : (
-                filtered.map(({ s, belt, family }) => (
-                  <tr
-                    key={s.id}
-                    className="border-t hover:bg-[#1F1F25] cursor-pointer transition-colors"
-                    style={{ borderColor: DOJO_COLORS.divider }}
-                    onClick={() => navigate(`/students/${s.id}`)}
-                  >
-                    <td className="px-4 py-3">
-                      <p
-                        className="font-semibold"
+                filtered.map(({ s, belt, family }) => {
+                  const maxed = atMaxRank(s.tags);
+                  return (
+                    <tr
+                      key={s.id}
+                      className="border-t hover:bg-[var(--dojo-bg-panel-hover)] transition-colors"
+                      style={{ borderColor: DOJO_COLORS.divider }}
+                    >
+                      <td className="px-4 py-3">
+                        <p
+                          className="font-semibold"
+                          style={{ color: DOJO_COLORS.textPrimary }}
+                        >
+                          {s.full_name}
+                        </p>
+                        {s.email && (
+                          <p
+                            className="text-xs"
+                            style={{ color: DOJO_COLORS.textMuted }}
+                          >
+                            {s.email}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <BeltChip belt={belt} size="md" />
+                      </td>
+                      <td
+                        className="px-4 py-3 text-sm"
+                        style={{ color: DOJO_COLORS.textSecondary }}
+                      >
+                        {timeAtRank(s)}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-sm font-mono"
                         style={{ color: DOJO_COLORS.textPrimary }}
                       >
-                        {s.full_name}
-                      </p>
-                      {s.email && (
-                        <p
-                          className="text-xs"
-                          style={{ color: DOJO_COLORS.textMuted }}
-                        >
-                          {s.email}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <BeltChip belt={belt} size="md" />
-                    </td>
-                    <td
-                      className="px-4 py-3 text-sm"
-                      style={{ color: DOJO_COLORS.textSecondary }}
-                    >
-                      {timeAtRank(s)}
-                    </td>
-                    <td
-                      className="px-4 py-3 text-sm font-mono"
-                      style={{ color: DOJO_COLORS.textPrimary }}
-                    >
-                      {s.package_balance ?? 0}
-                    </td>
-                    <td className="px-4 py-3">
-                      {family ? (
-                        <span
-                          className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded"
+                        {s.package_balance ?? 0}
+                      </td>
+                      <td className="px-4 py-3">
+                        {family ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded"
+                            style={{
+                              background: DOJO_COLORS.bgInset,
+                              color: DOJO_COLORS.textSecondary,
+                              border: `1px solid ${DOJO_COLORS.divider}`,
+                            }}
+                          >
+                            <HeartHandshake size={11} /> {family}
+                          </span>
+                        ) : (
+                          <span style={{ color: DOJO_COLORS.textMuted, fontSize: 12 }}>
+                            —
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => promote.mutate(s.id)}
+                          disabled={promote.isPending || maxed}
+                          title={maxed ? 'Already at the highest rank' : 'Promote to next rank'}
+                          className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider px-2 py-1 rounded transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                           style={{
-                            background: DOJO_COLORS.bgInset,
-                            color: DOJO_COLORS.textSecondary,
-                            border: `1px solid ${DOJO_COLORS.divider}`,
+                            background: DOJO_COLORS.gold,
+                            color: DOJO_COLORS.onGold,
                           }}
                         >
-                          <HeartHandshake size={11} /> {family}
-                        </span>
-                      ) : (
-                        <span style={{ color: DOJO_COLORS.textMuted, fontSize: 12 }}>
-                          —
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          promote.mutate(s.id);
-                        }}
-                        disabled={promote.isPending}
-                        className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider px-2 py-1 rounded transition-opacity hover:opacity-90 disabled:opacity-40"
-                        style={{
-                          background: DOJO_COLORS.gold,
-                          color: '#1A1208',
-                        }}
-                      >
-                        <ChevronUp size={12} /> Promote
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                          <ChevronUp size={12} />
+                          {maxed ? 'Top rank' : 'Promote'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -215,7 +215,7 @@ export function DojoButton({
         className={`${base} ${className}`}
         style={{
           background: DOJO_COLORS.gold,
-          color: '#1A1208',
+          color: DOJO_COLORS.onGold,
         }}
       >
         {children}

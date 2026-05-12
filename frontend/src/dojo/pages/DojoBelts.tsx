@@ -12,7 +12,7 @@
 // Eligible students (>= threshold classes since last promotion) get a
 // gold "READY" badge.
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronUp, ShieldCheck, Award } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,11 +20,10 @@ import { supabase } from '../../lib/supabase';
 import type { Client } from '../../lib/database.types';
 import {
   DOJO_COLORS,
-  DEFAULT_BELT_SYSTEM,
   BELT_SYSTEMS,
   readBeltFromTags,
   BELT_TAG_PREFIX,
-  type BeltSystemId,
+  useActiveBeltSystem,
   type Belt,
 } from '../theme';
 import {
@@ -41,7 +40,7 @@ const CLASSES_FOR_PROMOTION = 30;
 export function DojoBelts() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [system] = useState<BeltSystemId>(DEFAULT_BELT_SYSTEM);
+  const [system] = useActiveBeltSystem();
 
   const { data: students } = useQuery({
     queryKey: ['dojo-students-all', user?.id],
@@ -135,8 +134,9 @@ export function DojoBelts() {
       {/* Belt-rank stack — lowest first. Each rank gets its own card with
           the student list inside. */}
       <div className="space-y-4">
-        {ranks.belts.map((belt) => {
+        {ranks.belts.map((belt, idx) => {
           const list = ranks.byBelt.get(belt.id)!;
+          const isMaxRank = idx === ranks.belts.length - 1;
           return (
             <RankSection
               key={belt.id}
@@ -144,6 +144,7 @@ export function DojoBelts() {
               students={list}
               onPromote={(id) => promote.mutate(id)}
               promoting={promote.isPending}
+              isMaxRank={isMaxRank}
             />
           );
         })}
@@ -185,11 +186,13 @@ function RankSection({
   students,
   onPromote,
   promoting,
+  isMaxRank,
 }: {
   belt: Belt;
   students: Client[];
   onPromote: (id: string) => void;
   promoting: boolean;
+  isMaxRank: boolean;
 }) {
   if (students.length === 0) {
     // Render an empty placeholder strip so the sensei sees the rank exists
@@ -277,28 +280,42 @@ function RankSection({
                   </span>
                 </div>
               </div>
-              {eligible && (
+              {eligible && !isMaxRank && (
                 <span
                   className="text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded"
                   style={{
                     background: DOJO_COLORS.gold,
-                    color: '#1A1208',
+                    color: DOJO_COLORS.onGold,
                   }}
                 >
                   Ready
                 </span>
               )}
-              <button
-                onClick={() => onPromote(s.id)}
-                disabled={promoting}
-                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded disabled:opacity-40 hover:opacity-90 transition-opacity"
-                style={{
-                  background: DOJO_COLORS.brand,
-                  color: '#FFF',
-                }}
-              >
-                <ChevronUp size={12} /> Promote
-              </button>
+              {isMaxRank ? (
+                <span
+                  className="text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded"
+                  style={{
+                    background: 'transparent',
+                    color: DOJO_COLORS.textMuted,
+                    border: `1px dashed ${DOJO_COLORS.divider}`,
+                  }}
+                  title="Already at the highest rank in this system"
+                >
+                  Top rank
+                </span>
+              ) : (
+                <button
+                  onClick={() => onPromote(s.id)}
+                  disabled={promoting}
+                  className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded disabled:opacity-40 hover:opacity-90 transition-opacity"
+                  style={{
+                    background: DOJO_COLORS.brand,
+                    color: DOJO_COLORS.onBrand,
+                  }}
+                >
+                  <ChevronUp size={12} /> Promote
+                </button>
+              )}
             </li>
           );
         })}

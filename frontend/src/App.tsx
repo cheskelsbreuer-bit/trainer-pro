@@ -92,24 +92,43 @@ function PortalShell() {
   return <ClientPortal />;
 }
 
-// Admin shell — every browser tab requires a fresh magic-link sign-in. We track
-// "this tab has verified" in sessionStorage (auto-cleared on tab close) so a
-// long-lived Supabase session in localStorage doesn't grant admin access by
-// itself. Real auth still happens on the backend via the email allowlist.
+// Admin shell — a magic-link sign-in trusts the browser for 7 days. We
+// store the verification deadline in localStorage so closing the tab,
+// rebooting, or letting the Supabase token quietly refresh doesn't kick
+// the admin back to the magic-link form. Real auth still happens on the
+// backend via the email allowlist — the verified flag only signals
+// "this device proved itself recently."
+const ADMIN_VERIFIED_UNTIL_KEY = 'admin_verified_until';
+const ADMIN_VERIFY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function readAdminVerified(): boolean {
+  if (typeof window === 'undefined') return false;
+  const raw = window.localStorage.getItem(ADMIN_VERIFIED_UNTIL_KEY);
+  if (!raw) return false;
+  const ts = Number(raw);
+  if (!Number.isFinite(ts)) return false;
+  return Date.now() < ts;
+}
+function writeAdminVerified() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(
+    ADMIN_VERIFIED_UNTIL_KEY,
+    String(Date.now() + ADMIN_VERIFY_TTL_MS),
+  );
+}
+
 function AdminShell() {
   const { user, loading } = useAuth();
 
-  const [verified, setVerified] = useState<boolean>(() =>
-    typeof window !== 'undefined' && sessionStorage.getItem('admin_verified') === 'true',
-  );
+  const [verified, setVerified] = useState<boolean>(() => readAdminVerified());
 
   // Magic-link callback: Supabase parses tokens from the URL fragment
   // automatically. We watch for the ?verified=1 marker we set in the redirect
-  // URL, then flag this tab as verified and clean the URL.
+  // URL, then flag this device as verified for 7 days and clean the URL.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('verified') === '1' && user) {
-      sessionStorage.setItem('admin_verified', 'true');
+      writeAdminVerified();
       setVerified(true);
       window.history.replaceState({}, '', '/chesky');
     }
@@ -122,8 +141,7 @@ function AdminShell() {
     retry: false,
   });
 
-  // Not verified for this tab — always show the magic-link form, even if the
-  // user has a persisted Supabase session for the regular app.
+  // Not verified — magic-link form. (Real admin auth gate.)
   if (!verified) {
     return <AdminLogin />;
   }
@@ -135,10 +153,11 @@ function AdminShell() {
       </div>
     );
   }
-  // Edge case: verified flag set but session expired between requests.
+  // Verified device, but Supabase session is briefly gone — keep the 7-day
+  // verification intact and show the regular login. Once they sign back in,
+  // they jump straight into admin without another magic link.
   if (!user) {
-    sessionStorage.removeItem('admin_verified');
-    return <AdminLogin />;
+    return <Login />;
   }
   // Treat any error or non-admin as 404 — don't reveal /chesky exists.
   if (check.error || !check.data?.is_admin) {

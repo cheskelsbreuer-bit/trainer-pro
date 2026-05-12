@@ -32,6 +32,11 @@ export const DOJO_COLORS = {
   goldSoft: 'var(--dojo-gold-soft)',
   /** Dark text used on gold-fill chips/buttons so the label stays legible. */
   goldText: 'var(--dojo-gold-text)',
+  /** Text-on-gold for filled buttons — flips per theme so the contrast
+   *  works in both dark and light modes (gold is amber in dark, brown in light). */
+  onGold: 'var(--dojo-on-gold)',
+  /** Text-on-brand — always white since brand is strong red in both modes. */
+  onBrand: 'var(--dojo-on-brand)',
 
   ok: 'var(--dojo-ok)',
   warn: 'var(--dojo-warn)',
@@ -184,4 +189,54 @@ export function readFamilyFromTags(tags: string[] | null | undefined): string | 
     if (t.startsWith(FAMILY_TAG_PREFIX)) return t.slice(FAMILY_TAG_PREFIX.length);
   }
   return null;
+}
+
+// ── Active belt system ────────────────────────────────────────────────
+// Which discipline this dojo runs. Persisted in localStorage so the
+// sensei's pick in Settings actually applies to the rest of the app.
+// A future migration will move this onto the trainers row; for now
+// per-browser persistence is the lowest-friction fix.
+const BELT_SYSTEM_STORAGE_KEY = 'dojo-belt-system';
+
+export function readActiveBeltSystem(): BeltSystemId {
+  if (typeof window === 'undefined') return DEFAULT_BELT_SYSTEM;
+  const stored = window.localStorage.getItem(BELT_SYSTEM_STORAGE_KEY);
+  if (stored && stored in BELT_SYSTEMS) return stored as BeltSystemId;
+  return DEFAULT_BELT_SYSTEM;
+}
+
+export function writeActiveBeltSystem(id: BeltSystemId) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(BELT_SYSTEM_STORAGE_KEY, id);
+}
+
+/** React hook — re-reads when the user changes the system in Settings.
+ *  Other tabs/components see the change after their next render. */
+import { useEffect, useState } from 'react';
+
+export function useActiveBeltSystem(): [BeltSystemId, (id: BeltSystemId) => void] {
+  const [id, setId] = useState<BeltSystemId>(() => readActiveBeltSystem());
+
+  // Listen for storage events from other tabs and for our own custom
+  // 'dojo-belt-system-changed' event fired by writeActiveBeltSystem.
+  useEffect(() => {
+    function refresh() {
+      setId(readActiveBeltSystem());
+    }
+    window.addEventListener('storage', refresh);
+    window.addEventListener('dojo-belt-system-changed', refresh);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('dojo-belt-system-changed', refresh);
+    };
+  }, []);
+
+  function update(next: BeltSystemId) {
+    writeActiveBeltSystem(next);
+    setId(next);
+    // Tell other components in the SAME tab to re-read.
+    window.dispatchEvent(new Event('dojo-belt-system-changed'));
+  }
+
+  return [id, update];
 }

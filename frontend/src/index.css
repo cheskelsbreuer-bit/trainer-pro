@@ -37,6 +37,10 @@
   --dojo-gold: #F59E0B;
   --dojo-gold-soft: #78350F;
   --dojo-gold-text: #1A1208;
+  /* On-gold text: dark in dark mode (gold is bright amber). */
+  --dojo-on-gold: #1A1208;
+  /* On-brand text: white in both modes — brand is always strong red. */
+  --dojo-on-brand: #FFFFFF;
   --dojo-ok: #10B981;
   --dojo-warn: #F59E0B;
   --dojo-danger: #EF4444;
@@ -57,6 +61,9 @@
   --dojo-gold: #B45309;
   --dojo-gold-soft: #FEF3C7;
   --dojo-gold-text: #1A1208;
+  /* On-gold text: white in light mode (gold here is dark amber/brown). */
+  --dojo-on-gold: #FFFFFF;
+  --dojo-on-brand: #FFFFFF;
   --dojo-ok: #047857;
   --dojo-warn: #B45309;
   --dojo-danger: #B91C1C;

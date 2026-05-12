@@ -17,10 +17,9 @@ import type { Client, Session, Payment, Trainer } from '../../lib/database.types
 import { formatMoney } from '../../lib/format';
 import {
   DOJO_COLORS,
-  DEFAULT_BELT_SYSTEM,
   BELT_SYSTEMS,
   readBeltFromTags,
-  type BeltSystemId,
+  useActiveBeltSystem,
 } from '../theme';
 import {
   DojoCard,
@@ -44,9 +43,7 @@ type PaymentWithClient = Payment & { clients: { full_name: string } | null };
 export function DojoHome({ trainer }: { trainer: Trainer | undefined }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  // For V1, hardcode the system. Settings page will let the sensei pick;
-  // until then we default to karate (most common).
-  const system: BeltSystemId = DEFAULT_BELT_SYSTEM;
+  const [system] = useActiveBeltSystem();
 
   const { data: students } = useQuery({
     queryKey: ['dojo-students', user?.id],

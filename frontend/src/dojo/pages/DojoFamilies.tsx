@@ -13,9 +13,9 @@ import { supabase } from '../../lib/supabase';
 import type { Client } from '../../lib/database.types';
 import {
   DOJO_COLORS,
-  DEFAULT_BELT_SYSTEM,
   readBeltFromTags,
   readFamilyFromTags,
+  useActiveBeltSystem,
 } from '../theme';
 import {
   DojoPage,
@@ -27,7 +27,7 @@ import { BeltChip } from '../components/BeltChip';
 
 export function DojoFamilies() {
   const { user } = useAuth();
-  const system = DEFAULT_BELT_SYSTEM;
+  const [system] = useActiveBeltSystem();
 
   const { data: students } = useQuery({
     queryKey: ['dojo-students-all', user?.id],

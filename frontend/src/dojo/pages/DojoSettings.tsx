@@ -25,7 +25,12 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
-import { DOJO_COLORS, BELT_SYSTEMS, type BeltSystemId } from '../theme';
+import {
+  DOJO_COLORS,
+  BELT_SYSTEMS,
+  useActiveBeltSystem,
+  type BeltSystemId,
+} from '../theme';
 import {
   DojoPage,
   DojoPageHeader,
@@ -314,13 +319,16 @@ function IdentitySection({
 }
 
 function BeltsSection() {
-  const [system, setSystem] = useState<BeltSystemId>('karate');
+  // Persists per-browser via localStorage; every dojo page reads this hook
+  // so changing it here applies everywhere (Belts page, Students filter,
+  // dashboard belt distribution, promotion logic).
+  const [system, setSystem] = useActiveBeltSystem();
   return (
     <DojoCard accent="gold">
       <DojoSectionHeader
         icon={<ShieldCheck size={14} />}
         title="Discipline & belt system"
-        hint="Drives the Belts page and promotion order"
+        hint="Drives the Belts page and promotion order across the dojo"
       />
       <div className="p-4 space-y-3">
         <div className="flex gap-2 flex-wrap">
@@ -333,7 +341,7 @@ function BeltsSection() {
                 className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors"
                 style={{
                   background: active ? DOJO_COLORS.brand : DOJO_COLORS.bgInset,
-                  color: active ? '#FFF' : DOJO_COLORS.textSecondary,
+                  color: active ? DOJO_COLORS.onBrand : DOJO_COLORS.textSecondary,
                   border: `1px solid ${active ? DOJO_COLORS.brand : DOJO_COLORS.divider}`,
                 }}
               >
@@ -343,9 +351,8 @@ function BeltsSection() {
           })}
         </div>
         <p className="text-xs" style={{ color: DOJO_COLORS.textMuted }}>
-          Preview the ranks for the selected discipline. Selection persists
-          per-dojo in V2 (waiting on a discipline column in the trainers table);
-          for now, the Belts page always uses Karate at render time.
+          Pick your discipline — the Belts page, Students roster, and
+          promotion order all switch to match. Saved on this browser.
         </p>
         <div className="space-y-1.5 mt-2">
           {BELT_SYSTEMS[system].belts.map((b) => (
