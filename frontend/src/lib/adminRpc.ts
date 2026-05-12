@@ -181,4 +181,19 @@ export const adminRpc = {
       p_id: feedbackId,
       p_reply: reply,
     }),
+  /** Permanently delete a trainer and all their data (clients, sessions,
+   *  payments, etc.). Returns counts of what was wiped at each level. */
+  trainerDelete: (trainerId: string) =>
+    rpc<{
+      ok: boolean;
+      trainer_email: string | null;
+      deleted: {
+        clients: number;
+        sessions: number;
+        payments: number;
+        progress_entries: number;
+        workout_plans: number;
+        messages: number;
+      };
+    }>('ck_q11', { p_id: trainerId }),
 };

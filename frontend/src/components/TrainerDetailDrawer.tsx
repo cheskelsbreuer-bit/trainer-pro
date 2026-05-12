@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   Save,
   Activity,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { adminRpc, type AdminTrainerDetail, type AdminTrainerActivity } from '../lib/adminRpc';
 
@@ -153,11 +155,115 @@ export function TrainerDetailDrawer({
               {tab === 'payments' && (
                 <PaymentsTab trainerId={trainerId} currency={detail.data.currency} />
               )}
+              {tab === 'overview' && (
+                <DangerZone
+                  trainerId={trainerId}
+                  trainerEmail={detail.data.email}
+                  trainerName={
+                    detail.data.business_name ?? detail.data.full_name ?? null
+                  }
+                  onDeleted={() => {
+                    qc.invalidateQueries({ queryKey: ['admin-trainers'] });
+                    qc.invalidateQueries({ queryKey: ['admin-overview'] });
+                    onClose();
+                  }}
+                />
+              )}
             </>
           )}
         </div>
       </aside>
     </div>
+  );
+}
+
+/* ─────────────── Danger zone — permanent delete ─────────────── */
+function DangerZone({
+  trainerId,
+  trainerEmail,
+  trainerName,
+  onDeleted,
+}: {
+  trainerId: string;
+  trainerEmail: string | null;
+  trainerName: string | null;
+  onDeleted: () => void;
+}) {
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [armed, setArmed] = useState(false);
+
+  const del = useMutation({
+    mutationFn: () => adminRpc.trainerDelete(trainerId),
+    onSuccess: () => onDeleted(),
+  });
+
+  const canConfirm =
+    armed && trainerEmail && confirmEmail.trim().toLowerCase() === trainerEmail.toLowerCase();
+
+  return (
+    <section className="border border-rose-200 rounded-xl bg-rose-50 overflow-hidden mt-6">
+      <header className="px-4 py-3 bg-rose-100 border-b border-rose-200 flex items-center gap-2">
+        <AlertTriangle size={16} className="text-rose-700" />
+        <h4 className="text-sm font-bold text-rose-900 uppercase tracking-wide">
+          Danger zone
+        </h4>
+      </header>
+      <div className="p-4 space-y-3">
+        <p className="text-sm text-rose-900">
+          Permanently delete <strong>{trainerName ?? trainerEmail ?? 'this trainer'}</strong>{' '}
+          and every row of their data — clients, sessions, payments, progress entries,
+          workouts, messages, and their login. This cannot be undone.
+        </p>
+        {!armed ? (
+          <button
+            type="button"
+            onClick={() => setArmed(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-rose-300 text-rose-700 hover:bg-rose-50"
+          >
+            <Trash2 size={13} /> I want to delete this trainer
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-rose-900">
+              Type the trainer's email to confirm: <code>{trainerEmail ?? '—'}</code>
+            </label>
+            <input
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              placeholder={trainerEmail ?? ''}
+              className="w-full px-3 py-2 text-sm rounded border border-rose-300 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400"
+              autoFocus
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setArmed(false);
+                  setConfirmEmail('');
+                }}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-300 text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => del.mutate()}
+                disabled={!canConfirm || del.isPending}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={13} />
+                {del.isPending ? 'Deleting…' : 'Permanently delete trainer'}
+              </button>
+              {del.error && (
+                <span className="text-xs text-rose-700">
+                  {(del.error as Error).message}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

@@ -8,34 +8,47 @@
 // sensei pick which system applies — Karate (10 ranks), Taekwondo (10 ranks),
 // BJJ (5 adult ranks), Judo (6 ranks), Krav Maga (5 levels).
 
+// Color tokens are CSS variables — actual values live in index.css under
+// the .dojo-theme-dark and .dojo-theme-light classes. DojoLayout sets the
+// active class on its root element based on the user's preference, so
+// the same component code lights up correctly in either mode.
 export const DOJO_COLORS = {
-  // Full-page surfaces
-  bgPage: '#0A0A0B', // near-black, with a tiny hint of warmth
-  bgPanel: '#16161A', // raised surfaces (cards, sidebar)
-  bgPanelHover: '#1F1F25',
-  bgInset: '#0E0E11', // sunken (tables, code blocks)
-  divider: '#2A2A31',
+  bgPage: 'var(--dojo-bg-page)',
+  bgPanel: 'var(--dojo-bg-panel)',
+  bgPanelHover: 'var(--dojo-bg-panel-hover)',
+  bgInset: 'var(--dojo-bg-inset)',
+  divider: 'var(--dojo-divider)',
 
-  // Type
-  textPrimary: '#F5F5F4', // off-white parchment
-  textSecondary: '#A1A1AA', // zinc-400
-  textMuted: '#71717A', // zinc-500
+  textPrimary: 'var(--dojo-text-primary)',
+  textSecondary: 'var(--dojo-text-secondary)',
+  textMuted: 'var(--dojo-text-muted)',
 
-  // Brand — crimson dojo red
-  brand: '#DC2626', // red-600
-  brandHover: '#B91C1C', // red-700
-  brandSoft: '#7F1D1D', // red-900 for filled chips on dark
-  brandRing: 'rgba(220, 38, 38, 0.4)',
+  brand: 'var(--dojo-brand)',
+  brandHover: 'var(--dojo-brand-hover)',
+  brandSoft: 'var(--dojo-brand-soft)',
+  brandRing: 'var(--dojo-brand-ring)',
 
-  // Honor — gold for rank highlights and key totals
-  gold: '#F59E0B', // amber-500
-  goldSoft: '#78350F', // amber-900
+  gold: 'var(--dojo-gold)',
+  goldSoft: 'var(--dojo-gold-soft)',
+  /** Dark text used on gold-fill chips/buttons so the label stays legible. */
+  goldText: 'var(--dojo-gold-text)',
 
-  // Status
-  ok: '#10B981',
-  warn: '#F59E0B',
-  danger: '#EF4444',
+  ok: 'var(--dojo-ok)',
+  warn: 'var(--dojo-warn)',
+  danger: 'var(--dojo-danger)',
 } as const;
+
+export type DojoThemeMode = 'dark' | 'light';
+const THEME_STORAGE_KEY = 'dojo-theme';
+export function readDojoThemePreference(): DojoThemeMode {
+  if (typeof window === 'undefined') return 'dark';
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return stored === 'light' ? 'light' : 'dark';
+}
+export function writeDojoThemePreference(mode: DojoThemeMode) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(THEME_STORAGE_KEY, mode);
+}
 
 export interface Belt {
   /** Internal id, e.g. 'white', 'green', 'black-1' */
@@ -84,10 +97,57 @@ export const TKD_BELTS: Belt[] = [
   { id: 'black-2', label: 'Black Belt — 2nd Dan', color: '#0A0A0B', dan: true },
 ];
 
+// Judo (IJF) — six kyu colors + black for dan. Same root system as karate
+// (Kano invented both grading systems) but the color sequence differs.
+export const JUDO_BELTS: Belt[] = [
+  { id: 'white', label: 'White Belt', color: '#F5F5F4' },
+  { id: 'yellow', label: 'Yellow Belt', color: '#FACC15' },
+  { id: 'orange', label: 'Orange Belt', color: '#FB923C' },
+  { id: 'green', label: 'Green Belt', color: '#22C55E' },
+  { id: 'blue', label: 'Blue Belt', color: '#3B82F6' },
+  { id: 'brown', label: 'Brown Belt', color: '#92400E' },
+  { id: 'black-1', label: 'Black Belt — 1st Dan', color: '#0A0A0B', dan: true },
+];
+
+// Krav Maga (most common Practitioner / Graduate / Expert system used by
+// IKMF and Krav Maga Global). Krav doesn't use colored belts on the mat
+// but the level structure is what dojos track.
+export const KRAV_LEVELS: Belt[] = [
+  { id: 'p1', label: 'Practitioner 1', color: '#94A3B8' },
+  { id: 'p2', label: 'Practitioner 2', color: '#64748B' },
+  { id: 'p3', label: 'Practitioner 3', color: '#475569' },
+  { id: 'p4', label: 'Practitioner 4', color: '#334155' },
+  { id: 'p5', label: 'Practitioner 5', color: '#1E293B' },
+  { id: 'g1', label: 'Graduate 1', color: '#F59E0B', dan: true },
+  { id: 'g2', label: 'Graduate 2', color: '#D97706', dan: true },
+  { id: 'g3', label: 'Graduate 3', color: '#B45309', dan: true },
+  { id: 'g4', label: 'Graduate 4', color: '#92400E', dan: true },
+  { id: 'g5', label: 'Graduate 5', color: '#78350F', dan: true },
+  { id: 'e1', label: 'Expert 1', color: '#0A0A0B', dan: true },
+  { id: 'e2', label: 'Expert 2', color: '#0A0A0B', dan: true },
+  { id: 'e3', label: 'Expert 3', color: '#0A0A0B', dan: true },
+];
+
+// MMA — no traditional belt system. Most gyms classify by experience tier
+// (Fundamentals / Intermediate / Advanced / Competition / Pro) and fight
+// record. We model the experience tier here; per-fighter record lives on
+// the student profile.
+export const MMA_LEVELS: Belt[] = [
+  { id: 'fundamentals', label: 'Fundamentals', color: '#94A3B8' },
+  { id: 'intermediate', label: 'Intermediate', color: '#3B82F6' },
+  { id: 'advanced', label: 'Advanced', color: '#7C3AED' },
+  { id: 'competition', label: 'Competition Team', color: '#DC2626' },
+  { id: 'amateur', label: 'Amateur Fighter', color: '#B45309', dan: true },
+  { id: 'pro', label: 'Pro Fighter', color: '#0A0A0B', dan: true },
+];
+
 export const BELT_SYSTEMS = {
   karate: { label: 'Karate', belts: KARATE_BELTS },
   bjj: { label: 'Brazilian Jiu-Jitsu', belts: BJJ_BELTS },
   taekwondo: { label: 'Taekwondo', belts: TKD_BELTS },
+  judo: { label: 'Judo', belts: JUDO_BELTS },
+  krav_maga: { label: 'Krav Maga', belts: KRAV_LEVELS },
+  mma: { label: 'MMA', belts: MMA_LEVELS },
 } as const;
 
 export type BeltSystemId = keyof typeof BELT_SYSTEMS;

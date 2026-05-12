@@ -2,6 +2,7 @@
 // brand bar, gold rank highlights. This Layout replaces Trainer Pro's
 // default Layout entirely when a martial-arts dojo is active.
 
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   Home,
@@ -13,8 +14,15 @@ import {
   Wallet,
   Settings,
   LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react';
-import { DOJO_COLORS } from '../theme';
+import {
+  DOJO_COLORS,
+  readDojoThemePreference,
+  writeDojoThemePreference,
+  type DojoThemeMode,
+} from '../theme';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 
@@ -35,6 +43,15 @@ const NAV: { to: string; label: string; icon: React.ComponentType<{ size?: numbe
 
 export function DojoLayout({ trainer }: DojoLayoutProps) {
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<DojoThemeMode>(() => readDojoThemePreference());
+
+  useEffect(() => {
+    writeDojoThemePreference(theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  }
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -45,7 +62,7 @@ export function DojoLayout({ trainer }: DojoLayoutProps) {
 
   return (
     <div
-      className="min-h-screen flex"
+      className={`dojo-theme-${theme} min-h-screen flex`}
       style={{
         background: DOJO_COLORS.bgPage,
         color: DOJO_COLORS.textPrimary,
@@ -125,9 +142,9 @@ export function DojoLayout({ trainer }: DojoLayoutProps) {
           })}
         </nav>
 
-        {/* Sign out */}
+        {/* Sign out + theme toggle */}
         <div
-          className="px-5 py-3 border-t"
+          className="px-5 py-3 border-t flex items-center justify-between"
           style={{ borderColor: DOJO_COLORS.divider }}
         >
           <button
@@ -136,6 +153,18 @@ export function DojoLayout({ trainer }: DojoLayoutProps) {
             style={{ color: DOJO_COLORS.textSecondary }}
           >
             <LogOut size={14} /> Sign out
+          </button>
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="w-7 h-7 rounded flex items-center justify-center transition-colors"
+            style={{
+              background: DOJO_COLORS.bgInset,
+              border: `1px solid ${DOJO_COLORS.divider}`,
+              color: DOJO_COLORS.textSecondary,
+            }}
+          >
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           </button>
         </div>
       </aside>
@@ -156,6 +185,18 @@ export function DojoLayout({ trainer }: DojoLayoutProps) {
           >
             道
           </div>
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="shrink-0 w-7 h-7 rounded flex items-center justify-center"
+            style={{
+              background: DOJO_COLORS.bgInset,
+              border: `1px solid ${DOJO_COLORS.divider}`,
+              color: DOJO_COLORS.textSecondary,
+            }}
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+          </button>
           {NAV.map((item) => {
             const Icon = item.icon;
             return (

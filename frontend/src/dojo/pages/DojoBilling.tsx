@@ -23,7 +23,6 @@ type PaymentWithClient = Payment & { clients: { full_name: string } | null };
 export function DojoBilling() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [recording, setRecording] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [amount, setAmount] = useState('');
 
@@ -93,7 +92,6 @@ export function DojoBilling() {
       if (error) throw error;
     },
     onSuccess: () => {
-      setRecording(false);
       setStudentId('');
       setAmount('');
       qc.invalidateQueries({ queryKey: ['dojo-payments'] });
@@ -105,13 +103,85 @@ export function DojoBilling() {
       <DojoPageHeader
         eyebrow="The money"
         title="Billing"
-        subtitle="Tuition history, who's behind on dues, monthly totals."
-        action={
-          <DojoButton onClick={() => setRecording((s) => !s)}>
-            <Plus size={16} /> Record payment
-          </DojoButton>
-        }
+        subtitle="Record tuition the moment a student pays. Below: history, monthly totals, and who's behind on dues."
       />
+
+      {/* Always-visible record-a-payment panel. The user complained they
+          couldn't find how to record a payment, so we never hide this form. */}
+      <DojoCard className="mb-6" accent="gold">
+        <DojoSectionHeader
+          icon={<DollarSign size={14} />}
+          title="Record a payment"
+          hint="Pick a student, enter the amount, save — that's it."
+        />
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-[2fr_1fr_auto] gap-3 items-end">
+          <div>
+            <label
+              className="block text-xs uppercase tracking-wider font-semibold mb-1"
+              style={{ color: DOJO_COLORS.textSecondary }}
+            >
+              Student
+            </label>
+            <select
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              className="w-full px-3 py-2 rounded text-sm focus:outline-none"
+              style={{
+                background: DOJO_COLORS.bgInset,
+                color: DOJO_COLORS.textPrimary,
+                border: `1px solid ${DOJO_COLORS.divider}`,
+              }}
+            >
+              <option value="">Pick a student…</option>
+              {(students ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              className="block text-xs uppercase tracking-wider font-semibold mb-1"
+              style={{ color: DOJO_COLORS.textSecondary }}
+            >
+              Amount ($)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              className="w-full px-3 py-2 rounded text-sm focus:outline-none"
+              style={{
+                background: DOJO_COLORS.bgInset,
+                color: DOJO_COLORS.textPrimary,
+                border: `1px solid ${DOJO_COLORS.divider}`,
+              }}
+            />
+          </div>
+          <DojoButton
+            variant="gold"
+            onClick={() => record.mutate()}
+            disabled={record.isPending || !studentId || !amount}
+            className="h-[38px]"
+          >
+            <Plus size={14} /> {record.isPending ? 'Saving…' : 'Save payment'}
+          </DojoButton>
+        </div>
+        {record.error && (
+          <p className="px-4 pb-3 text-xs" style={{ color: DOJO_COLORS.danger }}>
+            {(record.error as Error).message}
+          </p>
+        )}
+        {record.isSuccess && !record.isPending && !record.error && (
+          <p className="px-4 pb-3 text-xs" style={{ color: DOJO_COLORS.ok }}>
+            Payment saved. Add another or scroll down to see the history.
+          </p>
+        )}
+      </DojoCard>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         <DojoStatTile
@@ -130,53 +200,6 @@ export function DojoBilling() {
           sublabel="zero attendance this cycle"
         />
       </div>
-
-      {recording && (
-        <DojoCard className="mb-6">
-          <DojoSectionHeader icon={<DollarSign size={14} />} title="Record a payment" />
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <select
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              className="px-3 py-2 rounded text-sm focus:outline-none"
-              style={{
-                background: DOJO_COLORS.bgInset,
-                color: DOJO_COLORS.textPrimary,
-                border: `1px solid ${DOJO_COLORS.divider}`,
-              }}
-            >
-              <option value="">Pick a student…</option>
-              {(students ?? []).map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.full_name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Amount"
-              className="px-3 py-2 rounded text-sm focus:outline-none"
-              style={{
-                background: DOJO_COLORS.bgInset,
-                color: DOJO_COLORS.textPrimary,
-                border: `1px solid ${DOJO_COLORS.divider}`,
-              }}
-            />
-            <DojoButton onClick={() => record.mutate()} disabled={record.isPending}>
-              {record.isPending ? 'Saving…' : 'Save'}
-            </DojoButton>
-          </div>
-          {record.error && (
-            <p className="px-4 pb-3 text-xs" style={{ color: DOJO_COLORS.danger }}>
-              {(record.error as Error).message}
-            </p>
-          )}
-        </DojoCard>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <DojoCard className="lg:col-span-2" accent="gold">

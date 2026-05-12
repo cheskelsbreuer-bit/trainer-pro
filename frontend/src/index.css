@@ -16,3 +16,48 @@
     background: rgb(248 250 252);
   }
 }
+
+/* Dojo theme — two palettes (dark, light) driven by CSS variables so every
+ * component in src/dojo/ that references DOJO_COLORS picks up the active
+ * mode automatically. The DojoLayout root element sets one of these
+ * classes based on the user's choice (persisted to localStorage). */
+.dojo-theme-dark {
+  --dojo-bg-page: #0A0A0B;
+  --dojo-bg-panel: #16161A;
+  --dojo-bg-panel-hover: #1F1F25;
+  --dojo-bg-inset: #0E0E11;
+  --dojo-divider: #2A2A31;
+  --dojo-text-primary: #F5F5F4;
+  --dojo-text-secondary: #A1A1AA;
+  --dojo-text-muted: #71717A;
+  --dojo-brand: #DC2626;
+  --dojo-brand-hover: #B91C1C;
+  --dojo-brand-soft: #7F1D1D;
+  --dojo-brand-ring: rgba(220, 38, 38, 0.4);
+  --dojo-gold: #F59E0B;
+  --dojo-gold-soft: #78350F;
+  --dojo-gold-text: #1A1208;
+  --dojo-ok: #10B981;
+  --dojo-warn: #F59E0B;
+  --dojo-danger: #EF4444;
+}
+.dojo-theme-light {
+  --dojo-bg-page: #FAFAF9;
+  --dojo-bg-panel: #FFFFFF;
+  --dojo-bg-panel-hover: #F4F4F5;
+  --dojo-bg-inset: #F4F4F5;
+  --dojo-divider: #E4E4E7;
+  --dojo-text-primary: #18181B;
+  --dojo-text-secondary: #52525B;
+  --dojo-text-muted: #71717A;
+  --dojo-brand: #B91C1C;
+  --dojo-brand-hover: #991B1B;
+  --dojo-brand-soft: #FEE2E2;
+  --dojo-brand-ring: rgba(185, 28, 28, 0.25);
+  --dojo-gold: #B45309;
+  --dojo-gold-soft: #FEF3C7;
+  --dojo-gold-text: #1A1208;
+  --dojo-ok: #047857;
+  --dojo-warn: #B45309;
+  --dojo-danger: #B91C1C;
+}

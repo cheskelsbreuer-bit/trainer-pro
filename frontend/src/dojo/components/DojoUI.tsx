@@ -2,6 +2,8 @@
 // dark theme + crimson/gold accents stay consistent without a global CSS
 // override.
 
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, Home } from 'lucide-react';
 import { DOJO_COLORS } from '../theme';
 
 const HEADER_FONT =
@@ -250,7 +252,57 @@ export function DojoButton({
   );
 }
 
-/** Page container — keeps consistent padding + max width for dojo pages. */
+/** Back button shown at the top of every non-home dojo page. Goes one step
+ *  back in browser history; also exposes a Home shortcut to the dashboard. */
+export function DojoBackBar({
+  to,
+  homeLabel = 'Dojo',
+}: {
+  /** Optional override for the back destination. Defaults to history(-1). */
+  to?: string;
+  /** Text next to the Home icon (defaults to "Dojo"). */
+  homeLabel?: string;
+}) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  // On the home route this would be redundant — render nothing.
+  if (location.pathname === '/') return null;
+  return (
+    <div className="flex items-center gap-2 mb-4 text-xs uppercase tracking-wider">
+      <button
+        onClick={() => (to ? navigate(to) : navigate(-1))}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded transition-colors hover:opacity-90"
+        style={{
+          background: DOJO_COLORS.bgPanel,
+          border: `1px solid ${DOJO_COLORS.divider}`,
+          color: DOJO_COLORS.textSecondary,
+        }}
+      >
+        <ArrowLeft size={13} /> Back
+      </button>
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded transition-colors hover:opacity-90"
+        style={{
+          background: DOJO_COLORS.bgPanel,
+          border: `1px solid ${DOJO_COLORS.divider}`,
+          color: DOJO_COLORS.textSecondary,
+        }}
+      >
+        <Home size={13} /> {homeLabel}
+      </Link>
+    </div>
+  );
+}
+
+/** Page container — keeps consistent padding + max width for dojo pages.
+ *  Automatically renders the back/home bar on every page except the
+ *  dashboard, so no individual page has to remember to include it. */
 export function DojoPage({ children }: { children: React.ReactNode }) {
-  return <div className="px-6 sm:px-8 py-8 max-w-7xl mx-auto">{children}</div>;
+  return (
+    <div className="px-6 sm:px-8 py-8 max-w-7xl mx-auto">
+      <DojoBackBar />
+      {children}
+    </div>
+  );
 }
