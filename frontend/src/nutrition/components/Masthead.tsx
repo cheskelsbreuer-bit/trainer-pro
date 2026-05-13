@@ -56,7 +56,7 @@ export function Masthead({ trainer }: { trainer: Trainer | undefined }) {
         <div className="flex-1 text-center">
           <p
             className="text-[10px] uppercase tracking-[0.5em] mb-1"
-            style={{ color: N.sage }}
+            style={{ color: N.coral }}
           >
             ✦ Nutrition Practice ✦
           </p>
@@ -66,8 +66,8 @@ export function Masthead({ trainer }: { trainer: Trainer | undefined }) {
               fontFamily: SERIF_FONT,
               color: N.ink,
               fontSize: 'clamp(1.5rem, 3.5vw, 2.5rem)',
-              fontWeight: 600,
-              letterSpacing: '0.01em',
+              fontWeight: 500,
+              letterSpacing: '-0.005em',
             }}
             title={practiceName}
           >

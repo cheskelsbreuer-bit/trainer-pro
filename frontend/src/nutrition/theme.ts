@@ -31,10 +31,16 @@ export const N = {
   danger: 'var(--nut-danger)',
 } as const;
 
+// Display font — Fraunces. A warm, modern, optically-sized serif used
+// by a lot of contemporary wellness brands (Cup of Jo, MyFitnessPal,
+// Headspace-adjacent). Has friendly rounded terminals + a beautiful
+// italic that holds up at all sizes.
 export const SERIF_FONT =
-  "'Cormorant Garamond', 'Cormorant', Georgia, 'Times New Roman', serif";
+  "'Fraunces', 'Cormorant Garamond', Georgia, 'Times New Roman', serif";
+// Body font — Inter remains the workhorse. Outfit (warm geometric sans)
+// is loaded too if a page ever wants a friendlier sans alternative.
 export const BODY_FONT =
-  "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+  "'Inter', 'Outfit', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
 // Theme mode — defaults to LIGHT for the wellness aesthetic (most
 // nutrition apps are paper-mode by default).
