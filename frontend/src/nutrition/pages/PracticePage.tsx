@@ -16,11 +16,11 @@ import type { Client, Trainer } from '../../lib/database.types';
 import {
   N,
   SERIF_FONT,
-  readGoal,
-  readCurrentWeight,
-  readGoalWeight,
-  readStartingWeight,
-  computeProgressToGoal,
+  readActivePractice,
+  daysOnPractice,
+  isPracticeWindowDone,
+  SKILL_BY_ID,
+  PRACTICE_WINDOW_DAYS,
   relativeWhen,
   type CheckInRow,
 } from '../theme';
@@ -372,67 +372,112 @@ function PracticeStat({
 }
 
 function FeaturedClient({ clients }: { clients: Client[] }) {
-  const featured = useMemo(() => {
-    let best: { client: Client; pct: number } | null = null;
-    for (const c of clients) {
-      const start = readStartingWeight(c.tags);
-      const cur = readCurrentWeight(c.tags);
-      const goal = readGoalWeight(c.tags);
-      const pct = computeProgressToGoal(start, cur, goal);
-      if (pct != null && (best === null || pct > best.pct)) {
-        best = { client: c, pct };
-      }
-    }
-    return best;
+  // PN-style featured panel — the clients whose 2-week practice window
+  // has ended. These need the coach's attention NOW because the next
+  // habit should be assigned. The whole methodology hinges on this beat.
+  const ready = useMemo(() => {
+    return clients
+      .map((c) => ({
+        client: c,
+        practice: readActivePractice(c.tags),
+        days: daysOnPractice(c.tags),
+        ready: isPracticeWindowDone(c.tags),
+      }))
+      .filter((x) => x.ready);
   }, [clients]);
 
-  if (!featured) return null;
-  const goal = readGoal(featured.client.tags);
-  const cur = readCurrentWeight(featured.client.tags);
-  const target = readGoalWeight(featured.client.tags);
+  if (ready.length === 0) {
+    // Show a quiet sage panel summarizing in-progress practices instead.
+    const inProgress = clients
+      .map((c) => ({ client: c, practice: readActivePractice(c.tags), days: daysOnPractice(c.tags) }))
+      .filter((x) => x.practice && x.days != null);
+    if (inProgress.length === 0) return null;
+    return (
+      <div
+        className="mt-8 p-4 rounded-2xl"
+        style={{ background: N.sageSoft, border: `1px solid ${N.sage}` }}
+      >
+        <p
+          className="text-[10px] uppercase tracking-[0.3em]"
+          style={{ color: N.sageDeep }}
+        >
+          Practicing now
+        </p>
+        <p
+          className="leading-tight mt-1 mb-3"
+          style={{
+            fontFamily: SERIF_FONT,
+            color: N.sageDeep,
+            fontSize: '1.5rem',
+            fontWeight: 600,
+          }}
+        >
+          {inProgress.length} clients on the curriculum
+        </p>
+        <ul className="space-y-1">
+          {inProgress.slice(0, 4).map(({ client, practice, days }) => (
+            <li
+              key={client.id}
+              className="flex items-baseline justify-between text-xs italic"
+              style={{ color: N.sageDeep, fontFamily: SERIF_FONT }}
+            >
+              <span>{client.full_name}</span>
+              <span style={{ color: N.mute }}>
+                {practice?.label} · day {days}/{PRACTICE_WINDOW_DAYS}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   return (
     <div
       className="mt-8 p-4 rounded-2xl"
-      style={{
-        background: N.sageSoft,
-        border: `1px solid ${N.sage}`,
-      }}
+      style={{ background: N.coralSoft, border: `1px solid ${N.coral}` }}
     >
-      <p className="text-[10px] uppercase tracking-[0.3em]" style={{ color: N.sageDeep }}>
-        Closest to their goal
+      <p
+        className="text-[10px] uppercase tracking-[0.3em]"
+        style={{ color: N.coralDeep }}
+      >
+        Ready for the next practice
       </p>
-      <h4
+      <p
         className="leading-tight mt-1 mb-2"
         style={{
           fontFamily: SERIF_FONT,
-          color: N.sageDeep,
+          color: N.coralDeep,
           fontSize: '1.5rem',
           fontWeight: 600,
         }}
       >
-        {featured.client.full_name}
-      </h4>
-      <p
-        className="text-xs italic mb-3"
-        style={{ color: N.sageDeep, fontFamily: SERIF_FONT }}
-      >
-        {goal.label}{cur != null && target != null ? ` · ${cur} → ${target} lb` : ''}
+        {ready.length} client{ready.length === 1 ? '' : 's'} finished their 2-week window
       </p>
-      <div
-        className="h-1.5 rounded-full overflow-hidden"
-        style={{ background: 'rgba(63, 89, 52, 0.15)' }}
-      >
-        <div
-          className="h-full rounded-full"
-          style={{ background: N.sage, width: `${Math.round(featured.pct * 100)}%` }}
-        />
-      </div>
       <p
-        className="text-[10px] uppercase tracking-[0.3em] mt-1.5 text-right"
-        style={{ color: N.sageDeep }}
+        className="text-xs italic mb-3 leading-relaxed"
+        style={{ color: N.coralDeep, fontFamily: SERIF_FONT }}
       >
-        {Math.round(featured.pct * 100)}% of the way
+        Pull up their check-in, confirm they're at 9-or-10/10 confidence on
+        the current practice, then layer in the next one.
       </p>
+      <ul className="space-y-1.5">
+        {ready.slice(0, 4).map(({ client, practice }) => {
+          const skill = practice ? SKILL_BY_ID[practice.skillId] : null;
+          return (
+            <li
+              key={client.id}
+              className="flex items-baseline justify-between gap-3 text-sm italic"
+              style={{ color: N.ink, fontFamily: SERIF_FONT }}
+            >
+              <span>{client.full_name}</span>
+              <span className="text-xs" style={{ color: skill?.color ?? N.mute }}>
+                {practice?.label}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

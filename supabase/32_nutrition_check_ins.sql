@@ -69,55 +69,76 @@ begin
     and client_id in (select id from public.clients where trainer_id = v_trainer_id and 'seed:nutrition' = any(tags));
   delete from public.clients where trainer_id = v_trainer_id and 'seed:nutrition' = any(tags);
 
-  -- Fat-loss
+  -- Fat-loss — each client on a different PN practice, varied days in.
+  -- 14-day window starts: practice started today = day 0, started 14d ago = window done.
   insert into public.clients (trainer_id, full_name, email, status, tags, goals) values
     (v_trainer_id, 'Audrey Lin', 'audrey.l@example.com', 'active',
-     array['goal:fat-loss', 'kcal:1700', 'protein:140', 'carbs:160', 'fats:55',
+     array['goal:fat-loss', 'practice:eat-slowly',
+           'pstart:' || ((current_date - interval '15 days')::date)::text,
+           'kcal:1700', 'protein:140', 'carbs:160', 'fats:55',
            'startingweightlb:174', 'weightlb:163', 'goalweightlb:150', 'seed:nutrition'],
      'Wedding in October. Wants to feel strong in the dress without dieting hard.'),
     (v_trainer_id, 'Marcus Bell', 'marcus.b@example.com', 'active',
-     array['goal:fat-loss', 'kcal:2000', 'protein:170', 'carbs:200', 'fats:65',
+     array['goal:fat-loss', 'practice:protein-each-meal',
+           'pstart:' || ((current_date - interval '6 days')::date)::text,
+           'kcal:2000', 'protein:170', 'carbs:200', 'fats:65',
            'startingweightlb:228', 'weightlb:212', 'goalweightlb:195', 'seed:nutrition'],
      'Type 2 diabetic working with his endocrinologist. Slow, sustainable.'),
     (v_trainer_id, 'Priya Shah', 'priya.s@example.com', 'active',
-     array['goal:fat-loss', 'kcal:1500', 'protein:120', 'carbs:140', 'fats:50',
+     array['goal:fat-loss', 'practice:eat-to-80',
+           'pstart:' || ((current_date - interval '10 days')::date)::text,
+           'kcal:1500', 'protein:120', 'carbs:140', 'fats:50',
            'startingweightlb:158', 'weightlb:155', 'goalweightlb:140', 'seed:nutrition'],
      'Post-partum, 9 months in. Breastfeeding so we keep calories adequate.');
 
   -- Muscle gain
   insert into public.clients (trainer_id, full_name, email, status, tags, goals) values
     (v_trainer_id, 'Jordan Park', 'jordan.p@example.com', 'active',
-     array['goal:muscle-gain', 'kcal:2800', 'protein:200', 'carbs:340', 'fats:80',
+     array['goal:muscle-gain', 'practice:hand-portion-carbs',
+           'pstart:' || ((current_date - interval '3 days')::date)::text,
+           'kcal:2800', 'protein:200', 'carbs:340', 'fats:80',
            'startingweightlb:165', 'weightlb:173', 'goalweightlb:180', 'seed:nutrition'],
      'Lifting 4x/wk. Underweight history — wants to build, not bloat.'),
     (v_trainer_id, 'Camille DuBois', 'camille.d@example.com', 'active',
-     array['goal:muscle-gain', 'kcal:2200', 'protein:155', 'carbs:240', 'fats:70',
+     array['goal:muscle-gain', 'practice:meal-prep-3x',
+           'pstart:' || ((current_date - interval '14 days')::date)::text,
+           'kcal:2200', 'protein:155', 'carbs:240', 'fats:70',
            'startingweightlb:132', 'weightlb:138', 'goalweightlb:145', 'seed:nutrition'],
      'Female powerlifter prepping for first meet. Strength over scale weight.');
 
   -- Maintenance
   insert into public.clients (trainer_id, full_name, email, status, tags, goals) values
     (v_trainer_id, 'Theo Russo', 'theo.r@example.com', 'active',
-     array['goal:maintenance', 'kcal:2400', 'protein:160', 'carbs:280', 'fats:75',
+     array['goal:maintenance', 'practice:something-not-nothing',
+           'pstart:' || ((current_date - interval '8 days')::date)::text,
+           'kcal:2400', 'protein:160', 'carbs:280', 'fats:75',
            'startingweightlb:185', 'weightlb:183', 'goalweightlb:183', 'seed:nutrition'],
      'Maintenance after a successful 25-lb cut. Wants to hold without thinking about it.'),
     (v_trainer_id, 'Naomi Klein', 'naomi.k@example.com', 'active',
-     array['goal:maintenance', 'kcal:1900', 'protein:130', 'carbs:200', 'fats:65',
+     array['goal:maintenance', 'practice:sleep-7h',
+           'pstart:' || ((current_date - interval '5 days')::date)::text,
+           'kcal:1900', 'protein:130', 'carbs:200', 'fats:65',
            'startingweightlb:142', 'weightlb:141', 'goalweightlb:140', 'seed:nutrition'],
      'Marathon training. Fueling, not dieting.');
 
   -- Health-focused
   insert into public.clients (trainer_id, full_name, email, status, tags, goals) values
     (v_trainer_id, 'Eli Tanaka', 'eli.t@example.com', 'active',
-     array['goal:health', 'kcal:2100', 'protein:120', 'carbs:240', 'fats:75',
+     array['goal:health', 'practice:veggies-each-meal',
+           'pstart:' || ((current_date - interval '12 days')::date)::text,
+           'kcal:2100', 'protein:120', 'carbs:240', 'fats:75',
            'startingweightlb:178', 'weightlb:176', 'goalweightlb:175', 'seed:nutrition'],
      'Mid-50s. Family history of heart disease. Mediterranean-style. Wants more energy.'),
     (v_trainer_id, 'Rosa Mendoza', 'rosa.m@example.com', 'active',
-     array['goal:health', 'kcal:1800', 'protein:100', 'carbs:220', 'fats:65',
+     array['goal:health', 'practice:stress-walk',
+           'pstart:' || ((current_date - interval '16 days')::date)::text,
+           'kcal:1800', 'protein:100', 'carbs:220', 'fats:65',
            'startingweightlb:160', 'weightlb:158', 'goalweightlb:158', 'seed:nutrition'],
      'IBS-friendly food rules. Stress management is half the work.'),
     (v_trainer_id, 'Yusuf Khan', 'yusuf.k@example.com', 'active',
-     array['goal:health', 'kcal:2000', 'protein:110', 'carbs:230', 'fats:70',
+     array['goal:health', 'practice:five-breaths',
+           'pstart:' || ((current_date - interval '2 days')::date)::text,
+           'kcal:2000', 'protein:110', 'carbs:230', 'fats:70',
            'startingweightlb:170', 'weightlb:170', 'goalweightlb:170', 'seed:nutrition'],
      'Pre-hypertensive. Cardiologist wants weight steady, sodium down.');
 

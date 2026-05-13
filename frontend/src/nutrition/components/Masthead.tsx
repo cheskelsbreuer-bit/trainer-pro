@@ -13,8 +13,9 @@ const SECTIONS: { to: string; label: string }[] = [
   { to: '/', label: 'Practice' },
   { to: '/clients', label: 'Clients' },
   { to: '/check-ins', label: 'Check-ins' },
-  { to: '/plans', label: 'Meal Plans' },
+  { to: '/plans', label: 'Practices' },
   { to: '/habits', label: 'Habits' },
+  { to: '/ask', label: 'Ask the Coach' },
   { to: '/plate', label: 'Plate' },
   { to: '/pantry', label: 'Pantry' },
 ];

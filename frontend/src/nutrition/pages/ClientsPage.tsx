@@ -15,6 +15,10 @@ import {
   N,
   SERIF_FONT,
   NUTRITION_GOALS,
+  NUTRITION_SKILLS,
+  NUTRITION_PRACTICES,
+  SKILL_BY_ID,
+  PRACTICE_WINDOW_DAYS,
   readGoal,
   readCalorieTarget,
   readProteinTarget,
@@ -23,8 +27,13 @@ import {
   readCurrentWeight,
   readGoalWeight,
   readStartingWeight,
+  readActivePractice,
+  daysOnPractice,
+  isPracticeWindowDone,
   computeProgressToGoal,
   GOAL_TAG,
+  PRACTICE_TAG,
+  PRACTICE_STARTED_TAG,
   CALORIES_TAG,
   PROTEIN_TAG,
   CARBS_TAG,
@@ -174,6 +183,10 @@ export function ClientsPage() {
 
 function ClientProfileCard({ client }: { client: Client }) {
   const goal = readGoal(client.tags);
+  const practice = readActivePractice(client.tags);
+  const skill = practice ? SKILL_BY_ID[practice.skillId] : null;
+  const dayN = daysOnPractice(client.tags);
+  const windowDone = isPracticeWindowDone(client.tags);
   const kcal = readCalorieTarget(client.tags);
   const protein = readProteinTarget(client.tags);
   const carbs = readCarbsTarget(client.tags);
@@ -189,6 +202,7 @@ function ClientProfileCard({ client }: { client: Client }) {
       style={{
         background: N.card,
         border: `1px solid ${N.rule}`,
+        borderTop: practice ? `3px solid ${skill?.color ?? N.sage}` : `1px solid ${N.rule}`,
       }}
     >
       {/* Initial-letter "photo" */}
@@ -220,6 +234,20 @@ function ClientProfileCard({ client }: { client: Client }) {
         >
           {goal.label}
         </span>
+        {/* Window-done flag — bottom-right, in coral */}
+        {windowDone && (
+          <span
+            className="absolute bottom-3 right-3 text-[10px] uppercase tracking-[0.25em] px-2 py-1 rounded-full italic"
+            style={{
+              background: N.coralSoft,
+              color: N.coralDeep,
+              border: `1px solid ${N.coral}`,
+              fontFamily: SERIF_FONT,
+            }}
+          >
+            Next practice?
+          </span>
+        )}
       </div>
 
       <div className="px-5 py-4">
@@ -234,16 +262,74 @@ function ClientProfileCard({ client }: { client: Client }) {
         >
           {client.full_name}
         </h3>
+
+        {/* The active practice — the PN lead. */}
+        {practice && skill ? (
+          <div
+            className="mt-3 px-3 py-2.5 rounded-lg"
+            style={{
+              background: `${skill.color}10`,
+              border: `1px solid ${skill.color}30`,
+            }}
+          >
+            <p
+              className="text-[10px] uppercase tracking-[0.3em] mb-0.5 italic"
+              style={{ color: skill.color, fontFamily: SERIF_FONT }}
+            >
+              Practicing
+            </p>
+            <p
+              className="leading-tight mb-1"
+              style={{
+                fontFamily: SERIF_FONT,
+                color: N.ink,
+                fontSize: '1.0625rem',
+                fontWeight: 600,
+              }}
+            >
+              {practice.label}
+            </p>
+            <p
+              className="text-[11px] italic"
+              style={{ color: N.inkSoft, fontFamily: SERIF_FONT }}
+            >
+              Day {dayN ?? '—'} of {PRACTICE_WINDOW_DAYS}
+              {' · '}
+              {skill.label}
+            </p>
+            {/* Practice window progress */}
+            <div
+              className="h-1 rounded-full overflow-hidden mt-2"
+              style={{ background: 'rgba(0,0,0,0.06)' }}
+            >
+              <div
+                className="h-full rounded-full"
+                style={{
+                  background: skill.color,
+                  width: `${Math.min(100, ((dayN ?? 0) / PRACTICE_WINDOW_DAYS) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <p
+            className="text-xs italic mt-3"
+            style={{ color: N.muteFaint, fontFamily: SERIF_FONT }}
+          >
+            No active practice. Pick one from the Library.
+          </p>
+        )}
+
         {client.goals && (
           <p
-            className="text-xs italic mt-1 line-clamp-2"
+            className="text-xs italic mt-3 line-clamp-2"
             style={{ color: N.inkSoft, fontFamily: SERIF_FONT }}
           >
             "{client.goals}"
           </p>
         )}
 
-        {/* Weight progress — only when we have starting + current + goal */}
+        {/* Weight progress — secondary detail */}
         {pct != null && (
           <div className="mt-3">
             <div
@@ -267,25 +353,23 @@ function ClientProfileCard({ client }: { client: Client }) {
           </div>
         )}
 
-        {/* Macro chip row */}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-xs">
-          {kcal != null && <Macro label="kcal" value={`${kcal}`} tone="ink" />}
-          {protein != null && <Macro label="P" value={`${protein}g`} tone="coral" />}
-          {carbs != null && <Macro label="C" value={`${carbs}g`} tone="sage" />}
-          {fats != null && <Macro label="F" value={`${fats}g`} tone="honey" />}
-          {kcal == null && protein == null && carbs == null && fats == null && (
-            <span
-              className="italic text-[11px]"
-              style={{ color: N.muteFaint, fontFamily: SERIF_FONT }}
-            >
-              No macro plan set
-            </span>
-          )}
-        </div>
+        {/* Macros — tucked at the bottom as supporting detail (PN secondary) */}
+        {(kcal != null || protein != null || carbs != null || fats != null) && (
+          <div
+            className="flex flex-wrap gap-x-3 gap-y-1 mt-3 pt-3 border-t text-xs"
+            style={{ borderColor: N.ruleSoft }}
+          >
+            {kcal != null && <Macro label="kcal" value={`${kcal}`} tone="ink" />}
+            {protein != null && <Macro label="P" value={`${protein}g`} tone="coral" />}
+            {carbs != null && <Macro label="C" value={`${carbs}g`} tone="sage" />}
+            {fats != null && <Macro label="F" value={`${fats}g`} tone="honey" />}
+          </div>
+        )}
       </div>
     </article>
   );
 }
+
 
 function Macro({
   label,
@@ -331,6 +415,7 @@ function AddClientModal({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [goal, setGoal] = useState('maintenance');
+  const [practice, setPractice] = useState('eat-slowly');
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -345,6 +430,10 @@ function AddClientModal({
       if (!user) throw new Error('Not signed in');
       if (!name.trim()) throw new Error('Name required');
       const tags: string[] = [`${GOAL_TAG}${goal}`];
+      if (practice) {
+        tags.push(`${PRACTICE_TAG}${practice}`);
+        tags.push(`${PRACTICE_STARTED_TAG}${new Date().toISOString().slice(0, 10)}`);
+      }
       const addNum = (prefix: string, raw: string) => {
         const v = parseInt(raw, 10);
         if (Number.isFinite(v) && v > 0) tags.push(`${prefix}${v}`);
@@ -415,6 +504,41 @@ function AddClientModal({
               ))}
             </select>
           </div>
+          <div>
+            <Lbl>Starting practice — PN curriculum</Lbl>
+            <select
+              value={practice}
+              onChange={(e) => setPractice(e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+              style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
+            >
+              <option value="">— no practice yet —</option>
+              {NUTRITION_SKILLS.map((s) => (
+                <optgroup key={s.id} label={s.label}>
+                  {NUTRITION_PRACTICES.filter((p) => p.skillId === s.id)
+                    .sort((a, b) => a.order - b.order)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+            <p
+              className="text-[10px] italic mt-1"
+              style={{ color: N.muteFaint, fontFamily: SERIF_FONT }}
+            >
+              PN recommends starting with "Eat slowly" for almost every new
+              client — the highest-ROI habit.
+            </p>
+          </div>
+          <p
+            className="text-[10px] uppercase tracking-[0.25em] italic pt-2"
+            style={{ color: N.mute, fontFamily: SERIF_FONT }}
+          >
+            Macros — optional, secondary to practices
+          </p>
           <div className="grid grid-cols-4 gap-2">
             <Field label="kcal" value={kcal} onChange={setKcal} type="number" />
             <Field label="P (g)" value={protein} onChange={setProtein} type="number" />

@@ -1,126 +1,37 @@
-// Meal Plans — recipe-card grid styled like a cookbook contents page.
-// V1 ships with a small library of starter macro-shaped templates. A
-// future migration adds a real meal_plans table; for now the page
-// reads as a curated collection of sample plans the coach can hand to
-// clients.
+// The Practices Library — PN's curriculum, organized by skill. The
+// nutrition coach scans this page to pick which 2-week practice to
+// assign next, then opens a client to set it. (This page is read-only;
+// assignment happens on the client page in V2 — for now, the seed sets
+// active practices and this library is the reference.)
+//
+// Also hosts the canonical PN Hand Portions reference panel at the top
+// of the page so coaches can show it to a new client.
 
 import { useState } from 'react';
-import { N, SERIF_FONT, NUTRITION_GOALS } from '../theme';
-
-interface StarterPlan {
-  id: string;
-  title: string;
-  blurb: string;
-  goal: 'fat-loss' | 'maintenance' | 'muscle-gain' | 'health';
-  kcal: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-  feel: string; // one-line "vibe" e.g. "Mediterranean, plant-forward"
-}
-
-const STARTERS: StarterPlan[] = [
-  {
-    id: 'lean-150',
-    title: 'The Lean Cut',
-    blurb: 'A modest deficit with plenty of protein and fibrous vegetables. Built to lose fat without losing the joy of dinner.',
-    goal: 'fat-loss',
-    kcal: 1600,
-    protein: 140,
-    carbs: 140,
-    fats: 55,
-    feel: 'High protein, Mediterranean leaning',
-  },
-  {
-    id: 'lean-180',
-    title: 'The Slow Burn',
-    blurb: 'A gentler deficit for clients with a long runway. Sustainable, lots of whole foods, no white-knuckling.',
-    goal: 'fat-loss',
-    kcal: 1850,
-    protein: 150,
-    carbs: 175,
-    fats: 65,
-    feel: 'Whole-food, balanced',
-  },
-  {
-    id: 'maintain-200',
-    title: 'Even Keel',
-    blurb: 'Maintenance for clients who have arrived. Built around adequacy, variety, and a steady weekly rhythm.',
-    goal: 'maintenance',
-    kcal: 2000,
-    protein: 140,
-    carbs: 220,
-    fats: 70,
-    feel: 'Mediterranean, balanced',
-  },
-  {
-    id: 'maintain-230',
-    title: 'The Steady Plate',
-    blurb: 'Maintenance with a bit more carbohydrate for active clients. Lots of grains, fruit, and dairy if tolerated.',
-    goal: 'maintenance',
-    kcal: 2300,
-    protein: 145,
-    carbs: 280,
-    fats: 70,
-    feel: 'Carb-forward, athletic',
-  },
-  {
-    id: 'gain-260',
-    title: 'The Build',
-    blurb: 'A small surplus, carb-forward. Designed to grow strong without growing soft. Lots of starches around training.',
-    goal: 'muscle-gain',
-    kcal: 2600,
-    protein: 180,
-    carbs: 320,
-    fats: 75,
-    feel: 'Heavy carb, post-workout shake',
-  },
-  {
-    id: 'gain-300',
-    title: 'The Big Build',
-    blurb: 'For clients with high training volume who need real fuel. Calorie-dense without being junky.',
-    goal: 'muscle-gain',
-    kcal: 3000,
-    protein: 200,
-    carbs: 380,
-    fats: 90,
-    feel: 'Athletic, hearty',
-  },
-  {
-    id: 'health-1800',
-    title: 'The Long Game',
-    blurb: 'Maintenance plan with a heavy emphasis on micronutrients, fiber, and omega-3s. Built for longevity, not aesthetics.',
-    goal: 'health',
-    kcal: 1900,
-    protein: 110,
-    carbs: 220,
-    fats: 75,
-    feel: 'Plant-forward, omega-rich',
-  },
-  {
-    id: 'health-2100',
-    title: 'The Mediterranean',
-    blurb: 'Classic Mediterranean structure — fish twice a week, olive oil, beans, plenty of vegetables. Heart-and-brain friendly.',
-    goal: 'health',
-    kcal: 2100,
-    protein: 120,
-    carbs: 240,
-    fats: 85,
-    feel: 'Mediterranean, anti-inflammatory',
-  },
-];
+import { useNavigate } from 'react-router-dom';
+import {
+  N,
+  SERIF_FONT,
+  NUTRITION_SKILLS,
+  NUTRITION_PRACTICES,
+  HAND_PORTIONS,
+  PRACTICE_WINDOW_DAYS,
+  type NutritionSkill,
+} from '../theme';
 
 export function PlansPage() {
-  const [goalFilter, setGoalFilter] = useState('');
-  const filtered = goalFilter
-    ? STARTERS.filter((p) => p.goal === goalFilter)
-    : STARTERS;
+  const navigate = useNavigate();
+  const [openSkill, setOpenSkill] = useState<string>(NUTRITION_SKILLS[0].id);
 
   return (
-    <div className="px-6 sm:px-12 pt-10 max-w-6xl mx-auto">
-      <section className="text-center mb-8">
-        <p className="text-[10px] uppercase tracking-[0.5em] mb-2" style={{ color: N.coral }}>
-          The Cookbook
+    <div className="px-6 sm:px-12 pt-10 max-w-6xl mx-auto pb-10">
+      {/* Masthead — magazine cover style */}
+      <section className="text-center mb-10">
+        <p
+          className="text-[10px] uppercase tracking-[0.5em] mb-2"
+          style={{ color: N.coral }}
+        >
+          The PN Curriculum
         </p>
         <h2
           className="leading-tight"
@@ -131,163 +42,280 @@ export function PlansPage() {
             fontWeight: 600,
           }}
         >
-          Meal Plans
+          The Practices Library
         </h2>
         <p
-          className="mt-2 text-sm italic max-w-xl mx-auto"
-          style={{ color: N.mute, fontFamily: SERIF_FONT }}
+          className="mt-3 text-sm italic max-w-2xl mx-auto leading-relaxed"
+          style={{ color: N.mute, fontFamily: SERIF_FONT, fontSize: '1rem' }}
         >
-          A starter library to hand a new client — adjust the macros, swap in
-          their preferences, and send. Custom plan builder coming soon.
+          Coaches assign <em>one</em> practice at a time. The client works it
+          for {PRACTICE_WINDOW_DAYS} days. When the client can do it at
+          9-or-10-of-10 confidence, the next practice is layered in.
+          <br />
+          <span style={{ color: N.muteFaint, fontStyle: 'italic' }}>
+            — adapted from Precision Nutrition's coaching framework
+          </span>
         </p>
       </section>
 
-      <div className="flex items-center justify-center gap-1.5 mb-8">
-        <button
-          onClick={() => setGoalFilter('')}
-          className="px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] rounded-full italic"
-          style={{
-            background: goalFilter === '' ? N.sageSoft : 'transparent',
-            color: goalFilter === '' ? N.sageDeep : N.mute,
-            border: `1px solid ${goalFilter === '' ? N.sage : N.rule}`,
-            fontFamily: SERIF_FONT,
-          }}
-        >
-          All
-        </button>
-        {NUTRITION_GOALS.map((g) => {
-          const active = goalFilter === g.id;
-          return (
-            <button
-              key={g.id}
-              onClick={() => setGoalFilter(g.id)}
-              className="px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] rounded-full italic"
-              style={{
-                background: active ? `${g.color}22` : 'transparent',
-                color: active ? g.color : N.mute,
-                border: `1px solid ${active ? g.color : N.rule}`,
-                fontFamily: SERIF_FONT,
-              }}
-            >
-              {g.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Hand portions reference — PN's signature visual */}
+      <HandPortionsPanel />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map((p) => (
-          <PlanCard key={p.id} plan={p} />
+      {/* The library — skill-by-skill */}
+      <section className="mt-12">
+        <SectionHead
+          title="Skills & practices"
+          subtitle="The five PN skills, each broken into daily practices in sequence"
+        />
+
+        {/* Skill-row tabs */}
+        <div
+          className="flex flex-wrap items-center gap-2 mb-6 border-b pb-3"
+          style={{ borderColor: N.rule }}
+        >
+          {NUTRITION_SKILLS.map((s) => {
+            const active = openSkill === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setOpenSkill(s.id)}
+                className="text-[11px] uppercase tracking-[0.25em] px-3 py-1.5 italic rounded-full"
+                style={{
+                  background: active ? `${s.color}1F` : 'transparent',
+                  color: active ? s.color : N.mute,
+                  border: `1px solid ${active ? s.color : N.rule}`,
+                  fontFamily: SERIF_FONT,
+                }}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected skill — header card + practice list */}
+        {NUTRITION_SKILLS.filter((s) => s.id === openSkill).map((s) => (
+          <SkillSection key={s.id} skill={s} />
         ))}
-      </div>
+      </section>
+
+      {/* CTA to clients page */}
+      <section className="mt-12 text-center">
+        <p
+          className="italic mb-4"
+          style={{ color: N.inkSoft, fontFamily: SERIF_FONT, fontSize: '1.05rem' }}
+        >
+          Pick the right practice for the right client. Then go assign it.
+        </p>
+        <button
+          onClick={() => navigate('/clients')}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-[11px] uppercase tracking-[0.3em] italic"
+          style={{ background: N.sage, color: '#FFF', fontFamily: SERIF_FONT }}
+        >
+          Open the roster →
+        </button>
+      </section>
     </div>
   );
 }
 
-function PlanCard({ plan }: { plan: StarterPlan }) {
-  const goalMeta =
-    NUTRITION_GOALS.find((g) => g.id === plan.goal) ?? NUTRITION_GOALS[1];
+function HandPortionsPanel() {
   return (
-    <article
-      className="rounded-2xl overflow-hidden flex flex-col"
-      style={{
-        background: N.card,
-        border: `1px solid ${N.rule}`,
-      }}
+    <section
+      className="rounded-2xl overflow-hidden"
+      style={{ background: N.card, border: `1px solid ${N.rule}` }}
     >
-      {/* Plate placeholder — a circle on a sage tile */}
-      <div
-        className="aspect-[3/2] flex items-center justify-center relative"
-        style={{ background: N.sageSoft }}
+      <header
+        className="px-6 py-4 border-b text-center"
+        style={{ borderColor: N.rule, background: N.inset }}
       >
-        <div
-          className="rounded-full"
-          style={{
-            width: '70%',
-            paddingTop: '70%',
-            background: N.card,
-            border: `2px dashed ${N.sage}`,
-          }}
-          aria-hidden
-        />
         <p
-          className="absolute text-[10px] uppercase tracking-[0.4em] italic"
-          style={{
-            color: N.sageDeep,
-            fontFamily: SERIF_FONT,
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-          }}
+          className="text-[10px] uppercase tracking-[0.4em] mb-1"
+          style={{ color: N.coral }}
         >
-          {plan.kcal} kcal
+          PN Signature Tool
         </p>
-        <span
-          className="absolute bottom-3 left-3 text-[10px] uppercase tracking-[0.25em] px-2 py-1 rounded-full italic"
-          style={{
-            background: N.card,
-            color: goalMeta.color,
-            border: `1px solid ${goalMeta.color}66`,
-            fontFamily: SERIF_FONT,
-          }}
-        >
-          {goalMeta.label}
-        </span>
-      </div>
-
-      <div className="px-5 py-4 flex-1 flex flex-col">
         <h3
-          className="leading-tight mb-1"
+          className="leading-tight"
           style={{
             fontFamily: SERIF_FONT,
             color: N.ink,
-            fontSize: '1.5rem',
+            fontSize: '1.875rem',
             fontWeight: 600,
           }}
         >
-          {plan.title}
+          The Hand Portions System
         </h3>
         <p
-          className="text-[10px] uppercase tracking-[0.25em] mb-2 italic"
+          className="mt-1 text-sm italic"
           style={{ color: N.mute, fontFamily: SERIF_FONT }}
         >
-          {plan.feel}
+          Calorie control without weighing food — portion sizes scale with body size
         </p>
-        <p
-          className="text-sm italic mb-3 flex-1"
-          style={{ color: N.inkSoft, fontFamily: SERIF_FONT, lineHeight: 1.5 }}
-        >
-          {plan.blurb}
-        </p>
-        <div className="flex items-baseline gap-4 pt-2 border-t" style={{ borderColor: N.ruleSoft }}>
-          <Macro label="P" value={`${plan.protein}g`} color={N.coral} />
-          <Macro label="C" value={`${plan.carbs}g`} color={N.sage} />
-          <Macro label="F" value={`${plan.fats}g`} color={N.honey} />
-        </div>
+      </header>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px" style={{ background: N.rule }}>
+        {HAND_PORTIONS.map((h) => (
+          <div
+            key={h.id}
+            className="p-5"
+            style={{ background: N.card }}
+          >
+            <div className="flex items-baseline gap-2 mb-2">
+              <span
+                className="text-[10px] uppercase tracking-[0.3em]"
+                style={{ color: h.color }}
+              >
+                {h.macroLabel}
+              </span>
+            </div>
+            <h4
+              className="leading-tight mb-2"
+              style={{
+                fontFamily: SERIF_FONT,
+                color: N.ink,
+                fontSize: '1.625rem',
+                fontWeight: 600,
+              }}
+            >
+              {h.label}
+            </h4>
+            <p
+              className="text-sm italic mb-2 leading-relaxed"
+              style={{ color: N.inkSoft, fontFamily: SERIF_FONT }}
+            >
+              {h.blurb}
+            </p>
+            <p
+              className="text-[11px] uppercase tracking-[0.2em] italic"
+              style={{ color: N.mute, fontFamily: SERIF_FONT }}
+            >
+              {h.examples}
+            </p>
+          </div>
+        ))}
       </div>
-    </article>
+    </section>
   );
 }
 
-function Macro({ label, value, color }: { label: string; value: string; color: string }) {
+function SkillSection({ skill }: { skill: NutritionSkill }) {
+  const practices = NUTRITION_PRACTICES.filter((p) => p.skillId === skill.id)
+    .sort((a, b) => a.order - b.order);
+
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span
-        className="text-[10px] uppercase tracking-[0.25em]"
-        style={{ color: N.mute }}
+    <div>
+      <header
+        className="mb-5 pb-4 border-b"
+        style={{ borderColor: N.ruleSoft }}
       >
-        {label}
-      </span>
-      <span
+        <p
+          className="text-[10px] uppercase tracking-[0.4em] mb-1"
+          style={{ color: skill.color }}
+        >
+          Skill
+        </p>
+        <h3
+          className="leading-tight mb-1.5"
+          style={{
+            fontFamily: SERIF_FONT,
+            color: N.ink,
+            fontSize: '2.25rem',
+            fontWeight: 600,
+          }}
+        >
+          {skill.label}
+        </h3>
+        <p
+          className="text-sm italic max-w-2xl"
+          style={{ color: N.inkSoft, fontFamily: SERIF_FONT, fontSize: '1rem' }}
+        >
+          {skill.blurb}
+        </p>
+      </header>
+
+      <ol>
+        {practices.map((p, i) => (
+          <li
+            key={p.id}
+            className="grid grid-cols-[40px_1fr] gap-4 py-5 border-b"
+            style={{ borderColor: N.rule }}
+          >
+            <span
+              style={{
+                fontFamily: SERIF_FONT,
+                color: skill.color,
+                fontSize: '2rem',
+                fontStyle: 'italic',
+                fontWeight: 500,
+                lineHeight: 0.9,
+              }}
+            >
+              {String(i + 1).padStart(2, '0')}.
+            </span>
+            <div>
+              <h4
+                className="leading-tight mb-1"
+                style={{
+                  fontFamily: SERIF_FONT,
+                  color: N.ink,
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
+                }}
+              >
+                {p.label}
+              </h4>
+              <p
+                className="italic mb-2"
+                style={{
+                  color: N.inkSoft,
+                  fontFamily: SERIF_FONT,
+                  fontSize: '1.05rem',
+                  lineHeight: 1.5,
+                }}
+              >
+                {p.blurb}
+              </p>
+              <p
+                className="text-sm"
+                style={{ color: N.mute, fontFamily: SERIF_FONT, fontStyle: 'italic' }}
+              >
+                <span style={{ color: skill.color }}>Why this matters:</span>{' '}
+                {p.rationale}
+              </p>
+              <p
+                className="text-[10px] uppercase tracking-[0.2em] mt-2 italic"
+                style={{ color: N.muteFaint, fontFamily: SERIF_FONT }}
+              >
+                How clients log it · {p.measure}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function SectionHead({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="mb-6 text-center">
+      <h3
+        className="leading-none"
         style={{
           fontFamily: SERIF_FONT,
-          color,
-          fontSize: '1.1rem',
+          color: N.ink,
+          fontSize: '2.25rem',
           fontWeight: 600,
         }}
       >
-        {value}
-      </span>
+        {title}
+      </h3>
+      <p
+        className="text-xs italic mt-2"
+        style={{ color: N.mute, fontFamily: SERIF_FONT }}
+      >
+        {subtitle}
+      </p>
     </div>
   );
 }
