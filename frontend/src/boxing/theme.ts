@@ -1,94 +1,83 @@
-// Boxing gym design tokens. The boxing app deliberately breaks from BOTH
-// Trainer Pro's pastel UI and the dojo's crimson-gold dojo aesthetic.
-// Aesthetic borrows from real boxing software (Mat Track, Clubworx,
-// XEPOS, Wodify combat) plus the visual language every fighter knows
-// from the ring itself: red corner / blue corner / championship gold.
+// Boxing tokens + data helpers. Deliberately NOT a UI primitives library:
+// the dojo's mistake was sharing primitives between apps. Each boxing
+// page composes its own JSX. This file is data-shaped only:
+//   - color tokens (CSS-variable strings — actual values in index.css)
+//   - tier system + weight class catalog
+//   - fighter-tag helpers
+//   - W-L-D record computation
+//   - theme mode hook (dark/light)
 //
-// Tier system (replaces "belts" — boxing has no traditional belts):
-//   Recreational → Amateur → Pro. Each tier has typical training
-//   commitments and (for Amateur+) USA Boxing weight-class registration.
+// Design intent for the visual language:
+//   - Fight-poster aesthetic: pure black sheet, bone-white type, red.
+//   - HUGE numerals as decoration (records, weights, dates).
+//   - Newsprint serif moments mixed with condensed display sans.
+//   - Blue is reserved for the literal "blue corner" of a single fight
+//     comparison, NOT a co-brand color.
 
 import { useEffect, useState } from 'react';
 
-// CSS variables live in index.css under .boxing-theme-dark / .boxing-theme-light.
-// BoxingLayout puts the active class on its root element.
-export const BOXING_COLORS = {
-  bgPage: 'var(--boxing-bg-page)',
-  bgPanel: 'var(--boxing-bg-panel)',
-  bgPanelHover: 'var(--boxing-bg-panel-hover)',
-  bgInset: 'var(--boxing-bg-inset)',
-  divider: 'var(--boxing-divider)',
-
-  textPrimary: 'var(--boxing-text-primary)',
-  textSecondary: 'var(--boxing-text-secondary)',
-  textMuted: 'var(--boxing-text-muted)',
-
-  // Brand red — the gym's identity color. Equivalent to "red corner".
+export const C = {
+  ink: 'var(--boxing-ink)',
+  inkSoft: 'var(--boxing-ink-soft)',
+  paper: 'var(--boxing-paper)',
+  paperSoft: 'var(--boxing-paper-soft)',
+  rule: 'var(--boxing-rule)',
+  text: 'var(--boxing-text)',
+  textDim: 'var(--boxing-text-dim)',
+  textFaint: 'var(--boxing-text-faint)',
   red: 'var(--boxing-red)',
-  redSoft: 'var(--boxing-red-soft)',
-  redRing: 'var(--boxing-red-ring)',
-  // Blue corner — the visual counterpart, used for amateur/secondary accents.
-  blue: 'var(--boxing-blue)',
-  blueSoft: 'var(--boxing-blue-soft)',
-  blueRing: 'var(--boxing-blue-ring)',
-  // Championship gold — record callouts, big numbers, ring of honor.
-  gold: 'var(--boxing-gold)',
-  goldSoft: 'var(--boxing-gold-soft)',
-
-  onRed: 'var(--boxing-on-red)',
-  onBlue: 'var(--boxing-on-blue)',
-  onGold: 'var(--boxing-on-gold)',
-
+  redDeep: 'var(--boxing-red-deep)',
+  blueCorner: 'var(--boxing-blue-corner)',
+  blueCornerDeep: 'var(--boxing-blue-corner-deep)',
+  beltGold: 'var(--boxing-belt-gold)',
+  beltGoldDeep: 'var(--boxing-belt-gold-deep)',
   ok: 'var(--boxing-ok)',
   warn: 'var(--boxing-warn)',
   danger: 'var(--boxing-danger)',
 } as const;
 
-// Tier classifications. Mirrors how real boxing gyms classify their
-// roster: Recreational (fitness), Amateur (USA Boxing registered),
-// Pro (managed pro fighter). Each tier drives a different visual color.
+// Display font — Bebas Neue is loaded globally; combine with a slab for
+// "fight poster" feel when used heavily. Keep this in one place so every
+// boxing component pulls from here.
+export const DISPLAY_FONT =
+  "'Bebas Neue', 'Oswald', 'Arial Narrow', system-ui, sans-serif";
+export const NEWSPRINT_FONT =
+  "'Bebas Neue', 'Georgia', serif";
+
+// ── Tier system ──────────────────────────────────────────────────────
 export interface FighterTier {
   id: string;
   label: string;
-  /** Visible accent color for this tier in chips, badges, cards. */
   color: string;
-  /** Short blurb shown on the Tiers page describing this group. */
   description: string;
 }
-
 export const FIGHTER_TIERS: FighterTier[] = [
   {
     id: 'rec',
     label: 'Recreational',
-    color: '#94A3B8',
-    description:
-      'Fitness boxers — bag, mitts, conditioning. No sparring or competition track.',
+    color: '#9B9B95',
+    description: 'Fitness boxers. Bag, mitts, conditioning — no sparring or competition.',
   },
   {
     id: 'amateur',
     label: 'Amateur',
-    color: '#2563EB',
-    description:
-      'USA Boxing registered. Eligible for sparring, smokers, and amateur bouts.',
+    color: '#1E88E5',
+    description: 'USA Boxing registered. Eligible for sparring, smokers, amateur bouts.',
   },
   {
     id: 'pro',
     label: 'Pro',
-    color: '#DC2626',
-    description:
-      'Licensed professional fighter. Managed for camps, weight cuts, fight cards.',
+    color: '#E10F1F',
+    description: 'Licensed professional. Camps, weight cuts, fight cards.',
   },
 ];
 
-// Weight classes — USA Boxing amateur/pro standard set used by most gyms.
-// Limits are in pounds. Open / heavyweight has no upper bound.
+// ── Weight classes ───────────────────────────────────────────────────
 export interface WeightClass {
   id: string;
   label: string;
-  /** Upper limit in pounds. null = heavyweight (no cap). */
   lbsMax: number | null;
 }
-
 export const WEIGHT_CLASSES: WeightClass[] = [
   { id: 'atomweight', label: 'Atomweight', lbsMax: 105 },
   { id: 'jr-flyweight', label: 'Jr. Flyweight', lbsMax: 112 },
@@ -103,127 +92,92 @@ export const WEIGHT_CLASSES: WeightClass[] = [
   { id: 'heavyweight', label: 'Heavyweight', lbsMax: null },
 ];
 
-// Tag prefixes used on clients.tags to store boxing-specific attributes.
-export const TIER_TAG_PREFIX = 'tier:';
-export const WEIGHT_TAG_PREFIX = 'weight:';
-export const STANCE_TAG_PREFIX = 'stance:'; // 'orthodox' | 'southpaw'
+// Tag prefixes — boxing-specific attributes stored on clients.tags.
+export const TIER_TAG = 'tier:';
+export const WEIGHT_TAG = 'weight:';
+export const STANCE_TAG = 'stance:';
 
 export type Stance = 'orthodox' | 'southpaw';
 
-export function readTierFromTags(tags: string[] | null | undefined): FighterTier {
+export function readTier(tags: string[] | null | undefined): FighterTier {
   if (!tags) return FIGHTER_TIERS[0];
   for (const t of tags) {
-    if (t.startsWith(TIER_TAG_PREFIX)) {
-      const id = t.slice(TIER_TAG_PREFIX.length);
-      const tier = FIGHTER_TIERS.find((x) => x.id === id);
-      if (tier) return tier;
+    if (t.startsWith(TIER_TAG)) {
+      const id = t.slice(TIER_TAG.length);
+      const found = FIGHTER_TIERS.find((x) => x.id === id);
+      if (found) return found;
     }
   }
   return FIGHTER_TIERS[0];
 }
-
-export function readWeightFromTags(
-  tags: string[] | null | undefined,
-): WeightClass | null {
+export function readWeight(tags: string[] | null | undefined): WeightClass | null {
   if (!tags) return null;
   for (const t of tags) {
-    if (t.startsWith(WEIGHT_TAG_PREFIX)) {
-      const id = t.slice(WEIGHT_TAG_PREFIX.length);
+    if (t.startsWith(WEIGHT_TAG)) {
+      const id = t.slice(WEIGHT_TAG.length);
       const w = WEIGHT_CLASSES.find((x) => x.id === id);
       if (w) return w;
     }
   }
   return null;
 }
-
-export function readStanceFromTags(
-  tags: string[] | null | undefined,
-): Stance | null {
+export function readStance(tags: string[] | null | undefined): Stance | null {
   if (!tags) return null;
   for (const t of tags) {
-    if (t.startsWith(STANCE_TAG_PREFIX)) {
-      const v = t.slice(STANCE_TAG_PREFIX.length);
+    if (t.startsWith(STANCE_TAG)) {
+      const v = t.slice(STANCE_TAG.length);
       if (v === 'orthodox' || v === 'southpaw') return v;
     }
   }
   return null;
 }
 
-// ── Theme mode (dark / light) ───────────────────────────────────────
-export type BoxingThemeMode = 'dark' | 'light';
-const THEME_STORAGE_KEY = 'boxing-theme';
-
-export function readBoxingThemePreference(): BoxingThemeMode {
-  if (typeof window === 'undefined') return 'dark';
-  return window.localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
-}
-export function writeBoxingThemePreference(mode: BoxingThemeMode) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(THEME_STORAGE_KEY, mode);
-}
-
-// ── Fighter W-L-D record helpers ────────────────────────────────────
-// The record is computed from the `boxing_fights` table (one row per bout)
-// — see supabase/29_boxing_fights.sql. Each fight row has a `result` of
-// 'win' / 'loss' / 'draw' / null (null = scheduled, not yet contested).
+// ── W-L-D record ─────────────────────────────────────────────────────
 export interface FightRow {
   id: string;
   fighter_id: string;
   opponent_name: string | null;
   starts_at: string;
   result: 'win' | 'loss' | 'draw' | null;
-  decision: string | null; // KO / TKO / UD / SD / MD / draw
+  decision: string | null;
   venue: string | null;
   notes: string | null;
 }
-
-export interface FighterRecord {
-  wins: number;
-  losses: number;
-  draws: number;
-  /** Number of wins by knockout (KO/TKO) — boxing brag metric. */
-  knockouts: number;
+export interface Record {
+  w: number;
+  l: number;
+  d: number;
+  ko: number;
   total: number;
 }
-
-export function computeRecord(fights: FightRow[]): FighterRecord {
-  let wins = 0,
-    losses = 0,
-    draws = 0,
-    knockouts = 0;
+export function computeRecord(fights: FightRow[]): Record {
+  let w = 0, l = 0, d = 0, ko = 0;
   for (const f of fights) {
     if (f.result === 'win') {
-      wins++;
-      if (f.decision === 'KO' || f.decision === 'TKO') knockouts++;
-    } else if (f.result === 'loss') losses++;
-    else if (f.result === 'draw') draws++;
+      w++;
+      if (f.decision === 'KO' || f.decision === 'TKO') ko++;
+    } else if (f.result === 'loss') l++;
+    else if (f.result === 'draw') d++;
   }
-  return { wins, losses, draws, knockouts, total: wins + losses + draws };
+  return { w, l, d, ko, total: w + l + d };
+}
+export function recordString(r: Record): string {
+  return `${r.w}-${r.l}-${r.d}`;
 }
 
-export function formatRecord(r: FighterRecord, withKO = true): string {
-  const base = `${r.wins}-${r.losses}-${r.draws}`;
-  if (withKO && r.knockouts > 0) return `${base} (${r.knockouts} KO)`;
-  return base;
-}
+// ── Theme mode ───────────────────────────────────────────────────────
+export type ThemeMode = 'dark' | 'light';
+const THEME_KEY = 'boxing-theme';
 
-// ── Stored theme + active tier preference (placeholder hook) ──────────
-const ACTIVE_TIER_KEY = 'boxing-default-tier';
-export function readActiveDefaultTier(): string {
-  if (typeof window === 'undefined') return 'rec';
-  return window.localStorage.getItem(ACTIVE_TIER_KEY) ?? 'rec';
-}
-export function writeActiveDefaultTier(id: string) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(ACTIVE_TIER_KEY, id);
-}
-
-/** React hook for the theme mode so every boxing page can read + flip it. */
-export function useBoxingTheme(): [BoxingThemeMode, () => void] {
-  const [mode, setMode] = useState<BoxingThemeMode>(() => readBoxingThemePreference());
+export function useBoxingTheme(): [ThemeMode, () => void] {
+  const [mode, setMode] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    return window.localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
+  });
   useEffect(() => {
-    writeBoxingThemePreference(mode);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(THEME_KEY, mode);
+    }
   }, [mode]);
-  const toggle = () => setMode((m) => (m === 'dark' ? 'light' : 'dark'));
-  return [mode, toggle];
+  return [mode, () => setMode((m) => (m === 'dark' ? 'light' : 'dark'))];
 }

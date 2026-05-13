@@ -1,33 +1,30 @@
-// Boxing app — the entire app shell trainers see when their primary
-// template is boxing_gym. Mirrors the structure of src/dojo/ but with
-// boxing pages, theme, and vocabulary.
+// Boxing app routes. The entire app mounts here when the trainer's
+// primary template is boxing_gym. Each page composes its OWN JSX —
+// no shared "BoxingPage" wrapper, no shared header/card/stat-tile
+// primitives. The shell (TopNav) is what unifies them visually.
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import type { Trainer } from '../lib/database.types';
-import { BoxingLayout } from './components/BoxingLayout';
-import { BoxingHome } from './pages/BoxingHome';
-import { BoxingFighters } from './pages/BoxingFighters';
-import { BoxingTraining } from './pages/BoxingTraining';
-import { BoxingFights } from './pages/BoxingFights';
-import { BoxingTiers } from './pages/BoxingTiers';
-import { BoxingBilling } from './pages/BoxingBilling';
-import { BoxingSettings } from './pages/BoxingSettings';
+import { AppShell } from './components/AppShell';
+import { HomePage } from './pages/HomePage';
+import { StablePage } from './pages/StablePage';
+import { WorkPage } from './pages/WorkPage';
+import { FightNightPage } from './pages/FightNightPage';
+import { ClimbPage } from './pages/ClimbPage';
+import { BooksPage } from './pages/BooksPage';
+import { CornerPage } from './pages/CornerPage';
 
-interface BoxingAppProps {
-  trainer: Trainer | undefined;
-}
-
-export function BoxingApp({ trainer }: BoxingAppProps) {
+export function BoxingApp({ trainer }: { trainer: Trainer | undefined }) {
   return (
     <Routes>
-      <Route element={<BoxingLayout trainer={trainer} />}>
-        <Route index element={<BoxingHome trainer={trainer} />} />
-        <Route path="fighters" element={<BoxingFighters />} />
-        <Route path="training" element={<BoxingTraining />} />
-        <Route path="fights" element={<BoxingFights />} />
-        <Route path="tiers" element={<BoxingTiers />} />
-        <Route path="billing" element={<BoxingBilling />} />
-        <Route path="settings" element={<BoxingSettings />} />
+      <Route element={<AppShell trainer={trainer} />}>
+        <Route index element={<HomePage trainer={trainer} />} />
+        <Route path="stable" element={<StablePage />} />
+        <Route path="work" element={<WorkPage />} />
+        <Route path="fight-night" element={<FightNightPage />} />
+        <Route path="climb" element={<ClimbPage />} />
+        <Route path="books" element={<BooksPage />} />
+        <Route path="corner" element={<CornerPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

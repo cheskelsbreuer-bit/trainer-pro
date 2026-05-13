@@ -69,55 +69,52 @@
   --dojo-danger: #B91C1C;
 }
 
-/* Boxing / kickboxing theme — red corner / blue corner palette. */
+/* Boxing / kickboxing theme — fight-poster aesthetic.
+ * Pure black + bone-white + boxing red. Blue accent is reserved
+ * for the "blue corner" indicator on a single fight; it is NOT a
+ * primary brand color (that's the mistake the previous boxing
+ * attempt made — treating blue as a co-brand instead of as a fight
+ * corner marker). */
 .boxing-theme-dark {
-  --boxing-bg-page: #050608;
-  --boxing-bg-panel: #0F1115;
-  --boxing-bg-panel-hover: #181B22;
-  --boxing-bg-inset: #0A0C10;
-  --boxing-divider: #1F2330;
-  --boxing-text-primary: #F5F5F4;
-  --boxing-text-secondary: #A1A1AA;
-  --boxing-text-muted: #71717A;
-  /* Red corner = brand */
-  --boxing-red: #DC2626;
-  --boxing-red-soft: #7F1D1D;
-  --boxing-red-ring: rgba(220, 38, 38, 0.4);
-  /* Blue corner = secondary brand */
-  --boxing-blue: #2563EB;
-  --boxing-blue-soft: #1E3A8A;
-  --boxing-blue-ring: rgba(37, 99, 235, 0.4);
-  /* Championship gold for W-L-D record + accents */
-  --boxing-gold: #EAB308;
-  --boxing-gold-soft: #713F12;
-  --boxing-on-red: #FFFFFF;
-  --boxing-on-blue: #FFFFFF;
-  --boxing-on-gold: #1A1208;
-  --boxing-ok: #10B981;
-  --boxing-warn: #F59E0B;
-  --boxing-danger: #EF4444;
+  /* Pure black sheet — like a fight poster. */
+  --boxing-ink: #000000;
+  --boxing-ink-soft: #0B0B0B;
+  --boxing-paper: #F5F2EA; /* bone-white, used as inverse panels */
+  --boxing-paper-soft: #2A2A2A; /* dark panels when ink is the bg */
+  --boxing-rule: #2A2A2A;
+  --boxing-text: #F5F2EA;
+  --boxing-text-dim: #9B9B95;
+  --boxing-text-faint: #5C5C58;
+  /* Boxing red — venous, not corporate */
+  --boxing-red: #E10F1F;
+  --boxing-red-deep: #8A0A14;
+  /* Blue corner — narrow use only, for a single fight's blue side */
+  --boxing-blue-corner: #1E88E5;
+  --boxing-blue-corner-deep: #0D47A1;
+  /* Belt gold — championship green-gold, not amber */
+  --boxing-belt-gold: #C9A332;
+  --boxing-belt-gold-deep: #6B5512;
+  --boxing-ok: #25C26B;
+  --boxing-warn: #F2B807;
+  --boxing-danger: #E10F1F;
 }
 .boxing-theme-light {
-  --boxing-bg-page: #FAFAF7;
-  --boxing-bg-panel: #FFFFFF;
-  --boxing-bg-panel-hover: #F4F4F5;
-  --boxing-bg-inset: #F4F4F5;
-  --boxing-divider: #E4E4E7;
-  --boxing-text-primary: #0A0A0B;
-  --boxing-text-secondary: #52525B;
-  --boxing-text-muted: #71717A;
-  --boxing-red: #B91C1C;
-  --boxing-red-soft: #FEE2E2;
-  --boxing-red-ring: rgba(185, 28, 28, 0.25);
-  --boxing-blue: #1D4ED8;
-  --boxing-blue-soft: #DBEAFE;
-  --boxing-blue-ring: rgba(29, 78, 216, 0.25);
-  --boxing-gold: #B45309;
-  --boxing-gold-soft: #FEF3C7;
-  --boxing-on-red: #FFFFFF;
-  --boxing-on-blue: #FFFFFF;
-  --boxing-on-gold: #FFFFFF;
-  --boxing-ok: #047857;
-  --boxing-warn: #B45309;
-  --boxing-danger: #B91C1C;
+  /* Newsprint paper feel. */
+  --boxing-ink: #F5F2EA;
+  --boxing-ink-soft: #FFFFFF;
+  --boxing-paper: #000000;
+  --boxing-paper-soft: #EFEAE0;
+  --boxing-rule: #D6D0C2;
+  --boxing-text: #0A0A0A;
+  --boxing-text-dim: #555248;
+  --boxing-text-faint: #8C8779;
+  --boxing-red: #B30B1A;
+  --boxing-red-deep: #6E0710;
+  --boxing-blue-corner: #1565C0;
+  --boxing-blue-corner-deep: #0A3F7A;
+  --boxing-belt-gold: #9A7B16;
+  --boxing-belt-gold-deep: #5A480C;
+  --boxing-ok: #1B8849;
+  --boxing-warn: #B47A06;
+  --boxing-danger: #B30B1A;
 }
