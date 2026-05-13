@@ -7,6 +7,7 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -174,6 +175,18 @@ export function ClientsPage() {
 }
 
 function ClientProfileCard({ client }: { client: Client }) {
+  // Wraps the card in a Link so the whole card opens the detail page.
+  return (
+    <Link
+      to={`/clients/${client.id}`}
+      className="block transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-2xl"
+    >
+      <ClientProfileCardBody client={client} />
+    </Link>
+  );
+}
+
+function ClientProfileCardBody({ client }: { client: Client }) {
   const goal = readGoal(client.tags);
   const practice = readActivePractice(client.tags);
   const skill = practice ? SKILL_BY_ID[practice.skillId] : null;

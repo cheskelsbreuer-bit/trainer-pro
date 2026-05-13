@@ -6,6 +6,7 @@ import type { Trainer } from '../lib/database.types';
 import { AppShell } from './components/AppShell';
 import { PracticePage } from './pages/PracticePage';
 import { ClientsPage } from './pages/ClientsPage';
+import { ClientDetailPage } from './pages/ClientDetailPage';
 import { CheckInsPage } from './pages/CheckInsPage';
 import { PlansPage } from './pages/PlansPage';
 import { HabitsPage } from './pages/HabitsPage';
@@ -19,6 +20,7 @@ export function NutritionApp({ trainer }: { trainer: Trainer | undefined }) {
       <Route element={<AppShell trainer={trainer} />}>
         <Route index element={<PracticePage trainer={trainer} />} />
         <Route path="clients" element={<ClientsPage />} />
+        <Route path="clients/:id" element={<ClientDetailPage />} />
         <Route path="check-ins" element={<CheckInsPage />} />
         <Route path="plans" element={<PlansPage />} />
         <Route path="habits" element={<HabitsPage />} />
