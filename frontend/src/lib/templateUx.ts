@@ -24,8 +24,16 @@ import { TEMPLATES_BY_SLUG } from './templates';
 //   - 'boxing':  boxing/kickboxing gym — full separate app under src/boxing/
 //                with red corner / blue corner theme, fighter W-L-D record,
 //                round-based training, tier system instead of belts
+//   - 'nutrition': nutrition coach — full separate app under src/nutrition/
+//                with editorial-magazine aesthetic, serif type, sage palette,
+//                inbox-of-check-ins workflow, no sidebar
 // Other slugs map to the closest built variant until their own is built.
-export type DashboardVariant = 'private' | 'studio' | 'martial' | 'boxing';
+export type DashboardVariant =
+  | 'private'
+  | 'studio'
+  | 'martial'
+  | 'boxing'
+  | 'nutrition';
 
 export interface TemplateUx {
   slug: string;
@@ -138,9 +146,11 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     dashboardHeadline: 'Your nutrition practice',
     dashboardSubtitle: 'Active meal plans, weekly check-ins, macros adherence.',
     spaceNoun: 'practice',
-    primaryCtaLabel: 'Build a meal plan',
-    primaryCtaPath: '/workouts',
-    dashboardVariant: 'private',
+    primaryCtaLabel: 'Review check-ins',
+    primaryCtaPath: '/check-ins',
+    // Full separate app — mounts src/nutrition/ with editorial magazine
+    // aesthetic, serif headers, sage + cream palette, no sidebar.
+    dashboardVariant: 'nutrition',
   },
 };
 

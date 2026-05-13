@@ -98,6 +98,58 @@
   --boxing-warn: #F2B807;
   --boxing-danger: #E10F1F;
 }
+/* Nutrition coach theme — wellness / editorial magazine palette. Sage
+ * green + warm cream + a soft coral accent. No charcoal. No pure
+ * black. Serif type for display. Soft rounded edges. */
+.nutrition-theme-light {
+  --nut-paper: #FAF6EE;        /* warm cream sheet */
+  --nut-card: #FFFFFF;
+  --nut-inset: #F4EFE3;        /* darker warm tan for sunken */
+  --nut-rule: #E4DCC7;
+  --nut-rule-soft: #F0E9D5;
+  --nut-ink: #2F2419;          /* deep walnut for body type */
+  --nut-ink-soft: #5A4A36;
+  --nut-mute: #8B7E6A;
+  --nut-mute-faint: #BFB4A0;
+  /* Sage green primary */
+  --nut-sage: #6B8E5A;
+  --nut-sage-deep: #3F5934;
+  --nut-sage-soft: #DCE6D2;
+  /* Coral accent — for highlights, "needs attention" markers */
+  --nut-coral: #D87456;
+  --nut-coral-deep: #A94E33;
+  --nut-coral-soft: #FAE6DD;
+  /* Soft yellow for habits / sun-warmth */
+  --nut-honey: #D9A441;
+  --nut-honey-soft: #F8ECCC;
+  /* Status — softer / wellness-aligned than the boxing punch palette */
+  --nut-ok: #6B8E5A;
+  --nut-warn: #C68C2C;
+  --nut-danger: #B85A47;
+}
+.nutrition-theme-dark {
+  --nut-paper: #1B1611;
+  --nut-card: #251E16;
+  --nut-inset: #15110C;
+  --nut-rule: #3A3026;
+  --nut-rule-soft: #2C241B;
+  --nut-ink: #F0E9D5;
+  --nut-ink-soft: #C9BFA8;
+  --nut-mute: #8B7E6A;
+  --nut-mute-faint: #5A4A36;
+  --nut-sage: #8FB47A;
+  --nut-sage-deep: #6B8E5A;
+  --nut-sage-soft: #2D3A24;
+  --nut-coral: #E89579;
+  --nut-coral-deep: #C76244;
+  --nut-coral-soft: #3F2419;
+  --nut-honey: #E6BC60;
+  --nut-honey-soft: #3F311A;
+  --nut-ok: #8FB47A;
+  --nut-warn: #E6BC60;
+  --nut-danger: #E89579;
+}
+
 .boxing-theme-light {
   /* Newsprint paper feel. */
   --boxing-ink: #F5F2EA;

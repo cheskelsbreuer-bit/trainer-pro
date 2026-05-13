@@ -31,6 +31,7 @@ import { adminRpc } from './lib/adminRpc';
 import { pickTemplateUx } from './lib/templateUx';
 import { DojoApp } from './dojo/DojoApp';
 import { BoxingApp } from './boxing/BoxingApp';
+import { NutritionApp } from './nutrition/NutritionApp';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,6 +77,7 @@ function ProtectedShell() {
   const variant = pickTemplateUx(trainer?.template_slugs).dashboardVariant;
   if (variant === 'martial') return <DojoApp trainer={trainer} />;
   if (variant === 'boxing') return <BoxingApp trainer={trainer} />;
+  if (variant === 'nutrition') return <NutritionApp trainer={trainer} />;
   return <Layout />;
 }
 
