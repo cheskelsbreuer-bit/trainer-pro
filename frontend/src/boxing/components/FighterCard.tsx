@@ -7,7 +7,16 @@
 // gym wall of fight posters or trading cards.
 
 import { Link } from 'react-router-dom';
-import { C, DISPLAY_FONT, recordString, type Record, type FighterTier, type WeightClass, type Stance } from '../theme';
+import {
+  C,
+  DISPLAY_FONT,
+  recordString,
+  computeWeightStatus,
+  type Record,
+  type FighterTier,
+  type WeightClass,
+  type Stance,
+} from '../theme';
 
 interface FighterCardProps {
   id: string;
@@ -16,11 +25,31 @@ interface FighterCardProps {
   tier: FighterTier;
   weight: WeightClass | null;
   stance: Stance | null;
+  /** Current body weight in pounds — drives "on weight" indicator. */
+  currentWeightLb?: number | null;
   /** Link target — defaults to "/stable" (no detail page yet); pass null to disable. */
   to?: string | null;
 }
 
-export function FighterCard({ id, name, record, tier, weight, stance, to = '/stable' }: FighterCardProps) {
+export function FighterCard({
+  id,
+  name,
+  record,
+  tier,
+  weight,
+  stance,
+  currentWeightLb = null,
+  to = '/stable',
+}: FighterCardProps) {
+  const weightStatus = computeWeightStatus(currentWeightLb, weight);
+  const weightStatusColor =
+    weightStatus.kind === 'on-weight'
+      ? C.ok
+      : weightStatus.kind === 'over'
+        ? C.danger
+        : weightStatus.kind === 'under'
+          ? C.warn
+          : C.textFaint;
   const inner = (
     <article
       className="relative aspect-[3/4] overflow-hidden flex flex-col"
@@ -109,7 +138,7 @@ export function FighterCard({ id, name, record, tier, weight, stance, to = '/sta
         </div>
       </div>
 
-      {/* Name + weight class — the bottom plate of the card */}
+      {/* Name + weight class + on-weight status */}
       <div
         className="px-4 py-3 border-t"
         style={{ borderColor: C.rule, background: C.inkSoft }}
@@ -127,12 +156,29 @@ export function FighterCard({ id, name, record, tier, weight, stance, to = '/sta
         >
           {name}
         </p>
-        <p
-          className="text-[10px] uppercase tracking-[0.3em] mt-1.5"
-          style={{ color: C.textDim }}
-        >
-          {weight?.label ?? 'No weight class'}
-        </p>
+        <div className="flex items-center justify-between gap-2 mt-1.5">
+          <p
+            className="text-[10px] uppercase tracking-[0.3em] truncate"
+            style={{ color: C.textDim }}
+          >
+            {weight?.label ?? 'No class'}
+          </p>
+          {(weightStatus.kind === 'on-weight' ||
+            weightStatus.kind === 'over' ||
+            weightStatus.kind === 'under') && (
+            <span
+              className="text-[10px] uppercase tracking-widest font-bold px-1.5 py-0.5"
+              style={{
+                color: weightStatusColor,
+                border: `1px solid ${weightStatusColor}66`,
+                fontFamily: DISPLAY_FONT,
+              }}
+              title={`Current: ${currentWeightLb} lb`}
+            >
+              {weightStatus.label}
+            </span>
+          )}
+        </div>
       </div>
     </article>
   );

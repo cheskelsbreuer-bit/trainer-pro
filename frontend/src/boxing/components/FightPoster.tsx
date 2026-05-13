@@ -18,6 +18,12 @@ interface PosterFighter {
   tier?: { label: string; color: string };
   weightLabel?: string | null;
   stance?: 'orthodox' | 'southpaw' | null;
+  // Tale-of-the-tape stats. Any subset is fine — comparison row only
+  // renders metrics where at least ONE corner has a value.
+  heightIn?: number | null;
+  reachIn?: number | null;
+  age?: number | null;
+  weightLb?: number | null;
 }
 
 interface FightPosterProps {
@@ -130,6 +136,9 @@ export function FightPoster({
           <Corner side="blue" fighter={blue} isHero={isHero} />
         </div>
 
+        {/* Tale of the tape — rendered when at least one corner has stats */}
+        <TaleOfTape red={red} blue={blue ?? null} isHero={isHero} />
+
         {/* Venue */}
         {venue && (
           <p
@@ -142,6 +151,102 @@ export function FightPoster({
       </div>
     </article>
   );
+}
+
+function TaleOfTape({
+  red,
+  blue,
+  isHero,
+}: {
+  red: PosterFighter;
+  blue: PosterFighter | null;
+  isHero: boolean;
+}) {
+  // What metrics are worth showing?
+  const metrics: { key: 'height' | 'reach' | 'age' | 'weight'; label: string }[] = [
+    { key: 'height', label: 'Height' },
+    { key: 'reach', label: 'Reach' },
+    { key: 'age', label: 'Age' },
+    { key: 'weight', label: 'Weight' },
+  ];
+
+  const rows = metrics
+    .map((m) => {
+      const r = readMetric(red, m.key);
+      const b = readMetric(blue, m.key);
+      return { ...m, r, b, hasAny: r !== null || b !== null };
+    })
+    .filter((row) => row.hasAny);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div
+      className={`mx-auto ${isHero ? 'max-w-xl mt-6' : 'max-w-lg mt-5'} border-t border-b py-3`}
+      style={{ borderColor: C.rule }}
+    >
+      <p
+        className="text-center text-[10px] uppercase tracking-[0.4em] mb-2"
+        style={{ color: C.beltGold }}
+      >
+        Tale of the tape
+      </p>
+      <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <td
+                className="py-1 text-right font-mono"
+                style={{
+                  color: row.r !== null ? C.text : C.textFaint,
+                  width: '38%',
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: isHero ? '1.125rem' : '0.95rem',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {row.r ?? '—'}
+              </td>
+              <td
+                className="text-center text-[10px] uppercase tracking-[0.3em] px-2"
+                style={{ color: C.textDim, width: '24%' }}
+              >
+                {row.label}
+              </td>
+              <td
+                className="py-1 text-left font-mono"
+                style={{
+                  color: row.b !== null ? C.text : C.textFaint,
+                  width: '38%',
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: isHero ? '1.125rem' : '0.95rem',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {row.b ?? '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function readMetric(
+  f: PosterFighter | null,
+  key: 'height' | 'reach' | 'age' | 'weight',
+): string | null {
+  if (!f) return null;
+  if (key === 'height' && f.heightIn != null) {
+    const ft = Math.floor(f.heightIn / 12);
+    const inch = f.heightIn % 12;
+    return `${ft}'${inch}"`;
+  }
+  if (key === 'reach' && f.reachIn != null) return `${f.reachIn}"`;
+  if (key === 'age' && f.age != null) return `${f.age} yrs`;
+  if (key === 'weight' && f.weightLb != null) return `${f.weightLb} lb`;
+  return null;
 }
 
 function Corner({

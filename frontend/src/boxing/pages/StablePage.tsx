@@ -16,10 +16,14 @@ import {
   readTier,
   readWeight,
   readStance,
+  readCurrentWeight,
   computeRecord,
   TIER_TAG,
   WEIGHT_TAG,
   STANCE_TAG,
+  HEIGHT_TAG,
+  REACH_TAG,
+  WEIGHT_LB_TAG,
   type FightRow,
 } from '../theme';
 import { FighterCard } from '../components/FighterCard';
@@ -76,6 +80,7 @@ export function StablePage() {
         tier: readTier(f.tags),
         weight: readWeight(f.tags),
         stance: readStance(f.tags),
+        currentWeightLb: readCurrentWeight(f.tags),
       })),
     [fighters, fightsByFighter],
   );
@@ -192,6 +197,7 @@ export function StablePage() {
                 tier={c.tier}
                 weight={c.weight}
                 stance={c.stance}
+                currentWeightLb={c.currentWeightLb}
                 to={null}
               />
             ))}
@@ -278,6 +284,10 @@ function AddFighterModal({
   const [tier, setTier] = useState('rec');
   const [weight, setWeight] = useState('');
   const [stance, setStance] = useState<'orthodox' | 'southpaw'>('orthodox');
+  const [heightIn, setHeightIn] = useState('');
+  const [reachIn, setReachIn] = useState('');
+  const [currentLb, setCurrentLb] = useState('');
+  const [dob, setDob] = useState('');
 
   const create = useMutation({
     mutationFn: async () => {
@@ -286,10 +296,17 @@ function AddFighterModal({
       const tags: string[] = [`${TIER_TAG}${tier}`];
       if (weight) tags.push(`${WEIGHT_TAG}${weight}`);
       tags.push(`${STANCE_TAG}${stance}`);
+      const h = parseInt(heightIn, 10);
+      if (Number.isFinite(h) && h > 0) tags.push(`${HEIGHT_TAG}${h}`);
+      const r = parseInt(reachIn, 10);
+      if (Number.isFinite(r) && r > 0) tags.push(`${REACH_TAG}${r}`);
+      const w = parseInt(currentLb, 10);
+      if (Number.isFinite(w) && w > 0) tags.push(`${WEIGHT_LB_TAG}${w}`);
       const { error } = await supabase.from('clients').insert({
         trainer_id: user.id,
         full_name: name.trim(),
         email: email.trim() || null,
+        date_of_birth: dob || null,
         status: 'active',
         tags,
       });
@@ -347,6 +364,13 @@ function AddFighterModal({
             <option value="orthodox">Orthodox</option>
             <option value="southpaw">Southpaw</option>
           </SelectField>
+          {/* Tale of the tape inputs — every real boxing app captures these */}
+          <div className="grid grid-cols-3 gap-2">
+            <Input label="Height (in)" value={heightIn} onChange={setHeightIn} type="number" />
+            <Input label="Reach (in)" value={reachIn} onChange={setReachIn} type="number" />
+            <Input label="Current lb" value={currentLb} onChange={setCurrentLb} type="number" />
+          </div>
+          <Input label="Date of birth (optional)" value={dob} onChange={setDob} type="date" />
           {create.error && (
             <p className="text-xs" style={{ color: C.danger }}>
               {(create.error as Error).message}

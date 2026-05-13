@@ -14,6 +14,10 @@ import {
   readTier,
   readWeight,
   readStance,
+  readHeight,
+  readReach,
+  readCurrentWeight,
+  ageFromDob,
   computeRecord,
   type FightRow,
 } from '../theme';
@@ -168,8 +172,22 @@ export function FightNightPage() {
                       tier: { label: tier.label, color: tier.color },
                       weightLabel: weight?.label ?? null,
                       stance,
+                      heightIn: readHeight(fighter.tags),
+                      reachIn: readReach(fighter.tags),
+                      age: ageFromDob(fighter.date_of_birth),
+                      weightLb: readCurrentWeight(fighter.tags),
                     }}
-                    blue={f.opponent_name ? { name: f.opponent_name } : null}
+                    blue={
+                      f.opponent_name
+                        ? {
+                            name: f.opponent_name,
+                            heightIn: f.opponent_height_in ?? null,
+                            reachIn: f.opponent_reach_in ?? null,
+                            age: f.opponent_age ?? null,
+                            stance: (f.opponent_stance as 'orthodox' | 'southpaw' | null) ?? null,
+                          }
+                        : null
+                    }
                   />
                   <button
                     onClick={() => setEditing(f)}
@@ -322,6 +340,18 @@ function FightModal({
   );
   const [decision, setDecision] = useState(existing?.decision ?? '');
   const [notes, setNotes] = useState(existing?.notes ?? '');
+  // Opponent tale-of-the-tape
+  const [oppRecord, setOppRecord] = useState(existing?.opponent_record ?? '');
+  const [oppHeight, setOppHeight] = useState(
+    existing?.opponent_height_in ? String(existing.opponent_height_in) : '',
+  );
+  const [oppReach, setOppReach] = useState(
+    existing?.opponent_reach_in ? String(existing.opponent_reach_in) : '',
+  );
+  const [oppAge, setOppAge] = useState(
+    existing?.opponent_age ? String(existing.opponent_age) : '',
+  );
+  const [oppStance, setOppStance] = useState(existing?.opponent_stance ?? '');
 
   const save = useMutation({
     mutationFn: async () => {
@@ -337,6 +367,11 @@ function FightModal({
         result: result || null,
         decision: decision || null,
         notes: notes.trim() || null,
+        opponent_record: oppRecord.trim() || null,
+        opponent_height_in: oppHeight ? parseInt(oppHeight, 10) : null,
+        opponent_reach_in: oppReach ? parseInt(oppReach, 10) : null,
+        opponent_age: oppAge ? parseInt(oppAge, 10) : null,
+        opponent_stance: oppStance || null,
       };
       if (existing) {
         const { error } = await supabase
@@ -411,6 +446,28 @@ function FightModal({
             <option value="">—</option>
             {DECISIONS.map((d) => <option key={d} value={d}>{d}</option>)}
           </Sel>
+
+          {/* Opponent tale-of-the-tape — the box on the back of every fight poster */}
+          <div
+            className="sm:col-span-2 pt-3 mt-1 border-t"
+            style={{ borderColor: C.rule }}
+          >
+            <p className="text-[10px] uppercase tracking-[0.4em] mb-2" style={{ color: C.beltGold }}>
+              Opponent tale of the tape
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <Txt label="Record (e.g. 12-1)" value={oppRecord} onChange={setOppRecord} />
+              <Txt label="Height (in)" value={oppHeight} onChange={setOppHeight} type="number" />
+              <Txt label="Reach (in)" value={oppReach} onChange={setOppReach} type="number" />
+              <Txt label="Age" value={oppAge} onChange={setOppAge} type="number" />
+              <Sel label="Stance" value={oppStance} onChange={setOppStance}>
+                <option value="">—</option>
+                <option value="orthodox">Orthodox</option>
+                <option value="southpaw">Southpaw</option>
+              </Sel>
+            </div>
+          </div>
+
           <div className="sm:col-span-2">
             <span className="block text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: C.textDim }}>
               Notes

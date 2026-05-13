@@ -94,8 +94,12 @@ export const WEIGHT_CLASSES: WeightClass[] = [
 
 // Tag prefixes — boxing-specific attributes stored on clients.tags.
 export const TIER_TAG = 'tier:';
-export const WEIGHT_TAG = 'weight:';
+export const WEIGHT_TAG = 'weight:'; // weight CLASS (e.g. welterweight)
 export const STANCE_TAG = 'stance:';
+// Physical attributes — used for tale of the tape + on-weight indicator.
+export const HEIGHT_TAG = 'height:'; // inches, e.g. 'height:71'
+export const REACH_TAG = 'reach:'; // inches, e.g. 'reach:74'
+export const WEIGHT_LB_TAG = 'weightlb:'; // current body weight, e.g. 'weightlb:152'
 
 export type Stance = 'orthodox' | 'southpaw';
 
@@ -132,6 +136,83 @@ export function readStance(tags: string[] | null | undefined): Stance | null {
   return null;
 }
 
+function readNumberTag(
+  tags: string[] | null | undefined,
+  prefix: string,
+): number | null {
+  if (!tags) return null;
+  for (const t of tags) {
+    if (t.startsWith(prefix)) {
+      const v = parseInt(t.slice(prefix.length), 10);
+      if (Number.isFinite(v)) return v;
+    }
+  }
+  return null;
+}
+export function readHeight(tags: string[] | null | undefined): number | null {
+  return readNumberTag(tags, HEIGHT_TAG);
+}
+export function readReach(tags: string[] | null | undefined): number | null {
+  return readNumberTag(tags, REACH_TAG);
+}
+export function readCurrentWeight(tags: string[] | null | undefined): number | null {
+  return readNumberTag(tags, WEIGHT_LB_TAG);
+}
+
+/** Format inches as feet'inches" — e.g. 71 → 5'11". */
+export function formatHeight(inches: number | null): string | null {
+  if (inches === null) return null;
+  const ft = Math.floor(inches / 12);
+  const inch = inches % 12;
+  return `${ft}'${inch}"`;
+}
+
+/** Compute age from date_of_birth (YYYY-MM-DD string). */
+export function ageFromDob(dob: string | null | undefined): number | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}
+
+/** "On weight" status given a fighter's current body weight and their
+ *  weight class limit. Boxers cut weight before a fight; coaches
+ *  obsess about this number. */
+export interface WeightStatus {
+  kind: 'on-weight' | 'over' | 'under' | 'no-class' | 'no-weight';
+  /** Pounds over the class limit (negative = under). null if either input missing. */
+  delta: number | null;
+  /** Human label, e.g. "On weight" / "4 lb to cut" / "2 lb to gain". */
+  label: string;
+}
+export function computeWeightStatus(
+  currentLb: number | null,
+  weightClass: WeightClass | null,
+): WeightStatus {
+  if (currentLb === null) {
+    return { kind: 'no-weight', delta: null, label: 'no weight on file' };
+  }
+  if (!weightClass) {
+    return { kind: 'no-class', delta: null, label: `${currentLb} lb` };
+  }
+  if (weightClass.lbsMax === null) {
+    // Heavyweight — no upper bound
+    return { kind: 'on-weight', delta: 0, label: `${currentLb} lb · heavyweight` };
+  }
+  const delta = currentLb - weightClass.lbsMax;
+  if (delta <= 0 && delta >= -3) {
+    return { kind: 'on-weight', delta, label: 'on weight' };
+  }
+  if (delta > 0) {
+    return { kind: 'over', delta, label: `${delta} lb to cut` };
+  }
+  return { kind: 'under', delta, label: `${Math.abs(delta)} lb under class` };
+}
+
 // ── W-L-D record ─────────────────────────────────────────────────────
 export interface FightRow {
   id: string;
@@ -142,6 +223,13 @@ export interface FightRow {
   decision: string | null;
   venue: string | null;
   notes: string | null;
+  // Opponent tale-of-the-tape — added in migration 31_boxing_fight_tape.sql.
+  // All optional: legacy rows will have nulls.
+  opponent_record?: string | null; // e.g. "12-1-0" or "12-1-0 (8 KO)"
+  opponent_height_in?: number | null;
+  opponent_reach_in?: number | null;
+  opponent_age?: number | null;
+  opponent_stance?: string | null;
 }
 export interface Record {
   w: number;

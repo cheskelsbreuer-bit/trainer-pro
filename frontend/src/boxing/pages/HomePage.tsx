@@ -21,6 +21,10 @@ import {
   readTier,
   readWeight,
   readStance,
+  readHeight,
+  readReach,
+  readCurrentWeight,
+  ageFromDob,
   FIGHTER_TIERS,
   type FightRow,
 } from '../theme';
@@ -92,6 +96,26 @@ export function HomePage({ trainer }: { trainer: Trainer | undefined }) {
     },
   });
 
+  // Last-seen for each fighter — derives an inactivity callout. Real
+  // boxing apps surface this so coaches catch drift before the fighter
+  // quits altogether ("attendance trends" in the marketing copy).
+  const { data: lastSeen } = useQuery({
+    queryKey: ['boxing-last-seen', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('client_id, starts_at')
+        .order('starts_at', { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      const m = new Map<string, string>();
+      (data ?? []).forEach((r: { client_id: string; starts_at: string }) => {
+        if (!m.has(r.client_id)) m.set(r.client_id, r.starts_at);
+      });
+      return m;
+    },
+  });
+
   const fightsByFighter = useMemo(() => {
     const m = new Map<string, FightRow[]>();
     (fights ?? []).forEach((f) => {
@@ -141,6 +165,26 @@ export function HomePage({ trainer }: { trainer: Trainer | undefined }) {
     return FIGHTER_TIERS.map((t) => ({ tier: t, count: m[t.id] ?? 0 }));
   }, [fighterStats]);
 
+  // Inactive = on the active roster but hasn't trained in 7+ days. Cap
+  // at 5 callouts so the strip doesn't dominate the page.
+  const offTheMat = useMemo(() => {
+    if (!fighters || !lastSeen) return [];
+    const sevenDaysAgo = Date.now() - 7 * 86400000;
+    return fighters
+      .map((f) => {
+        const last = lastSeen.get(f.id);
+        if (!last) return { fighter: f, last: null as string | null, daysAgo: Infinity };
+        return {
+          fighter: f,
+          last,
+          daysAgo: Math.floor((Date.now() - new Date(last).getTime()) / 86400000),
+        };
+      })
+      .filter((x) => !x.last || new Date(x.last).getTime() < sevenDaysAgo)
+      .sort((a, b) => b.daysAgo - a.daysAgo)
+      .slice(0, 5);
+  }, [fighters, lastSeen]);
+
   return (
     <div>
       {/* Marquee under the nav — like the running-headline strip in a stadium */}
@@ -165,6 +209,57 @@ export function HomePage({ trainer }: { trainer: Trainer | undefined }) {
           </span>
         ))}
       </div>
+
+      {/* Inactive fighters — the "drift radar". Surfaces fighters who
+          haven't trained in 7+ days BEFORE they quietly disappear. A
+          real boxing app's most useful retention signal. */}
+      {offTheMat.length > 0 && (
+        <div
+          className="px-4 sm:px-8 py-3 border-b flex items-center gap-3 overflow-x-auto"
+          style={{
+            background: C.inkSoft,
+            borderColor: C.rule,
+          }}
+        >
+          <span
+            className="text-[10px] uppercase tracking-[0.4em] font-bold shrink-0"
+            style={{ color: C.danger }}
+          >
+            Off the mat:
+          </span>
+          {offTheMat.map(({ fighter, last, daysAgo }) => (
+            <span
+              key={fighter.id}
+              className="shrink-0 flex items-baseline gap-2 px-2.5 py-1 text-xs"
+              style={{
+                background: C.ink,
+                border: `1px solid ${C.danger}55`,
+              }}
+            >
+              <span
+                className="font-bold uppercase"
+                style={{
+                  fontFamily: DISPLAY_FONT,
+                  color: C.text,
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {fighter.full_name}
+              </span>
+              <span
+                className="text-[10px] uppercase tracking-widest"
+                style={{ color: C.danger }}
+              >
+                {last
+                  ? daysAgo === Infinity
+                    ? 'never'
+                    : `${daysAgo}d ago`
+                  : 'never trained'}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Poster hero — the dashboard's centerpiece */}
       <div className="px-4 sm:px-8 pt-6 sm:pt-10 pb-8">
@@ -413,8 +508,23 @@ function PosterFromFight({
         tier: { label: tier.label, color: tier.color },
         weightLabel: weight?.label ?? null,
         stance,
+        heightIn: readHeight(fighter.tags),
+        reachIn: readReach(fighter.tags),
+        age: ageFromDob(fighter.date_of_birth),
+        weightLb: readCurrentWeight(fighter.tags),
       }}
-      blue={fight.opponent_name ? { name: fight.opponent_name } : null}
+      blue={
+        fight.opponent_name
+          ? {
+              name: fight.opponent_name,
+              heightIn: fight.opponent_height_in ?? null,
+              reachIn: fight.opponent_reach_in ?? null,
+              age: fight.opponent_age ?? null,
+              stance:
+                (fight.opponent_stance as 'orthodox' | 'southpaw' | null) ?? null,
+            }
+          : null
+      }
     />
   );
 }
