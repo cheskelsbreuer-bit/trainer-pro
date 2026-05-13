@@ -98,34 +98,38 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
   }, [checkIns]);
 
   return (
-    <div className="px-6 sm:px-12 pt-10 max-w-6xl mx-auto">
-      {/* Greeting — like a magazine letter-from-the-editor */}
-      <section className="text-center mb-10">
+    <div className="px-4 sm:px-8 py-8 max-w-6xl mx-auto">
+      {/* Page header — left-aligned, app-style */}
+      <section className="mb-8">
         <p
-          className="text-[10px] uppercase tracking-[0.5em] mb-2"
-          style={{ color: N.coral }}
+          className="text-xs font-medium mb-1"
+          style={{ color: N.mute }}
         >
-          From your desk · {new Date().toLocaleDateString(undefined, { weekday: 'long' })}
+          {new Date().toLocaleDateString(undefined, {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+          })}
         </p>
-        <h2
+        <h1
           className="leading-tight"
           style={{
             fontFamily: SERIF_FONT,
             color: N.ink,
-            fontSize: 'clamp(2rem, 4.5vw, 3.5rem)',
-            fontWeight: 500,
-            letterSpacing: '0.005em',
+            fontSize: 'clamp(1.875rem, 3.5vw, 2.5rem)',
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
           }}
         >
           {greeting(trainer)}
-        </h2>
+        </h1>
         <p
-          className="mt-3 text-sm italic max-w-xl mx-auto"
-          style={{ color: N.inkSoft, fontFamily: SERIF_FONT }}
+          className="mt-1.5 text-sm"
+          style={{ color: N.mute }}
         >
           {pending.length === 0
-            ? 'No check-ins on the desk this morning — a quiet start to the week.'
-            : `${pending.length} check-in${pending.length === 1 ? '' : 's'} waiting for your eyes. Let's tend to them.`}
+            ? 'No check-ins waiting. A quiet start to the week.'
+            : `${pending.length} check-in${pending.length === 1 ? '' : 's'} waiting for your review.`}
         </p>
       </section>
 
@@ -150,35 +154,32 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
             </ul>
           )}
 
-          {/* Drift list — those who haven't checked in */}
+          {/* Drift list — clients who haven't checked in */}
           {drifting.length > 0 && (
-            <div className="mt-12">
+            <div className="mt-10">
               <SectionHead title="Drifting" subtitle="No check-in in 10+ days" />
-              <ul className="grid sm:grid-cols-2 gap-3">
+              <ul className="grid sm:grid-cols-2 gap-2">
                 {drifting.map(({ client, last }) => (
                   <li
                     key={client.id}
-                    className="px-4 py-3 rounded-lg flex items-baseline justify-between gap-3"
+                    className="px-4 py-3 rounded-xl flex items-center justify-between gap-3"
                     style={{
                       background: N.card,
                       border: `1px solid ${N.rule}`,
-                      borderLeft: `3px solid ${N.coral}`,
                     }}
                   >
                     <span
-                      className="truncate"
-                      style={{
-                        fontFamily: SERIF_FONT,
-                        color: N.ink,
-                        fontSize: '1.05rem',
-                        fontWeight: 500,
-                      }}
+                      className="truncate text-sm font-medium"
+                      style={{ color: N.ink }}
                     >
                       {client.full_name}
                     </span>
                     <span
-                      className="text-[10px] uppercase tracking-widest italic shrink-0"
-                      style={{ color: N.coralDeep, fontFamily: SERIF_FONT }}
+                      className="text-xs font-medium shrink-0 px-2 py-0.5 rounded-full"
+                      style={{
+                        color: N.honey,
+                        background: N.honeySoft,
+                      }}
                     >
                       {last ? relativeWhen(last.submitted_at) : 'never'}
                     </span>
@@ -217,25 +218,22 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
 
 function SectionHead({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="mb-5">
-      <h3
-        className="leading-none"
+    <div className="mb-4">
+      <h2
+        className="leading-tight"
         style={{
           fontFamily: SERIF_FONT,
           color: N.ink,
-          fontSize: '1.875rem',
+          fontSize: '1.25rem',
           fontWeight: 600,
+          letterSpacing: '-0.01em',
         }}
       >
         {title}
-      </h3>
-      <p
-        className="text-xs italic mt-1.5"
-        style={{ color: N.mute, fontFamily: SERIF_FONT }}
-      >
+      </h2>
+      <p className="text-xs mt-1" style={{ color: N.mute }}>
         {subtitle}
       </p>
-      <div className="h-px mt-3" style={{ background: N.rule }} />
     </div>
   );
 }
@@ -249,67 +247,70 @@ function CheckInFeatureCard({
 }) {
   return (
     <li
-      className="rounded-2xl overflow-hidden"
+      className="rounded-xl overflow-hidden transition-shadow hover:shadow-md"
       style={{
         background: N.card,
         border: `1px solid ${N.rule}`,
+        boxShadow: 'var(--nut-shadow)',
       }}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr]">
-        {/* "Photo" placeholder — a sage tile with a serif initial */}
+      <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[88px_1fr]">
+        {/* Avatar tile with the client's initial */}
         <div
-          className="flex items-center justify-center min-h-[120px]"
-          style={{ background: N.sageSoft }}
+          className="flex items-center justify-center"
+          style={{ background: N.coralSoft }}
         >
           <span
+            className="font-semibold"
             style={{
+              color: N.coralDeep,
+              fontSize: '1.875rem',
               fontFamily: SERIF_FONT,
-              color: N.sageDeep,
-              fontSize: '3rem',
-              fontWeight: 500,
-              fontStyle: 'italic',
             }}
           >
             {(clientName[0] || '?').toUpperCase()}
           </span>
         </div>
         <div className="px-5 py-4">
-          <p
-            className="text-[10px] uppercase tracking-[0.3em] mb-1"
-            style={{ color: N.coral }}
-          >
-            Check-in · {relativeWhen(checkIn.submitted_at)}
-          </p>
-          <h4
-            className="leading-tight mb-2"
-            style={{
-              fontFamily: SERIF_FONT,
-              color: N.ink,
-              fontSize: '1.5rem',
-              fontWeight: 600,
-            }}
-          >
-            {clientName}
-          </h4>
+          <div className="flex items-center gap-2 mb-1">
+            <h4
+              className="leading-tight"
+              style={{
+                fontFamily: SERIF_FONT,
+                color: N.ink,
+                fontSize: '1.0625rem',
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {clientName}
+            </h4>
+            <span
+              className="text-xs"
+              style={{ color: N.mute }}
+            >
+              · {relativeWhen(checkIn.submitted_at)}
+            </span>
+          </div>
           {checkIn.client_notes && (
             <p
-              className="text-sm italic mb-3"
-              style={{ color: N.inkSoft, fontFamily: SERIF_FONT, fontStyle: 'italic' }}
+              className="text-sm mb-3 leading-relaxed line-clamp-2"
+              style={{ color: N.inkSoft }}
             >
-              "{trimNotes(checkIn.client_notes)}"
+              {trimNotes(checkIn.client_notes)}
             </p>
           )}
-          <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
-            <StatPair label="Weight" value={checkIn.weight_lb != null ? `${checkIn.weight_lb} lb` : '—'} />
-            <StatPair label="Compliance" value={checkIn.compliance_pct != null ? `${checkIn.compliance_pct}%` : '—'} />
-            <StatPair label="Energy" value={checkIn.energy_1_5 != null ? `${checkIn.energy_1_5}/5` : '—'} />
-            <StatPair label="Hunger" value={checkIn.hunger_1_5 != null ? `${checkIn.hunger_1_5}/5` : '—'} />
-            <StatPair label="Sleep" value={checkIn.sleep_hours_avg != null ? `${checkIn.sleep_hours_avg.toFixed(1)}h` : '—'} />
+          <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs mb-3">
+            <StatPair label="Weight" value={checkIn.weight_lb != null ? `${checkIn.weight_lb} lb` : null} />
+            <StatPair label="Compliance" value={checkIn.compliance_pct != null ? `${checkIn.compliance_pct}%` : null} />
+            <StatPair label="Energy" value={checkIn.energy_1_5 != null ? `${checkIn.energy_1_5}/5` : null} />
+            <StatPair label="Hunger" value={checkIn.hunger_1_5 != null ? `${checkIn.hunger_1_5}/5` : null} />
+            <StatPair label="Sleep" value={checkIn.sleep_hours_avg != null ? `${checkIn.sleep_hours_avg.toFixed(1)}h` : null} />
           </dl>
           <Link
             to="/check-ins"
-            className="inline-block mt-3 text-xs uppercase tracking-[0.3em] italic"
-            style={{ color: N.sageDeep, fontFamily: SERIF_FONT, fontStyle: 'italic' }}
+            className="inline-flex items-center gap-1 text-xs font-medium hover:underline"
+            style={{ color: N.coral }}
           >
             Read & reply →
           </Link>
@@ -319,18 +320,19 @@ function CheckInFeatureCard({
   );
 }
 
-function StatPair({ label, value }: { label: string; value: string }) {
+function StatPair({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
   return (
-    <div className="inline-flex items-baseline gap-1.5">
+    <div className="inline-flex items-baseline gap-1">
       <dt
-        className="text-[10px] uppercase tracking-[0.2em]"
-        style={{ color: N.mute }}
+        className="text-[10px] uppercase font-semibold"
+        style={{ color: N.mute, letterSpacing: '0.05em' }}
       >
         {label}
       </dt>
       <dd
-        className="font-medium"
-        style={{ color: N.ink, fontFamily: SERIF_FONT, fontSize: '0.95rem' }}
+        className="font-semibold tabular-nums"
+        style={{ color: N.ink, fontSize: '0.875rem' }}
       >
         {value}
       </dd>
@@ -349,20 +351,26 @@ function PracticeStat({
 }) {
   const color = tone === 'sage' ? N.sageDeep : tone === 'coral' ? N.coralDeep : N.ink;
   return (
-    <div className="mb-5">
+    <div
+      className="rounded-xl px-4 py-3 mb-2"
+      style={{
+        background: N.card,
+        border: `1px solid ${N.rule}`,
+      }}
+    >
       <p
-        className="leading-none mb-1"
+        className="leading-none mb-1 font-semibold"
         style={{
           fontFamily: SERIF_FONT,
           color,
-          fontSize: '2.5rem',
-          fontWeight: 500,
+          fontSize: '1.75rem',
+          letterSpacing: '-0.02em',
         }}
       >
         {big}
       </p>
       <p
-        className="text-[10px] uppercase tracking-[0.3em]"
+        className="text-xs font-medium"
         style={{ color: N.mute }}
       >
         {label}
@@ -387,43 +395,39 @@ function FeaturedClient({ clients }: { clients: Client[] }) {
   }, [clients]);
 
   if (ready.length === 0) {
-    // Show a quiet sage panel summarizing in-progress practices instead.
     const inProgress = clients
       .map((c) => ({ client: c, practice: readActivePractice(c.tags), days: daysOnPractice(c.tags) }))
       .filter((x) => x.practice && x.days != null);
     if (inProgress.length === 0) return null;
     return (
       <div
-        className="mt-8 p-4 rounded-2xl"
-        style={{ background: N.sageSoft, border: `1px solid ${N.sage}` }}
+        className="mt-4 p-4 rounded-xl"
+        style={{ background: N.card, border: `1px solid ${N.rule}` }}
       >
-        <p
-          className="text-[10px] uppercase tracking-[0.3em]"
-          style={{ color: N.sageDeep }}
-        >
-          Practicing now
-        </p>
-        <p
-          className="leading-tight mt-1 mb-3"
-          style={{
-            fontFamily: SERIF_FONT,
-            color: N.sageDeep,
-            fontSize: '1.5rem',
-            fontWeight: 600,
-          }}
-        >
-          {inProgress.length} clients on the curriculum
-        </p>
-        <ul className="space-y-1">
-          {inProgress.slice(0, 4).map(({ client, practice, days }) => (
+        <div className="flex items-baseline justify-between mb-3">
+          <p
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: N.sageDeep }}
+          >
+            Practicing now
+          </p>
+          <span
+            className="text-xs font-semibold tabular-nums"
+            style={{ color: N.mute }}
+          >
+            {inProgress.length} active
+          </span>
+        </div>
+        <ul className="space-y-2">
+          {inProgress.slice(0, 5).map(({ client, practice, days }) => (
             <li
               key={client.id}
-              className="flex items-baseline justify-between text-xs italic"
-              style={{ color: N.sageDeep, fontFamily: SERIF_FONT }}
+              className="flex items-center justify-between text-sm"
+              style={{ color: N.ink }}
             >
-              <span>{client.full_name}</span>
-              <span style={{ color: N.mute }}>
-                {practice?.label} · day {days}/{PRACTICE_WINDOW_DAYS}
+              <span className="font-medium truncate">{client.full_name}</span>
+              <span className="text-xs tabular-nums" style={{ color: N.mute }}>
+                {practice?.label} · {days}/{PRACTICE_WINDOW_DAYS}d
               </span>
             </li>
           ))}
@@ -434,44 +438,47 @@ function FeaturedClient({ clients }: { clients: Client[] }) {
 
   return (
     <div
-      className="mt-8 p-4 rounded-2xl"
-      style={{ background: N.coralSoft, border: `1px solid ${N.coral}` }}
+      className="mt-4 p-4 rounded-xl"
+      style={{
+        background: N.honeySoft,
+        border: `1px solid ${N.honey}55`,
+      }}
     >
+      <div className="flex items-baseline justify-between mb-2">
+        <p
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: N.honey }}
+        >
+          Ready for next practice
+        </p>
+        <span
+          className="text-xs font-bold tabular-nums"
+          style={{ color: N.honey }}
+        >
+          {ready.length}
+        </span>
+      </div>
       <p
-        className="text-[10px] uppercase tracking-[0.3em]"
-        style={{ color: N.coralDeep }}
+        className="text-sm mb-3 leading-relaxed"
+        style={{ color: N.ink }}
       >
-        Ready for the next practice
+        2-week window done. Confirm 9-of-10 confidence, then layer in the
+        next practice.
       </p>
-      <p
-        className="leading-tight mt-1 mb-2"
-        style={{
-          fontFamily: SERIF_FONT,
-          color: N.coralDeep,
-          fontSize: '1.5rem',
-          fontWeight: 600,
-        }}
-      >
-        {ready.length} client{ready.length === 1 ? '' : 's'} finished their 2-week window
-      </p>
-      <p
-        className="text-xs italic mb-3 leading-relaxed"
-        style={{ color: N.coralDeep, fontFamily: SERIF_FONT }}
-      >
-        Pull up their check-in, confirm they're at 9-or-10/10 confidence on
-        the current practice, then layer in the next one.
-      </p>
-      <ul className="space-y-1.5">
-        {ready.slice(0, 4).map(({ client, practice }) => {
+      <ul className="space-y-2">
+        {ready.slice(0, 5).map(({ client, practice }) => {
           const skill = practice ? SKILL_BY_ID[practice.skillId] : null;
           return (
             <li
               key={client.id}
-              className="flex items-baseline justify-between gap-3 text-sm italic"
-              style={{ color: N.ink, fontFamily: SERIF_FONT }}
+              className="flex items-center justify-between gap-3 text-sm"
+              style={{ color: N.ink }}
             >
-              <span>{client.full_name}</span>
-              <span className="text-xs" style={{ color: skill?.color ?? N.mute }}>
+              <span className="font-medium truncate">{client.full_name}</span>
+              <span
+                className="text-xs font-semibold shrink-0"
+                style={{ color: skill?.color ?? N.mute }}
+              >
                 {practice?.label}
               </span>
             </li>
@@ -485,26 +492,29 @@ function FeaturedClient({ clients }: { clients: Client[] }) {
 function SetupNotice() {
   return (
     <div
-      className="mb-8 p-5 rounded-2xl"
+      className="mb-6 p-4 rounded-xl flex items-start gap-3"
       style={{
-        background: N.coralSoft,
-        border: `1px solid ${N.coral}`,
+        background: N.honeySoft,
+        border: `1px solid ${N.honey}55`,
       }}
     >
-      <p
-        className="text-[10px] uppercase tracking-[0.3em] mb-1"
-        style={{ color: N.coralDeep }}
-      >
-        One-time setup
-      </p>
-      <p
-        className="text-sm italic"
-        style={{ color: N.ink, fontFamily: SERIF_FONT }}
-      >
-        The check-ins table isn't installed yet. Run migration{' '}
-        <code>32_nutrition_check_ins.sql</code> in your Supabase SQL editor,
-        then reload.
-      </p>
+      <div className="shrink-0 mt-0.5" style={{ color: N.honey }}>⚠</div>
+      <div>
+        <p
+          className="text-sm font-semibold mb-1"
+          style={{ color: N.ink }}
+        >
+          One-time setup needed
+        </p>
+        <p
+          className="text-sm leading-relaxed"
+          style={{ color: N.inkSoft }}
+        >
+          The check-ins table isn't installed yet. Run migration{' '}
+          <code>32_nutrition_check_ins.sql</code> in your Supabase SQL editor,
+          then reload.
+        </p>
+      </div>
     </div>
   );
 }
@@ -512,8 +522,8 @@ function SetupNotice() {
 function EmptyNote({ text }: { text: string }) {
   return (
     <p
-      className="text-center py-10 italic"
-      style={{ color: N.mute, fontFamily: SERIF_FONT, fontSize: '1.05rem' }}
+      className="text-center py-10 text-sm"
+      style={{ color: N.mute }}
     >
       {text}
     </p>

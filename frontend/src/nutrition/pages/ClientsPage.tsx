@@ -74,55 +74,61 @@ export function ClientsPage() {
   }, [clients, q, goalFilter]);
 
   return (
-    <div className="px-6 sm:px-12 pt-10 max-w-6xl mx-auto">
-      {/* Issue-title style header */}
-      <section className="mb-8 text-center">
-        <p className="text-[10px] uppercase tracking-[0.5em] mb-2" style={{ color: N.coral }}>
-          The Roster
-        </p>
-        <h2
-          className="leading-tight"
-          style={{
-            fontFamily: SERIF_FONT,
-            color: N.ink,
-            fontSize: 'clamp(2.25rem, 5vw, 3.5rem)',
-            fontWeight: 600,
-          }}
+    <div className="px-4 sm:px-8 py-8 max-w-6xl mx-auto">
+      {/* App-style header: left-aligned title + action */}
+      <section className="mb-6 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1
+            className="leading-tight"
+            style={{
+              fontFamily: SERIF_FONT,
+              color: N.ink,
+              fontSize: 'clamp(1.875rem, 3.5vw, 2.5rem)',
+              fontWeight: 600,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Clients
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: N.mute }}>
+            {clients ? `${clients.length} active in your practice` : 'Loading…'}
+          </p>
+        </div>
+        <button
+          onClick={() => setAdding(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm hover:opacity-95 transition-opacity"
+          style={{ background: N.coral, color: '#FFF' }}
         >
-          People We're Tending To
-        </h2>
-        <p
-          className="mt-2 text-sm italic"
-          style={{ color: N.mute, fontFamily: SERIF_FONT }}
-        >
-          {clients ? `${clients.length} clients in your practice` : 'loading…'}
-        </p>
+          <Plus size={15} /> Add client
+        </button>
       </section>
 
-      {/* Quiet filter strip */}
-      <div className="mb-8 flex items-center gap-3 flex-wrap justify-center">
+      {/* Filter strip — modern app style, not centered editorial */}
+      <div
+        className="mb-6 p-2 rounded-xl flex items-center gap-2 flex-wrap"
+        style={{
+          background: N.card,
+          border: `1px solid ${N.rule}`,
+        }}
+      >
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="search clients…"
-          className="px-3 py-1.5 text-sm focus:outline-none rounded-md italic"
+          placeholder="Search clients…"
+          className="flex-1 min-w-[160px] px-3 py-1.5 text-sm focus:outline-none rounded-lg"
           style={{
-            background: N.card,
+            background: N.inset,
             color: N.ink,
             border: `1px solid ${N.rule}`,
-            fontFamily: SERIF_FONT,
-            width: 220,
           }}
         />
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 flex-wrap">
           <button
             onClick={() => setGoalFilter('')}
-            className="px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] rounded-full italic"
+            className="px-2.5 py-1 text-xs font-medium rounded-full transition-colors"
             style={{
-              background: goalFilter === '' ? N.sageSoft : 'transparent',
-              color: goalFilter === '' ? N.sageDeep : N.mute,
-              border: `1px solid ${goalFilter === '' ? N.sage : N.rule}`,
-              fontFamily: SERIF_FONT,
+              background: goalFilter === '' ? N.coral : 'transparent',
+              color: goalFilter === '' ? '#FFF' : N.mute,
             }}
           >
             All
@@ -133,12 +139,10 @@ export function ClientsPage() {
               <button
                 key={g.id}
                 onClick={() => setGoalFilter(g.id)}
-                className="px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] rounded-full italic"
+                className="px-2.5 py-1 text-xs font-medium rounded-full transition-colors"
                 style={{
-                  background: active ? `${g.color}22` : 'transparent',
-                  color: active ? g.color : N.mute,
-                  border: `1px solid ${active ? g.color : N.rule}`,
-                  fontFamily: SERIF_FONT,
+                  background: active ? g.color : 'transparent',
+                  color: active ? '#FFF' : N.mute,
                 }}
               >
                 {g.label}
@@ -146,18 +150,6 @@ export function ClientsPage() {
             );
           })}
         </div>
-        <button
-          onClick={() => setAdding(true)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] rounded-md"
-          style={{
-            background: N.sage,
-            color: '#FFF',
-            fontFamily: SERIF_FONT,
-            fontStyle: 'italic',
-          }}
-        >
-          <Plus size={13} /> Add a client
-        </button>
       </div>
 
       {/* Profile-card grid */}

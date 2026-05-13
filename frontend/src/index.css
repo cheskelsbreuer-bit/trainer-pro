@@ -98,61 +98,62 @@
   --boxing-warn: #F2B807;
   --boxing-danger: #E10F1F;
 }
-/* Nutrition coach theme — warm, wellness-editorial. Peach-cream paper,
- * terracotta as the warm primary (replaces sage as the lead voice),
- * sage as a calm supporting tone. Fraunces serif for display headers
- * — it's the warm modern revival that wellness brands actually use.
- * Soft rounded edges, photo-card-friendly shadows. */
+/* Nutrition coach theme — modern coaching-app aesthetic, modeled on
+ * Precision Nutrition's actual visual language: bright near-white,
+ * deep warm teal primary, burnt-orange accent, sans-serif throughout.
+ *
+ * Drops the "magazine editorial" direction (cream/serif/italic) for
+ * something that feels like a real piece of coaching software a busy
+ * coach would actually use every day. */
 .nutrition-theme-light {
-  --nut-paper: #FFF7EC;          /* peachy cream sheet */
-  --nut-card: #FFFEFB;            /* warmest off-white */
-  --nut-inset: #F8EDD9;            /* warmer inset for sunken surfaces */
-  --nut-rule: #ECDFC6;             /* warm divider */
-  --nut-rule-soft: #F4E9CF;
-  --nut-ink: #2A1E10;              /* warm dark-walnut text */
-  --nut-ink-soft: #5C4830;
-  --nut-mute: #997E5C;             /* warm taupe-tan */
-  --nut-mute-faint: #CFBA98;
-  /* TERRACOTTA — the warm primary, replaces sage as the brand voice. */
-  --nut-coral: #C66647;
-  --nut-coral-deep: #913F26;
-  --nut-coral-soft: #FBE3D2;
-  /* Sage — calm secondary tone, mostly for confirmation / progress. */
+  --nut-paper: #FAFAF7;           /* bright near-white with a whisper of warmth */
+  --nut-card: #FFFFFF;             /* pure white card surface */
+  --nut-inset: #F4F3EE;            /* slightly sunken (search bars, filter pills) */
+  --nut-rule: #E5E3DC;             /* subtle divider */
+  --nut-rule-soft: #EFEDE6;
+  --nut-ink: #1A1816;              /* warm near-black for primary type */
+  --nut-ink-soft: #3D3A35;
+  --nut-mute: #6A675F;             /* warm secondary type */
+  --nut-mute-faint: #9C9890;
+  /* TEAL — primary brand voice. PN's actual color. */
+  --nut-coral: #2D7A7A;             /* renamed-for-now (terracotta → teal) */
+  --nut-coral-deep: #1F5959;
+  --nut-coral-soft: #E1F0F0;
+  /* SAGE — calm supporting tone for confirmation / progress. */
   --nut-sage: #6F8E5A;
   --nut-sage-deep: #3F5934;
-  --nut-sage-soft: #DFE8CB;
-  /* Honey — sun-warmth highlight, used for habits and "ready" markers. */
-  --nut-honey: #D49423;
-  --nut-honey-soft: #FAEDC3;
-  /* Status */
+  --nut-sage-soft: #E5EDD9;
+  /* BURNT ORANGE — warm accent for "ready" / "needs attention" pops. */
+  --nut-honey: #D97142;
+  --nut-honey-soft: #FBE6DA;
   --nut-ok: #6F8E5A;
-  --nut-warn: #C97C1B;
-  --nut-danger: #B85A47;
-  /* Photo-card shadow — gives the cards a warmer, lifted feel. */
-  --nut-shadow: 0 1px 2px rgba(75, 50, 25, 0.04), 0 4px 14px rgba(75, 50, 25, 0.06);
+  --nut-warn: #D97142;
+  --nut-danger: #C0392B;
+  /* Soft card shadow — gives the white cards a lifted modern feel. */
+  --nut-shadow: 0 1px 2px rgba(20, 20, 18, 0.04), 0 4px 12px rgba(20, 20, 18, 0.05);
 }
 .nutrition-theme-dark {
-  --nut-paper: #1A130B;
-  --nut-card: #221A10;
-  --nut-inset: #140E07;
-  --nut-rule: #3A2D1B;
-  --nut-rule-soft: #2A2114;
-  --nut-ink: #F3E6CD;
-  --nut-ink-soft: #C8B595;
-  --nut-mute: #9A8260;
-  --nut-mute-faint: #5C4830;
-  --nut-coral: #E0866A;
-  --nut-coral-deep: #B25C3D;
-  --nut-coral-soft: #3A1F12;
-  --nut-sage: #92AE7A;
+  --nut-paper: #16161A;
+  --nut-card: #1E1E22;
+  --nut-inset: #131316;
+  --nut-rule: #2E2E33;
+  --nut-rule-soft: #232328;
+  --nut-ink: #F0EFEC;
+  --nut-ink-soft: #C9C7C2;
+  --nut-mute: #8C8A85;
+  --nut-mute-faint: #57554F;
+  --nut-coral: #5BA3A3;             /* lighter teal for dark */
+  --nut-coral-deep: #2D7A7A;
+  --nut-coral-soft: #1F3232;
+  --nut-sage: #8FAE76;
   --nut-sage-deep: #6F8E5A;
-  --nut-sage-soft: #2C3A24;
-  --nut-honey: #E8B547;
-  --nut-honey-soft: #3F311A;
-  --nut-ok: #92AE7A;
-  --nut-warn: #E8B547;
-  --nut-danger: #E0866A;
-  --nut-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.4);
+  --nut-sage-soft: #1F2A18;
+  --nut-honey: #EC8E5E;
+  --nut-honey-soft: #321C12;
+  --nut-ok: #8FAE76;
+  --nut-warn: #EC8E5E;
+  --nut-danger: #E27468;
+  --nut-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .boxing-theme-light {

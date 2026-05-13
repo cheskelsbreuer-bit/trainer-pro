@@ -1,11 +1,12 @@
-// Nutrition coach app — magazine masthead. Centered serif logo, thin
-// horizontal rules, small-caps section links underneath. Reads like
-// the table of contents of a wellness magazine rather than an app's
-// nav bar.
+// Top bar for the nutrition coach app — modern coaching-software feel,
+// not a magazine masthead. Modeled on Precision Nutrition's own header
+// and on the leading coach platforms (Healthie, Practice Better):
+// logo letter-mark on the left, section tabs in the center, account
+// menu on the right.
 
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Sun, Moon } from 'lucide-react';
-import { N, SERIF_FONT, useNutritionTheme } from '../theme';
+import { Sun, Moon, LogOut } from 'lucide-react';
+import { N, useNutritionTheme } from '../theme';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 
@@ -15,9 +16,9 @@ const SECTIONS: { to: string; label: string }[] = [
   { to: '/check-ins', label: 'Check-ins' },
   { to: '/plans', label: 'Practices' },
   { to: '/habits', label: 'Habits' },
-  { to: '/ask', label: 'Ask the Coach' },
-  { to: '/plate', label: 'Plate' },
-  { to: '/pantry', label: 'Pantry' },
+  { to: '/ask', label: 'Ask coach' },
+  { to: '/plate', label: 'Billing' },
+  { to: '/pantry', label: 'Settings' },
 ];
 
 export function Masthead({ trainer }: { trainer: Trainer | undefined }) {
@@ -30,100 +31,84 @@ export function Masthead({ trainer }: { trainer: Trainer | undefined }) {
   }
 
   const practiceName = trainer?.business_name || trainer?.full_name || 'Your Practice';
+  // First letter of the practice name, used as the logo mark.
+  const letterMark = (practiceName[0] || 'N').toUpperCase();
 
   return (
     <header
-      className="border-b"
-      style={{ background: N.paper, borderColor: N.rule }}
+      className="sticky top-0 z-30 border-b"
+      style={{
+        background: N.card,
+        borderColor: N.rule,
+      }}
     >
-      {/* Hairline ribbon at top edge */}
-      <div
-        className="h-px w-full"
-        style={{ background: N.sage }}
-        aria-hidden
-      />
-
-      <div className="px-6 sm:px-12 pt-6 pb-3 flex items-center gap-4">
-        {/* Tiny issue/date eyebrow on the left for masthead authenticity */}
-        <span
-          className="hidden md:block text-[10px] uppercase tracking-[0.3em] flex-1"
-          style={{ color: N.mute, fontFamily: SERIF_FONT, fontStyle: 'italic' }}
-        >
-          Vol. I · This Week's Issue
-        </span>
-
-        {/* Logo block — serif, centered */}
-        <div className="flex-1 text-center">
-          <p
-            className="text-[10px] uppercase tracking-[0.5em] mb-1"
-            style={{ color: N.coral }}
-          >
-            ✦ Nutrition Practice ✦
-          </p>
-          <h1
-            className="leading-none truncate mx-auto max-w-xs sm:max-w-md"
+      <div className="px-4 sm:px-8 h-14 flex items-center gap-4">
+        {/* Left — logo + practice name */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base"
             style={{
-              fontFamily: SERIF_FONT,
-              color: N.ink,
-              fontSize: 'clamp(1.5rem, 3.5vw, 2.5rem)',
-              fontWeight: 500,
-              letterSpacing: '-0.005em',
+              background: N.coral,
+              color: '#FFF',
             }}
+            aria-hidden
+          >
+            {letterMark}
+          </div>
+          <p
+            className="text-sm font-semibold truncate max-w-[160px] hidden sm:block"
+            style={{ color: N.ink }}
             title={practiceName}
           >
             {practiceName}
-          </h1>
+          </p>
         </div>
 
-        {/* Right cluster — theme + sign out, tiny + italic */}
-        <div
-          className="hidden md:flex items-center gap-3 flex-1 justify-end text-[10px] uppercase tracking-[0.2em]"
-          style={{ color: N.mute, fontFamily: SERIF_FONT, fontStyle: 'italic' }}
-        >
+        {/* Center — section tabs */}
+        <nav className="flex-1 min-w-0">
+          <div className="flex items-center gap-0.5 overflow-x-auto">
+            {SECTIONS.map((s) => (
+              <NavLink
+                key={s.to}
+                to={s.to}
+                end={s.to === '/'}
+                className={({ isActive }) =>
+                  `shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive ? '' : 'hover:bg-[var(--nut-inset)]'
+                  }`
+                }
+                style={({ isActive }) => ({
+                  color: isActive ? N.coral : N.mute,
+                  background: isActive ? N.coralSoft : 'transparent',
+                })}
+              >
+                {s.label}
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+
+        {/* Right — utility actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={toggleMode}
-            className="inline-flex items-center gap-1 hover:opacity-80"
-            title={mode === 'light' ? 'Switch to evening mode' : 'Switch to paper mode'}
+            aria-label="Toggle theme"
+            className="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--nut-inset)] transition-colors"
+            style={{ color: N.mute }}
+            title={mode === 'light' ? 'Switch to dark' : 'Switch to light'}
           >
-            {mode === 'light' ? <Moon size={11} /> : <Sun size={11} />}
-            {mode === 'light' ? 'Evening' : 'Paper'}
+            {mode === 'light' ? <Moon size={15} /> : <Sun size={15} />}
           </button>
-          <span style={{ color: N.muteFaint }}>·</span>
-          <button onClick={signOut} className="hover:opacity-80">
-            Sign out
+          <button
+            onClick={signOut}
+            aria-label="Sign out"
+            className="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--nut-inset)] transition-colors"
+            style={{ color: N.mute }}
+            title="Sign out"
+          >
+            <LogOut size={15} />
           </button>
         </div>
-      </div>
-
-      {/* Hairline + section links — table-of-contents style */}
-      <div
-        className="border-t border-b mx-6 sm:mx-12"
-        style={{ borderColor: N.ruleSoft }}
-      >
-        <nav className="flex items-center justify-center gap-1 sm:gap-2 py-2 overflow-x-auto">
-          {SECTIONS.map((s) => (
-            <NavLink
-              key={s.to}
-              to={s.to}
-              end={s.to === '/'}
-              className={({ isActive }) =>
-                `shrink-0 px-2 sm:px-3 py-1 text-[11px] uppercase transition-colors ${
-                  isActive ? 'font-semibold' : 'hover:opacity-80'
-                }`
-              }
-              style={({ isActive }) => ({
-                fontFamily: SERIF_FONT,
-                letterSpacing: '0.25em',
-                color: isActive ? N.sageDeep : N.mute,
-                fontStyle: isActive ? 'normal' : 'italic',
-                borderBottom: isActive ? `1px solid ${N.sage}` : `1px solid transparent`,
-                paddingBottom: '0.5rem',
-              })}
-            >
-              {s.label}
-            </NavLink>
-          ))}
-        </nav>
       </div>
     </header>
   );

@@ -106,40 +106,39 @@ export function AskCoachPage() {
   }
 
   return (
-    <div className="px-6 sm:px-12 pt-10 max-w-3xl mx-auto pb-12">
-      {/* Masthead */}
-      <section className="text-center mb-8">
-        <p
-          className="text-[10px] uppercase tracking-[0.5em] mb-2 inline-flex items-center gap-2"
-          style={{ color: N.coral }}
-        >
-          <Sparkles size={11} /> Coach to Coach
-        </p>
-        <h2
+    <div className="px-4 sm:px-8 py-8 max-w-3xl mx-auto pb-12">
+      {/* App-style header, left-aligned */}
+      <section className="mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles size={16} style={{ color: N.coral }} />
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: N.coral }}>
+            PN-trained assistant
+          </p>
+        </div>
+        <h1
           className="leading-tight"
           style={{
             fontFamily: SERIF_FONT,
             color: N.ink,
-            fontSize: 'clamp(2.25rem, 5vw, 3.5rem)',
+            fontSize: 'clamp(1.875rem, 3.5vw, 2.5rem)',
             fontWeight: 600,
+            letterSpacing: '-0.02em',
           }}
         >
           Ask the Coach
-        </h2>
+        </h1>
         <p
-          className="mt-3 text-sm italic max-w-xl mx-auto leading-relaxed"
-          style={{ color: N.mute, fontFamily: SERIF_FONT, fontSize: '1rem' }}
+          className="mt-1.5 text-sm leading-relaxed"
+          style={{ color: N.mute }}
         >
-          A PN-trained assistant for when you're stuck on a client. Ask
-          about terminology, what practice to pick next, how to handle a
-          stalled scale, what to do when someone's all-or-nothing. It
-          speaks PN.
+          Stuck on a client? Ask about a practice, a stalled scale, or
+          all-or-nothing thinking. Short answers, PN-shaped.
         </p>
       </section>
 
       {/* Conversation */}
       <div
-        className="rounded-2xl p-5 sm:p-6 min-h-[260px]"
+        className="rounded-xl p-5 sm:p-6 min-h-[260px]"
         style={{
           background: N.card,
           border: `1px solid ${N.rule}`,
@@ -148,22 +147,21 @@ export function AskCoachPage() {
         {messages.length === 0 && !sending ? (
           <div>
             <p
-              className="text-center text-sm italic mb-6"
-              style={{ color: N.mute, fontFamily: SERIF_FONT, fontSize: '1.05rem' }}
+              className="text-sm font-medium mb-4"
+              style={{ color: N.mute }}
             >
-              Try one of these — or ask anything.
+              Try one of these, or ask anything:
             </p>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {SUGGESTIONS.map((s) => (
                 <li key={s}>
                   <button
                     onClick={() => send(s)}
-                    className="w-full text-left px-3 py-2.5 rounded-lg text-sm italic hover:opacity-90 transition-opacity leading-snug"
+                    className="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-[var(--nut-inset)] transition-colors leading-snug"
                     style={{
-                      background: N.sageSoft,
-                      color: N.sageDeep,
-                      border: `1px solid ${N.sage}55`,
-                      fontFamily: SERIF_FONT,
+                      background: 'transparent',
+                      color: N.ink,
+                      border: `1px solid ${N.rule}`,
                     }}
                   >
                     {s}
@@ -173,7 +171,7 @@ export function AskCoachPage() {
             </ul>
           </div>
         ) : (
-          <ul className="space-y-5">
+          <ul className="space-y-4">
             {messages.map((m, i) => (
               <Message key={i} msg={m} />
             ))}
@@ -209,7 +207,7 @@ export function AskCoachPage() {
 
       {/* Composer */}
       <div
-        className="mt-4 rounded-2xl p-3 flex items-end gap-2"
+        className="mt-3 rounded-xl p-2 flex items-end gap-2"
         style={{
           background: N.card,
           border: `1px solid ${N.rule}`,
@@ -226,12 +224,11 @@ export function AskCoachPage() {
           }}
           placeholder="What's on your mind, coach?"
           rows={1}
-          className="flex-1 px-3 py-2 text-sm focus:outline-none rounded-lg italic resize-none"
+          className="flex-1 px-3 py-2 text-sm focus:outline-none resize-none"
           style={{
             background: 'transparent',
             color: N.ink,
-            fontFamily: SERIF_FONT,
-            fontSize: '1rem',
+            fontSize: '0.9375rem',
             minHeight: 38,
             maxHeight: 160,
           }}
@@ -240,12 +237,8 @@ export function AskCoachPage() {
           <button
             onClick={reset}
             title="Start over"
-            className="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:opacity-80"
-            style={{
-              background: N.inset,
-              color: N.mute,
-              border: `1px solid ${N.rule}`,
-            }}
+            className="w-9 h-9 inline-flex items-center justify-center rounded-lg hover:bg-[var(--nut-inset)] transition-colors"
+            style={{ color: N.mute }}
           >
             <RotateCw size={14} />
           </button>
@@ -253,23 +246,18 @@ export function AskCoachPage() {
         <button
           onClick={() => send(input)}
           disabled={sending || !input.trim()}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[11px] uppercase tracking-[0.25em] italic disabled:opacity-40"
-          style={{
-            background: N.sage,
-            color: '#FFF',
-            fontFamily: SERIF_FONT,
-          }}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-opacity hover:opacity-95"
+          style={{ background: N.coral, color: '#FFF' }}
         >
-          <Send size={13} /> {sending ? 'Asking…' : 'Ask'}
+          <Send size={14} /> {sending ? 'Asking…' : 'Ask'}
         </button>
       </div>
 
       <p
-        className="text-[10px] uppercase tracking-[0.3em] mt-6 text-center italic"
-        style={{ color: N.muteFaint, fontFamily: SERIF_FONT }}
+        className="text-xs mt-4 text-center"
+        style={{ color: N.muteFaint }}
       >
-        Powered by Claude, trained on the PN approach. Not a substitute for
-        clinical advice.
+        Powered by Claude, trained on the PN approach. Not clinical advice.
       </p>
     </div>
   );
@@ -280,21 +268,12 @@ function Message({ msg }: { msg: ChatMessage }) {
     return (
       <li className="flex">
         <div
-          className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-3"
-          style={{
-            background: N.sage,
-            color: '#FFF',
-          }}
+          className="ml-auto max-w-[85%] rounded-2xl rounded-tr-md px-4 py-2.5"
+          style={{ background: N.coral, color: '#FFF' }}
         >
           <p
-            className="text-[10px] uppercase tracking-[0.3em] italic mb-1 opacity-80"
-            style={{ fontFamily: SERIF_FONT }}
-          >
-            You
-          </p>
-          <p
             className="leading-relaxed whitespace-pre-wrap"
-            style={{ fontFamily: BODY_FONT, fontSize: '0.95rem' }}
+            style={{ fontFamily: BODY_FONT, fontSize: '0.9375rem' }}
           >
             {msg.content}
           </p>
@@ -305,24 +284,23 @@ function Message({ msg }: { msg: ChatMessage }) {
   return (
     <li className="flex">
       <div
-        className="max-w-[88%] rounded-2xl rounded-tl-sm px-4 py-3"
+        className="max-w-[90%] rounded-2xl rounded-tl-md px-4 py-3"
         style={{
           background: N.inset,
           color: N.ink,
-          border: `1px solid ${N.ruleSoft}`,
         }}
       >
         <p
-          className="text-[10px] uppercase tracking-[0.3em] italic mb-1 inline-flex items-center gap-1.5"
-          style={{ color: N.coral, fontFamily: SERIF_FONT }}
+          className="text-xs font-semibold uppercase tracking-wide mb-1.5 inline-flex items-center gap-1.5"
+          style={{ color: N.coral }}
         >
-          <Sparkles size={10} /> PN Coach
+          <Sparkles size={11} /> PN Coach
         </p>
         <p
           className="leading-relaxed whitespace-pre-wrap"
           style={{
-            fontFamily: SERIF_FONT,
-            fontSize: '1.05rem',
+            fontFamily: BODY_FONT,
+            fontSize: '0.9375rem',
             color: N.ink,
           }}
         >
@@ -337,15 +315,13 @@ function ThinkingBubble() {
   return (
     <li className="flex">
       <div
-        className="max-w-[60%] rounded-2xl rounded-tl-sm px-4 py-3 italic"
+        className="max-w-[60%] rounded-2xl rounded-tl-md px-4 py-2.5 text-sm"
         style={{
           background: N.inset,
           color: N.mute,
-          border: `1px solid ${N.ruleSoft}`,
-          fontFamily: SERIF_FONT,
         }}
       >
-        Thinking through it…
+        Thinking…
       </div>
     </li>
   );

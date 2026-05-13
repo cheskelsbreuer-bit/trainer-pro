@@ -31,14 +31,16 @@ export const N = {
   danger: 'var(--nut-danger)',
 } as const;
 
-// Display font — Fraunces. A warm, modern, optically-sized serif used
-// by a lot of contemporary wellness brands (Cup of Jo, MyFitnessPal,
-// Headspace-adjacent). Has friendly rounded terminals + a beautiful
-// italic that holds up at all sizes.
+// Display font — Outfit. Warm geometric sans-serif used by current-gen
+// coaching apps (PN, Headway, Noom-adjacent). Friendly but professional;
+// reads as "I'm a real piece of software" not "I'm a magazine."
+// The variable name is kept as SERIF_FONT because every page imports it;
+// changing the name would touch dozens of files. The semantic is "the
+// display font" now.
 export const SERIF_FONT =
-  "'Fraunces', 'Cormorant Garamond', Georgia, 'Times New Roman', serif";
-// Body font — Inter remains the workhorse. Outfit (warm geometric sans)
-// is loaded too if a page ever wants a friendlier sans alternative.
+  "'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+// Body font — Inter (the de-facto standard for modern web apps,
+// including PN's own site).
 export const BODY_FONT =
   "'Inter', 'Outfit', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
