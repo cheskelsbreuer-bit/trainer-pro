@@ -10,8 +10,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
 import type { Client } from '../../lib/database.types';
+import { nutritionRpc } from '../lib/nutritionRpc';
 import {
   N,
   SERIF_FONT,
@@ -56,15 +56,8 @@ export function ClientsPage() {
 
   const { data: clients, error: clientsError, isFetching } = useQuery({
     queryKey: ['nutrition-clients', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('status', 'active')
-        .order('full_name', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Client[];
-    },
+    queryFn: () => nutritionRpc.clientsList(),
+    enabled: !!user,
   });
 
   const filtered = useMemo(() => {
@@ -503,32 +496,18 @@ function AddClientModal({
       addNum(STARTING_WEIGHT_TAG, startWt);
       addNum(WEIGHT_LB_TAG, curWt);
       addNum(GOAL_WEIGHT_TAG, goalWt);
-      // Use .select() so we get the inserted row back (or a clear error).
-      const { data, error } = await supabase
-        .from('clients')
-        .insert({
-          trainer_id: user.id,
-          full_name: name.trim(),
-          email: email.trim() || null,
-          goals: goals.trim() || null,
-          status: 'active',
-          tags,
-        })
-        .select()
-        .single();
-      if (error) {
-        // Bubble up the postgres error message so the user can see it.
-        // Common failure modes: FK violation (no trainer row), RLS
-        // mismatch (auth.uid() differs), unique constraint, etc.
-        // eslint-disable-next-line no-console
-        console.error('[nutrition] clients insert failed:', error);
-        throw new Error(error.message + (error.hint ? ` — ${error.hint}` : ''));
-      }
-      return data;
+      // Use the Livigent-bypass RPC so the create doesn't get blocked
+      // by the user's network filter on the way out (same reason the
+      // list query was failing).
+      return await nutritionRpc.clientCreate({
+        full_name: name.trim(),
+        email: email.trim() || null,
+        goals: goals.trim() || null,
+        status: 'active',
+        tags,
+      });
     },
     onSuccess: async () => {
-      // refetch (not just invalidate) so the new client appears before
-      // we close the modal — guarantees the user sees the row land.
       await qc.refetchQueries({ queryKey: ['nutrition-clients'] });
       onClose();
     },

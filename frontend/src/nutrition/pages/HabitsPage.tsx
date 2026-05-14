@@ -5,9 +5,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
-import type { Client } from '../../lib/database.types';
 import { N, SERIF_FONT } from '../theme';
+import { nutritionRpc } from '../lib/nutritionRpc';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HABITS = [
@@ -22,15 +21,8 @@ export function HabitsPage() {
 
   const { data: clients } = useQuery({
     queryKey: ['nutrition-clients', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('status', 'active')
-        .order('full_name', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Client[];
-    },
+    queryFn: () => nutritionRpc.clientsList(),
+    enabled: !!user,
   });
 
   const weekStart = useMemo(() => {

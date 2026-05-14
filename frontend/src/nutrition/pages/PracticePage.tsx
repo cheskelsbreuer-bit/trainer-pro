@@ -14,6 +14,7 @@ import { UserPlus, BookOpen, MessageSquare, Sparkles, ArrowRight, Video, MapPin,
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Client, Session, Trainer } from '../../lib/database.types';
+import { nutritionRpc } from '../lib/nutritionRpc';
 import {
   N,
   SERIF_FONT,
@@ -31,15 +32,8 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
 
   const { data: clients } = useQuery({
     queryKey: ['nutrition-clients', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('status', 'active')
-        .order('full_name', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Client[];
-    },
+    queryFn: () => nutritionRpc.clientsList(),
+    enabled: !!user,
   });
 
   // Pending check-ins — if the table isn't installed yet we surface

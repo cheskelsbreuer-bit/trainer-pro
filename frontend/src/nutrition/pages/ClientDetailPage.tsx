@@ -27,6 +27,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Client, Payment, Session } from '../../lib/database.types';
+import { nutritionRpc } from '../lib/nutritionRpc';
 import { formatMoney } from '../../lib/format';
 import { MessageThread } from '../components/MessageThread';
 import {
@@ -61,13 +62,9 @@ export function ClientDetailPage() {
     queryKey: ['nutrition-client', id, user?.id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (error) throw error;
-      return data as Client;
+      const result = await nutritionRpc.clientDetail(id);
+      if ('error' in result) return null;
+      return result as Client;
     },
     enabled: !!id && !!user,
   });

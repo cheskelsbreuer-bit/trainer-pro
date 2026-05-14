@@ -26,6 +26,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Client, Session } from '../../lib/database.types';
 import { N, SERIF_FONT } from '../theme';
+import { nutritionRpc } from '../lib/nutritionRpc';
 
 type SessionWithClient = Session & { clients: { full_name: string } | null };
 
@@ -58,15 +59,8 @@ export function SessionsPage() {
 
   const { data: clients } = useQuery({
     queryKey: ['nutrition-clients', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('status', 'active')
-        .order('full_name', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Client[];
-    },
+    queryFn: () => nutritionRpc.clientsList(),
+    enabled: !!user,
   });
 
   const today = useMemo(() => {
