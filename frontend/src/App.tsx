@@ -206,16 +206,24 @@ export default function App() {
   if (isLandingHost()) {
     return (
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/find-trainers" element={<FindTrainersPage />} />
-            <Route path="/p/:slug" element={<PublicProfilePage />} />
-            <Route path="/book/:slug" element={<BookingPage />} />
-            <Route path="*" element={<LandingPage />} />
-          </Routes>
-        </BrowserRouter>
+        {/* AuthProvider needed for the admin route below — public pages
+            don't use it but AdminShell does. Safe to wrap the whole tree. */}
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/find-trainers" element={<FindTrainersPage />} />
+              <Route path="/p/:slug" element={<PublicProfilePage />} />
+              <Route path="/book/:slug" element={<BookingPage />} />
+              {/* Admin — must be present on the apex host too, otherwise
+                  trainerpro.coach/chesky falls through to LandingPage. */}
+              <Route path="/chesky" element={<AdminShell />} />
+              <Route path="/admin" element={<Navigate to="/chesky" replace />} />
+              <Route path="*" element={<LandingPage />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </QueryClientProvider>
     );
   }
