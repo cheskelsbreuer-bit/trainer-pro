@@ -116,12 +116,49 @@ export function CheckInsPage() {
         ))}
       </div>
 
+      {/* First-time explainer — only shown if there are NO check-ins at all */}
+      {(checkIns ?? []).length === 0 && !tableMissing && (
+        <div
+          className="rounded-2xl p-6 mb-6"
+          style={{
+            background: N.card,
+            border: `1px solid ${N.rule}`,
+            boxShadow: 'var(--nut-shadow)',
+          }}
+        >
+          <h3
+            className="font-semibold mb-2"
+            style={{
+              fontFamily: SERIF_FONT,
+              color: N.ink,
+              fontSize: '1.125rem',
+            }}
+          >
+            What are check-ins?
+          </h3>
+          <p
+            className="text-sm leading-relaxed mb-3"
+            style={{ color: N.inkSoft }}
+          >
+            Each week, every client sends you a short note about how the week
+            went — weight, sleep, hunger, energy, mood, and what they're
+            struggling with. That's a check-in. You read it, write a short
+            reply, and mark it reviewed. The history below is how you spot
+            trends.
+          </p>
+          <p className="text-sm" style={{ color: N.mute }}>
+            New check-ins land in the Pending tab. After you reply, they
+            move to Reviewed.
+          </p>
+        </div>
+      )}
+
       {list.length === 0 ? (
         <p
-          className="text-center py-12 italic"
-          style={{ color: N.mute, fontFamily: SERIF_FONT, fontSize: '1.05rem' }}
+          className="text-center py-12 text-sm"
+          style={{ color: N.mute }}
         >
-          {tab === 'pending' ? 'The desk is clear.' : 'Nothing replied yet this season.'}
+          {tab === 'pending' ? 'No check-ins waiting.' : 'No reviewed check-ins yet.'}
         </p>
       ) : (
         <ul className="space-y-8">

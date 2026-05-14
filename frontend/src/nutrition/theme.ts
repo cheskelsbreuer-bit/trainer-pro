@@ -75,12 +75,64 @@ export const WEIGHT_LB_TAG = 'weightlb:';
 export const GOAL_WEIGHT_TAG = 'goalweightlb:';
 export const STARTING_WEIGHT_TAG = 'startingweightlb:';
 
+// Expanded goal list. The first 4 are the most common — they stay on
+// the home / clients filter strip. The rest are still pickable in the
+// add-client modal but don't crowd the filters. Real coaches handle a
+// wide range of goals, this matches what Healthie / Practice Better /
+// Nutrium offer in their goal taxonomies.
 export const NUTRITION_GOALS = [
   { id: 'fat-loss', label: 'Fat loss', color: '#D87456' },
   { id: 'maintenance', label: 'Maintenance', color: '#6B8E5A' },
   { id: 'muscle-gain', label: 'Muscle gain', color: '#D9A441' },
   { id: 'health', label: 'General health', color: '#8B7E6A' },
+  { id: 'performance', label: 'Sports performance', color: '#1F8FB5' },
+  { id: 'endurance', label: 'Endurance training', color: '#4A8FCE' },
+  { id: 'postpartum', label: 'Postpartum recovery', color: '#C28BB5' },
+  { id: 'prenatal', label: 'Prenatal nutrition', color: '#C25C7A' },
+  { id: 'gut-health', label: 'Gut health', color: '#7A9B7B' },
+  { id: 'energy', label: 'Energy & fatigue', color: '#E89D4A' },
+  { id: 'sleep', label: 'Sleep support', color: '#7A7BB5' },
+  { id: 'longevity', label: 'Longevity & healthspan', color: '#5B8B7B' },
+  { id: 'blood-sugar', label: 'Blood sugar / pre-diabetes', color: '#B85A47' },
+  { id: 'cardio-health', label: 'Heart health', color: '#C0392B' },
+  { id: 'plant-based', label: 'Plant-based transition', color: '#558B6E' },
+  { id: 'hormones', label: 'Hormone balance', color: '#8E6BB5' },
 ];
+// The 4 goals that show up in the home + clients filter pills (so the
+// strip doesn't get crowded). All 16 are still pickable on Add-client.
+export const FEATURED_GOAL_IDS = ['fat-loss', 'maintenance', 'muscle-gain', 'health'];
+
+/** Suggest a starting PN practice based on the client's goal. Used by
+ *  the Add-client modal's "Not sure?" auto-pick button. */
+export function suggestStartingPractice(goalId: string): string {
+  // Eat slowly is PN's universally-recommended starter — works for
+  // almost every goal. We diverge for muscle-gain (protein-first
+  // matters more there) and a few others where evidence + PN canon
+  // points elsewhere.
+  switch (goalId) {
+    case 'muscle-gain':
+      return 'protein-each-meal';
+    case 'energy':
+    case 'sleep':
+      return 'sleep-7h';
+    case 'gut-health':
+      return 'eat-slowly';
+    case 'postpartum':
+    case 'prenatal':
+      return 'protein-each-meal';
+    case 'performance':
+    case 'endurance':
+      return 'hand-portion-carbs';
+    case 'blood-sugar':
+      return 'veggies-each-meal';
+    case 'longevity':
+    case 'cardio-health':
+    case 'plant-based':
+      return 'veggies-each-meal';
+    default:
+      return 'eat-slowly';
+  }
+}
 
 // ── PN Practices Library ─────────────────────────────────────────────
 // The Precision Nutrition curriculum, broken into skills and the daily

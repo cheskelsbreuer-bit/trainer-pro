@@ -35,7 +35,7 @@ const NAV: NavItem[] = [
   { to: '/clients', label: 'Clients', icon: Users },
   { to: '/sessions', label: 'Sessions', icon: CalendarClock },
   { to: '/check-ins', label: 'Check-ins', icon: Inbox },
-  { to: '/plans', label: 'Library', icon: BookOpen },
+  { to: '/plans', label: 'Habit library', icon: BookOpen },
   { to: '/ask', label: 'Ask coach', icon: Sparkles },
   { to: '/plate', label: 'Billing', icon: Wallet },
   { to: '/pantry', label: 'Settings', icon: Settings },

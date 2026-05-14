@@ -42,6 +42,7 @@ export function SessionsPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<'today' | 'upcoming' | 'past'>('upcoming');
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<SessionWithClient | null>(null);
 
   const { data: sessions } = useQuery({
     queryKey: ['nutrition-sessions', user?.id],
@@ -200,7 +201,12 @@ export function SessionsPage() {
       ) : (
         <ul className="space-y-2.5">
           {list.map((s) => (
-            <SessionRow key={s.id} session={s} qc={qc} />
+            <SessionRow
+              key={s.id}
+              session={s}
+              qc={qc}
+              onEdit={() => setEditing(s)}
+            />
           ))}
         </ul>
       )}
@@ -212,6 +218,14 @@ export function SessionsPage() {
           qc={qc}
         />
       )}
+      {editing && (
+        <BookSessionModal
+          clients={clients ?? []}
+          existing={editing}
+          onClose={() => setEditing(null)}
+          qc={qc}
+        />
+      )}
     </div>
   );
 }
@@ -219,9 +233,11 @@ export function SessionsPage() {
 function SessionRow({
   session,
   qc,
+  onEdit,
 }: {
   session: SessionWithClient;
   qc: ReturnType<typeof useQueryClient>;
+  onEdit: () => void;
 }) {
   const start = new Date(session.starts_at);
   const isPast = start.getTime() < Date.now();
@@ -248,11 +264,13 @@ function SessionRow({
 
   return (
     <li
-      className="rounded-xl p-4 flex items-start gap-4"
+      onClick={onEdit}
+      className="rounded-xl p-4 flex items-start gap-4 cursor-pointer transition-shadow hover:shadow-md"
       style={{
         background: N.card,
         border: `1px solid ${N.rule}`,
         opacity: session.status === 'cancelled' ? 0.5 : 1,
+        boxShadow: 'var(--nut-shadow)',
       }}
     >
       {/* Date tile */}
@@ -283,6 +301,7 @@ function SessionRow({
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <Link
             to={`/clients/${session.client_id}`}
+            onClick={(e) => e.stopPropagation()}
             className="font-semibold hover:underline"
             style={{ color: N.ink, fontSize: '0.9375rem' }}
           >
@@ -348,6 +367,7 @@ function SessionRow({
                   href={session.location}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className="hover:underline inline-flex items-center gap-1"
                   style={{ color: N.coral }}
                 >
@@ -368,10 +388,14 @@ function SessionRow({
         )}
       </div>
 
-      {/* Right action */}
+      {/* Right action — stopPropagation so clicking the button doesn't
+          also fire the row's edit handler. */}
       {!isPast && session.status === 'scheduled' && (
         <button
-          onClick={() => markComplete.mutate()}
+          onClick={(e) => {
+            e.stopPropagation();
+            markComplete.mutate();
+          }}
           disabled={markComplete.isPending}
           className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
           style={{
@@ -386,7 +410,10 @@ function SessionRow({
       )}
       {isPast && session.status === 'scheduled' && (
         <button
-          onClick={() => markComplete.mutate()}
+          onClick={(e) => {
+            e.stopPropagation();
+            markComplete.mutate();
+          }}
           disabled={markComplete.isPending}
           className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg"
           style={{
@@ -403,20 +430,40 @@ function SessionRow({
 
 function BookSessionModal({
   clients,
+  existing,
   onClose,
   qc,
 }: {
   clients: Client[];
+  existing?: SessionWithClient | null;
   onClose: () => void;
   qc: ReturnType<typeof useQueryClient>;
 }) {
   const { user } = useAuth();
-  const [clientId, setClientId] = useState('');
-  const [whenIso, setWhenIso] = useState('');
-  const [durationMin, setDurationMin] = useState('30');
-  const [kind, setKind] = useState<SessionKind>('video');
-  const [location, setLocation] = useState('');
-  const [notes, setNotes] = useState('');
+  const isEdit = !!existing;
+  const initialDuration =
+    existing && existing.ends_at
+      ? Math.round(
+          (new Date(existing.ends_at).getTime() -
+            new Date(existing.starts_at).getTime()) /
+            60000,
+        )
+      : 30;
+  const initialKind: SessionKind =
+    existing?.session_type === 'in_person'
+      ? 'in_person'
+      : existing?.session_type === 'phone'
+        ? 'phone'
+        : 'video';
+
+  const [clientId, setClientId] = useState(existing?.client_id ?? '');
+  const [whenIso, setWhenIso] = useState(
+    existing ? new Date(existing.starts_at).toISOString().slice(0, 16) : '',
+  );
+  const [durationMin, setDurationMin] = useState(String(initialDuration));
+  const [kind, setKind] = useState<SessionKind>(initialKind);
+  const [location, setLocation] = useState(existing?.location ?? '');
+  const [notes, setNotes] = useState(existing?.notes ?? '');
 
   const book = useMutation({
     mutationFn: async () => {
@@ -427,16 +474,41 @@ function BookSessionModal({
       const endsAt = new Date(
         startsAt.getTime() + (parseInt(durationMin, 10) || 30) * 60_000,
       );
-      const { error } = await supabase.from('sessions').insert({
+      const payload = {
         trainer_id: user.id,
         client_id: clientId,
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
-        status: 'scheduled',
         session_type: kind,
         location: location.trim() || null,
         notes: notes.trim() || null,
-      });
+      };
+      if (isEdit) {
+        const { error } = await supabase
+          .from('sessions')
+          .update(payload)
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('sessions')
+          .insert({ ...payload, status: 'scheduled' });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nutrition-sessions'] });
+      onClose();
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      if (!existing) return;
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', existing.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -472,7 +544,7 @@ function BookSessionModal({
               fontWeight: 600,
             }}
           >
-            Book a session
+            {isEdit ? 'Edit session' : 'Book a session'}
           </h3>
           <button onClick={onClose} style={{ color: N.mute }} aria-label="Close">
             <X size={20} />
@@ -577,14 +649,36 @@ function BookSessionModal({
             </p>
           )}
 
-          <button
-            onClick={() => book.mutate()}
-            disabled={book.isPending || !clientId || !whenIso}
-            className="w-full py-2.5 mt-2 rounded-md text-sm font-semibold disabled:opacity-50"
-            style={{ background: N.coral, color: '#FFF' }}
-          >
-            {book.isPending ? 'Booking…' : 'Book session'}
-          </button>
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              onClick={() => book.mutate()}
+              disabled={book.isPending || !clientId || !whenIso}
+              className="flex-1 py-2.5 rounded-md text-sm font-semibold disabled:opacity-50"
+              style={{ background: N.coral, color: '#FFF' }}
+            >
+              {book.isPending
+                ? 'Saving…'
+                : isEdit
+                  ? 'Save changes'
+                  : 'Book session'}
+            </button>
+            {isEdit && (
+              <button
+                onClick={() => {
+                  if (window.confirm('Delete this session?')) remove.mutate();
+                }}
+                disabled={remove.isPending}
+                className="shrink-0 px-3 py-2.5 rounded-md text-sm font-semibold disabled:opacity-50"
+                style={{
+                  background: 'transparent',
+                  color: N.danger,
+                  border: `1px solid ${N.danger}55`,
+                }}
+              >
+                {remove.isPending ? '…' : 'Delete'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

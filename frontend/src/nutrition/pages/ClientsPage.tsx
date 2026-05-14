@@ -16,8 +16,11 @@ import {
   N,
   SERIF_FONT,
   NUTRITION_GOALS,
+  FEATURED_GOAL_IDS,
+  suggestStartingPractice,
   NUTRITION_SKILLS,
   NUTRITION_PRACTICES,
+  PRACTICE_BY_ID,
   SKILL_BY_ID,
   PRACTICE_WINDOW_DAYS,
   readGoal,
@@ -51,7 +54,7 @@ export function ClientsPage() {
   const [goalFilter, setGoalFilter] = useState('');
   const [adding, setAdding] = useState(false);
 
-  const { data: clients } = useQuery({
+  const { data: clients, error: clientsError, isFetching } = useQuery({
     queryKey: ['nutrition-clients', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -92,8 +95,19 @@ export function ClientsPage() {
             Clients
           </h1>
           <p className="mt-1 text-sm" style={{ color: N.mute }}>
-            {clients ? `${clients.length} active in your practice` : 'Loading…'}
+            {clientsError
+              ? 'Couldn\'t load — see error below'
+              : clients
+                ? `${clients.length} active in your practice`
+                : isFetching
+                  ? 'Loading…'
+                  : 'No clients yet'}
           </p>
+          {clientsError && (
+            <p className="mt-1 text-xs" style={{ color: N.danger }}>
+              {(clientsError as Error).message}
+            </p>
+          )}
         </div>
         <button
           onClick={() => setAdding(true)}
@@ -134,7 +148,7 @@ export function ClientsPage() {
           >
             All
           </button>
-          {NUTRITION_GOALS.map((g) => {
+          {NUTRITION_GOALS.filter((g) => FEATURED_GOAL_IDS.includes(g.id)).map((g) => {
             const active = goalFilter === g.id;
             return (
               <button
@@ -549,7 +563,17 @@ function AddClientModal({
             </select>
           </div>
           <div>
-            <Lbl>Starting practice — PN curriculum</Lbl>
+            <div className="flex items-center justify-between mb-1">
+              <Lbl>Starting practice</Lbl>
+              <button
+                type="button"
+                onClick={() => setPractice(suggestStartingPractice(goal))}
+                className="text-[11px] font-semibold hover:underline"
+                style={{ color: N.coral }}
+              >
+                Not sure? Pick for me →
+              </button>
+            </div>
             <select
               value={practice}
               onChange={(e) => setPractice(e.target.value)}
@@ -569,13 +593,21 @@ function AddClientModal({
                 </optgroup>
               ))}
             </select>
-            <p
-              className="text-[10px] italic mt-1"
-              style={{ color: N.muteFaint, fontFamily: SERIF_FONT }}
-            >
-              PN recommends starting with "Eat slowly" for almost every new
-              client — the highest-ROI habit.
-            </p>
+            {practice && PRACTICE_BY_ID[practice] && (
+              <p
+                className="text-xs mt-1.5 leading-relaxed"
+                style={{ color: N.mute }}
+              >
+                <strong style={{ color: N.inkSoft }}>What this means:</strong>{' '}
+                {PRACTICE_BY_ID[practice].blurb}
+              </p>
+            )}
+            {!practice && (
+              <p className="text-xs mt-1.5" style={{ color: N.mute }}>
+                A daily habit they'll work for ~2 weeks. Tap "Pick for me"
+                if you're not sure — we'll match it to their goal.
+              </p>
+            )}
           </div>
           <p
             className="text-[10px] uppercase tracking-[0.25em] italic pt-2"

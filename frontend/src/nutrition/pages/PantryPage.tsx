@@ -18,6 +18,8 @@ import { FeedbackCard } from '../../components/FeedbackCard';
 type Section =
   | 'practice'
   | 'coach'
+  | 'coaching-defaults'
+  | 'units-cadence'
   | 'payments'
   | 'booking'
   | 'calendar'
@@ -28,6 +30,16 @@ type Section =
 const INDEX: { id: Section; title: string; blurb: string }[] = [
   { id: 'practice', title: 'The Practice', blurb: 'Your practice name and identity.' },
   { id: 'coach', title: 'You, the Coach', blurb: 'Name, contact, timezone, currency, notifications.' },
+  {
+    id: 'coaching-defaults',
+    title: 'Coaching defaults',
+    blurb: 'Practice window, default check-in cadence, default session length.',
+  },
+  {
+    id: 'units-cadence',
+    title: 'Units & display',
+    blurb: 'Pounds / kilos, inches / cm, week-starts-on-Sunday or -Monday.',
+  },
   { id: 'payments', title: 'Online Payments', blurb: 'Take coaching fees online via Stripe.' },
   { id: 'booking', title: 'Consult Booking', blurb: 'When clients can book initial consults.' },
   { id: 'calendar', title: 'Calendar Sync', blurb: 'Mirror consults to Google Calendar.' },
@@ -140,6 +152,8 @@ export function PantryPage() {
 
       {section === 'practice' && <PracticeIdentity trainer={trainer} userId={user?.id} qc={qc} />}
       {section === 'coach' && trainer && <CoachProfile trainer={trainer} userId={user?.id} qc={qc} />}
+      {section === 'coaching-defaults' && <CoachingDefaults />}
+      {section === 'units-cadence' && <UnitsCadence />}
       {section === 'payments' && <SolarWrap title="Online payments — Stripe"><StripeStatusCard /></SolarWrap>}
       {section === 'calendar' && trainer && <SolarWrap title="Calendar sync"><GoogleCalendarCard trainer={trainer} /></SolarWrap>}
       {section === 'booking' && trainer && <SolarWrap title="Consult booking"><BookingSettingsCard trainer={trainer} /></SolarWrap>}
@@ -271,6 +285,244 @@ function CoachProfile({
         {save.isPending ? 'Saving…' : 'Save profile'}
       </button>
     </article>
+  );
+}
+
+/** Nutrition-specific defaults that drive how the app behaves for
+ *  this coach. V1 stores these in localStorage; V2 will persist them
+ *  to the trainers row. */
+function CoachingDefaults() {
+  const [practiceWindow, setPracticeWindow] = useLocalStorageNum('nutrition-practice-window', 14);
+  const [checkInCadence, setCheckInCadence] = useLocalStorageStr('nutrition-checkin-cadence', 'weekly');
+  const [sessionLength, setSessionLength] = useLocalStorageNum('nutrition-session-length', 30);
+  const [autoReminder, setAutoReminder] = useLocalStorageBool('nutrition-auto-reminder', true);
+
+  return (
+    <article>
+      <SectionTitle>Coaching defaults</SectionTitle>
+      <p
+        className="text-sm leading-relaxed mb-5"
+        style={{ color: N.inkSoft }}
+      >
+        How long is a practice window? How often does a client check in?
+        These set the defaults for every new client — you can always override
+        per client.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+        <NumField
+          label="Practice window (days)"
+          value={practiceWindow}
+          onChange={setPracticeWindow}
+          help="PN's standard is 14. Most practices stay at 14."
+        />
+        <SelectField
+          label="Default check-in cadence"
+          value={checkInCadence}
+          onChange={setCheckInCadence}
+          options={[
+            { value: 'weekly', label: 'Weekly' },
+            { value: 'biweekly', label: 'Every 2 weeks' },
+            { value: 'monthly', label: 'Monthly' },
+          ]}
+        />
+        <NumField
+          label="Default session length (min)"
+          value={sessionLength}
+          onChange={setSessionLength}
+          help="30 min is standard for weekly check-in calls."
+        />
+        <ToggleField
+          label="Auto-remind clients before sessions"
+          value={autoReminder}
+          onChange={setAutoReminder}
+          help="Email + push notifications. Coming online once the client portal ships."
+        />
+      </div>
+      <p className="text-xs mt-4" style={{ color: N.muteFaint }}>
+        These settings save to your browser instantly. No save button needed.
+      </p>
+    </article>
+  );
+}
+
+function UnitsCadence() {
+  const [units, setUnits] = useLocalStorageStr('nutrition-units', 'imperial');
+  const [weekStart, setWeekStart] = useLocalStorageStr('nutrition-week-start', 'monday');
+  const [tempScale, setTempScale] = useLocalStorageStr('nutrition-temp-scale', 'f');
+  const [dateFormat, setDateFormat] = useLocalStorageStr('nutrition-date-format', 'us');
+
+  return (
+    <article>
+      <SectionTitle>Units & display</SectionTitle>
+      <p className="text-sm leading-relaxed mb-5" style={{ color: N.inkSoft }}>
+        Personal preferences. These affect the units the app shows you —
+        clients still see what makes sense in their region.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+        <SelectField
+          label="Weight & height units"
+          value={units}
+          onChange={setUnits}
+          options={[
+            { value: 'imperial', label: 'Pounds & inches' },
+            { value: 'metric', label: 'Kilograms & cm' },
+          ]}
+        />
+        <SelectField
+          label="Week starts on"
+          value={weekStart}
+          onChange={setWeekStart}
+          options={[
+            { value: 'monday', label: 'Monday' },
+            { value: 'sunday', label: 'Sunday' },
+          ]}
+        />
+        <SelectField
+          label="Temperature"
+          value={tempScale}
+          onChange={setTempScale}
+          options={[
+            { value: 'f', label: 'Fahrenheit' },
+            { value: 'c', label: 'Celsius' },
+          ]}
+        />
+        <SelectField
+          label="Date format"
+          value={dateFormat}
+          onChange={setDateFormat}
+          options={[
+            { value: 'us', label: 'MM/DD/YYYY' },
+            { value: 'eu', label: 'DD/MM/YYYY' },
+            { value: 'iso', label: 'YYYY-MM-DD' },
+          ]}
+        />
+      </div>
+      <p className="text-xs mt-4" style={{ color: N.muteFaint }}>
+        These settings save to your browser instantly. No save button needed.
+      </p>
+    </article>
+  );
+}
+
+// Tiny local-storage helpers — V1 persistence layer for nutrition
+// settings. V2 will move these onto the trainers row.
+function useLocalStorageStr(key: string, initial: string): [string, (v: string) => void] {
+  const [v, setV] = useState<string>(() => {
+    if (typeof window === 'undefined') return initial;
+    return window.localStorage.getItem(key) ?? initial;
+  });
+  return [
+    v,
+    (next: string) => {
+      setV(next);
+      if (typeof window !== 'undefined') window.localStorage.setItem(key, next);
+    },
+  ];
+}
+function useLocalStorageNum(key: string, initial: number): [number, (v: number) => void] {
+  const [s, setS] = useLocalStorageStr(key, String(initial));
+  return [parseInt(s, 10) || initial, (n: number) => setS(String(n))];
+}
+function useLocalStorageBool(key: string, initial: boolean): [boolean, (v: boolean) => void] {
+  const [s, setS] = useLocalStorageStr(key, initial ? '1' : '0');
+  return [s === '1', (b: boolean) => setS(b ? '1' : '0')];
+}
+
+function NumField({
+  label,
+  value,
+  onChange,
+  help,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  help?: string;
+}) {
+  return (
+    <div>
+      <Lbl>{label}</Lbl>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
+        className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+        style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
+      />
+      {help && (
+        <p className="text-xs mt-1" style={{ color: N.muteFaint }}>
+          {help}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  help,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  help?: string;
+}) {
+  return (
+    <div>
+      <Lbl>{label}</Lbl>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+        style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {help && (
+        <p className="text-xs mt-1" style={{ color: N.muteFaint }}>
+          {help}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ToggleField({
+  label,
+  value,
+  onChange,
+  help,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  help?: string;
+}) {
+  return (
+    <div>
+      <Lbl>{label}</Lbl>
+      <label className="inline-flex items-center gap-2 text-sm cursor-pointer" style={{ color: N.ink }}>
+        <input
+          type="checkbox"
+          checked={value}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        {value ? 'On' : 'Off'}
+      </label>
+      {help && (
+        <p className="text-xs mt-1" style={{ color: N.muteFaint }}>
+          {help}
+        </p>
+      )}
+    </div>
   );
 }
 

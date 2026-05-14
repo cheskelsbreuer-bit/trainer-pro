@@ -347,15 +347,17 @@ function CheckInFeatureCard({
   clientName: string;
 }) {
   return (
-    <li
-      className="rounded-xl overflow-hidden transition-shadow hover:shadow-md"
-      style={{
-        background: N.card,
-        border: `1px solid ${N.rule}`,
-        boxShadow: 'var(--nut-shadow)',
-      }}
-    >
-      <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[88px_1fr]">
+    <li>
+      <Link
+        to="/check-ins"
+        className="block rounded-xl overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2"
+        style={{
+          background: N.card,
+          border: `1px solid ${N.rule}`,
+          boxShadow: 'var(--nut-shadow)',
+        }}
+      >
+        <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[88px_1fr]">
         {/* Avatar tile with the client's initial */}
         <div
           className="flex items-center justify-center"
@@ -408,15 +410,15 @@ function CheckInFeatureCard({
             <StatPair label="Hunger" value={checkIn.hunger_1_5 != null ? `${checkIn.hunger_1_5}/5` : null} />
             <StatPair label="Sleep" value={checkIn.sleep_hours_avg != null ? `${checkIn.sleep_hours_avg.toFixed(1)}h` : null} />
           </dl>
-          <Link
-            to="/check-ins"
-            className="inline-flex items-center gap-1 text-xs font-medium hover:underline"
+          <span
+            className="inline-flex items-center gap-1 text-xs font-medium"
             style={{ color: N.coral }}
           >
             Read & reply →
-          </Link>
+          </span>
         </div>
-      </div>
+        </div>
+      </Link>
     </li>
   );
 }
