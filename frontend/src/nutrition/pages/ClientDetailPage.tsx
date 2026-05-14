@@ -18,11 +18,13 @@ import {
   Wallet,
   MessageSquare,
   Sparkles,
+  Ruler,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Client, Payment } from '../../lib/database.types';
 import { formatMoney } from '../../lib/format';
+import { MessageThread } from '../components/MessageThread';
 import {
   N,
   SERIF_FONT,
@@ -349,6 +351,18 @@ export function ClientDetailPage() {
             </div>
           </Card>
 
+          {/* Body measurements — pulled from the latest check-in with data */}
+          <MeasurementsCard checkIns={checkIns ?? []} />
+
+          {/* Coach ↔ client messaging thread */}
+          {user?.id && (
+            <MessageThread
+              clientId={client.id}
+              trainerId={user.id}
+              clientName={client.full_name}
+            />
+          )}
+
           {/* Check-in history */}
           <Card>
             <CardHead
@@ -661,6 +675,95 @@ function MacroStat({
         </span>
       </p>
     </div>
+  );
+}
+
+/** Latest body measurements card — shows waist/hip/chest with delta
+ *  from the first recorded value. Only renders when at least one
+ *  measurement is on file. */
+function MeasurementsCard({ checkIns }: { checkIns: CheckInRow[] }) {
+  // Find the most recent and the first check-in with each measurement.
+  const withWaist = checkIns.filter((c) => c.waist_in != null);
+  const withHip = checkIns.filter((c) => c.hip_in != null);
+  const withChest = checkIns.filter((c) => c.chest_in != null);
+  if (withWaist.length === 0 && withHip.length === 0 && withChest.length === 0) {
+    return null;
+  }
+  // checkIns is sorted newest-first, so [0] is latest and last is earliest.
+  const latest = (arr: CheckInRow[], k: 'waist_in' | 'hip_in' | 'chest_in') =>
+    arr.length > 0 ? Number(arr[0][k]) : null;
+  const first = (arr: CheckInRow[], k: 'waist_in' | 'hip_in' | 'chest_in') =>
+    arr.length > 0 ? Number(arr[arr.length - 1][k]) : null;
+
+  const rows = [
+    {
+      label: 'Waist',
+      latest: latest(withWaist, 'waist_in'),
+      first: first(withWaist, 'waist_in'),
+    },
+    {
+      label: 'Hip',
+      latest: latest(withHip, 'hip_in'),
+      first: first(withHip, 'hip_in'),
+    },
+    {
+      label: 'Chest',
+      latest: latest(withChest, 'chest_in'),
+      first: first(withChest, 'chest_in'),
+    },
+  ].filter((r) => r.latest != null);
+
+  return (
+    <Card>
+      <CardHead title="Body measurements" hint="Most recent" />
+      <div className="p-4 grid grid-cols-3 gap-3">
+        {rows.map((r) => {
+          const delta = r.first != null && r.latest != null ? r.latest - r.first : null;
+          const deltaColor =
+            delta == null
+              ? N.mute
+              : delta < 0
+                ? N.sageDeep
+                : delta > 0
+                  ? N.honey
+                  : N.mute;
+          return (
+            <div
+              key={r.label}
+              className="rounded-lg p-3"
+              style={{ background: N.inset }}
+            >
+              <p
+                className="text-xs font-medium mb-1 flex items-center gap-1"
+                style={{ color: N.mute }}
+              >
+                <Ruler size={11} /> {r.label}
+              </p>
+              <p
+                className="font-semibold leading-none tabular-nums"
+                style={{
+                  fontFamily: SERIF_FONT,
+                  color: N.ink,
+                  fontSize: '1.25rem',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {r.latest}"
+              </p>
+              {delta != null && delta !== 0 && (
+                <p
+                  className="text-xs font-semibold mt-1 tabular-nums"
+                  style={{ color: deltaColor }}
+                >
+                  {delta > 0 ? '+' : ''}
+                  {delta.toFixed(1)}" total
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
 

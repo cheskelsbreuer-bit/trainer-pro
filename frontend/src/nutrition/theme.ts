@@ -475,7 +475,8 @@ export function computeProgressToGoal(
   return Math.max(0, Math.min(1, pct));
 }
 
-// Check-in row — backed by the nutrition_check_ins table.
+// Check-in row — backed by the nutrition_check_ins table. Body
+// measurements added in migration 34.
 export interface CheckInRow {
   id: string;
   trainer_id: string;
@@ -483,6 +484,12 @@ export interface CheckInRow {
   week_starting: string; // YYYY-MM-DD
   weight_lb: number | null;
   body_fat_pct: number | null;
+  // Migration 34
+  waist_in: number | null;
+  hip_in: number | null;
+  chest_in: number | null;
+  photo_url: string | null;
+  // /Migration 34
   energy_1_5: number | null;
   hunger_1_5: number | null;
   sleep_hours_avg: number | null;
@@ -492,6 +499,17 @@ export interface CheckInRow {
   status: 'pending' | 'reviewed';
   submitted_at: string;
   reviewed_at: string | null;
+}
+
+// Coach ↔ client message — backed by nutrition_messages (migration 33).
+export interface MessageRow {
+  id: string;
+  trainer_id: string;
+  client_id: string;
+  sender: 'coach' | 'client';
+  body: string;
+  read_at: string | null;
+  created_at: string;
 }
 
 export function relativeWhen(iso: string): string {

@@ -203,6 +203,9 @@ function CheckInLetter({
       >
         <StatPair label="Weight" value={checkIn.weight_lb != null ? `${checkIn.weight_lb} lb` : null} />
         <StatPair label="Body fat" value={checkIn.body_fat_pct != null ? `${checkIn.body_fat_pct}%` : null} />
+        <StatPair label="Waist" value={checkIn.waist_in != null ? `${checkIn.waist_in}"` : null} />
+        <StatPair label="Hip" value={checkIn.hip_in != null ? `${checkIn.hip_in}"` : null} />
+        <StatPair label="Chest" value={checkIn.chest_in != null ? `${checkIn.chest_in}"` : null} />
         <StatPair label="Compliance" value={checkIn.compliance_pct != null ? `${checkIn.compliance_pct}%` : null} />
         <StatPair label="Energy" value={checkIn.energy_1_5 != null ? `${checkIn.energy_1_5}/5` : null} />
         <StatPair label="Hunger" value={checkIn.hunger_1_5 != null ? `${checkIn.hunger_1_5}/5` : null} />
