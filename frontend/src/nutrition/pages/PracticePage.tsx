@@ -10,7 +10,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { UserPlus, BookOpen, MessageSquare, Sparkles, ArrowRight, Video, MapPin, Phone } from 'lucide-react';
+import { UserPlus, BookOpen, MessageSquare, Sparkles, ArrowRight, Video, MapPin, Phone, Users, Inbox, TrendingUp, CalendarClock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Client, Session, Trainer } from '../../lib/database.types';
@@ -161,6 +161,46 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
               : `${pending.length} check-in${pending.length === 1 ? '' : 's'} waiting for your review.`}
         </p>
       </section>
+
+      {/* Iconographic stat row — the kind of dashboard hero every leading
+          coach app has. Shows the four numbers a coach checks first
+          thing in the morning. Only renders once they have clients. */}
+      {!isBrandNew && (
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <HeroStat
+            icon={<Users size={16} />}
+            label="Active clients"
+            value={(clients ?? []).length.toString()}
+            sub="in your practice"
+            tone="sage"
+          />
+          <HeroStat
+            icon={<Inbox size={16} />}
+            label="Check-ins pending"
+            value={pending.length.toString()}
+            sub={pending.length > 0 ? 'review today' : 'all caught up'}
+            tone={pending.length > 0 ? 'coral' : 'mute'}
+          />
+          <HeroStat
+            icon={<CalendarClock size={16} />}
+            label="Sessions today"
+            value={(todaysSessions ?? []).length.toString()}
+            sub={
+              (todaysSessions ?? []).length === 0
+                ? 'no calls'
+                : `${(todaysSessions ?? []).length === 1 ? 'call' : 'calls'} on calendar`
+            }
+            tone="honey"
+          />
+          <HeroStat
+            icon={<TrendingUp size={16} />}
+            label="Avg compliance"
+            value={avgCompliance != null ? `${avgCompliance}%` : '—'}
+            sub="across recent check-ins"
+            tone="sage"
+          />
+        </section>
+      )}
 
       {/* Welcome / next-step card. Shows different content based on
           where the coach is in onboarding. The single most important
@@ -588,6 +628,73 @@ function EmptyNote({ text }: { text: string }) {
     >
       {text}
     </p>
+  );
+}
+
+/** Iconographic hero-stat card — the dashboard pattern every modern
+ *  coaching app uses (Healthie, Practice Better, Trainerize). Big
+ *  bold number, small label with icon, tonal accent. */
+function HeroStat({
+  icon,
+  label,
+  value,
+  sub,
+  tone = 'sage',
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub: string;
+  tone?: 'sage' | 'coral' | 'honey' | 'mute';
+}) {
+  const accent =
+    tone === 'coral' ? N.coral
+    : tone === 'honey' ? N.honey
+    : tone === 'mute' ? N.mute
+    : N.sage;
+  const accentSoft =
+    tone === 'coral' ? N.coralSoft
+    : tone === 'honey' ? N.honeySoft
+    : tone === 'mute' ? N.inset
+    : N.sageSoft;
+  return (
+    <div
+      className="rounded-2xl p-4 transition-shadow hover:shadow-md"
+      style={{
+        background: N.card,
+        border: `1px solid ${N.rule}`,
+        boxShadow: 'var(--nut-shadow)',
+      }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: accentSoft, color: accent }}
+        >
+          {icon}
+        </div>
+        <span
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: N.mute }}
+        >
+          {label}
+        </span>
+      </div>
+      <p
+        className="font-semibold leading-none mb-1 tabular-nums"
+        style={{
+          fontFamily: SERIF_FONT,
+          color: N.ink,
+          fontSize: 'clamp(1.875rem, 3vw, 2.25rem)',
+          letterSpacing: '-0.025em',
+        }}
+      >
+        {value}
+      </p>
+      <p className="text-xs" style={{ color: N.mute }}>
+        {sub}
+      </p>
+    </div>
   );
 }
 
