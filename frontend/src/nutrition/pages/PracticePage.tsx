@@ -8,7 +8,7 @@
 // rather than SaaS dashboards.
 
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { UserPlus, BookOpen, MessageSquare, Sparkles, ArrowRight, Video, MapPin, Phone, Users, Inbox, TrendingUp, CalendarClock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -117,12 +117,24 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
     );
   }, [checkIns]);
 
-  // Empty-state detection — drives the welcome card and the "next step"
-  // banner. A brand-new coach shouldn't see a quiet dashboard with no
-  // idea what to do.
+  // Empty-state detection. The welcome card now lives on its own
+  // dismissable flag — once you've seen it and clicked "Got it", it's
+  // gone for good, regardless of how many clients you do or don't have.
   const hasClients = (clients ?? []).length > 0;
-  const hasCheckIns = (checkIns ?? []).length > 0;
-  const isBrandNew = !hasClients && !hasCheckIns && !tableMissing;
+  const WELCOME_DISMISSED_KEY = 'nutrition-welcome-dismissed';
+  const [welcomeDismissed, setWelcomeDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(WELCOME_DISMISSED_KEY) === '1';
+  });
+  const showWelcome = !welcomeDismissed;
+  function dismissWelcome() {
+    setWelcomeDismissed(true);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(WELCOME_DISMISSED_KEY, '1');
+    }
+  }
+  // Legacy var kept so the stats-row condition reads cleanly.
+  const isBrandNew = !hasClients && !tableMissing;
 
   return (
     <div className="px-4 sm:px-8 py-8 max-w-6xl mx-auto">
@@ -202,10 +214,10 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
         </section>
       )}
 
-      {/* Welcome / next-step card. Shows different content based on
-          where the coach is in onboarding. The single most important
-          piece of guidance a new user needs. */}
-      {isBrandNew && <WelcomeCard />}
+      {/* Welcome card — stays until the coach dismisses it, then never
+          shows again (localStorage). Decoupled from client count so
+          quick query refetches don't make it flicker in/out. */}
+      {showWelcome && <WelcomeCard onDismiss={dismissWelcome} />}
       {!isBrandNew && hasClients && pending.length > 0 && (
         <NextStepBanner
           icon={<MessageSquare size={16} />}
@@ -829,19 +841,30 @@ function TodaysSessionsCard({
   );
 }
 
-/** Welcome card shown to a coach who has no clients and no check-ins
- *  yet. Three clear, numbered steps with one obvious primary action. */
-function WelcomeCard() {
+/** Welcome card — onboarding explainer for new coaches. Stays until
+ *  the user clicks "Got it", then localStorage-flagged off forever. */
+function WelcomeCard({ onDismiss }: { onDismiss: () => void }) {
   return (
     <section
-      className="rounded-2xl p-6 sm:p-8 mb-8"
+      className="rounded-2xl p-6 sm:p-8 mb-8 relative"
       style={{
         background: N.card,
         border: `1px solid ${N.rule}`,
         boxShadow: 'var(--nut-shadow)',
       }}
     >
-      <div className="flex items-start gap-3 mb-5">
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss welcome"
+        className="absolute top-4 right-4 text-xs font-semibold px-2.5 py-1 rounded-md hover:opacity-95"
+        style={{
+          background: N.inset,
+          color: N.mute,
+        }}
+      >
+        Got it ✕
+      </button>
+      <div className="flex items-start gap-3 mb-5 pr-16">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: N.coralSoft, color: N.coral }}

@@ -503,18 +503,33 @@ function AddClientModal({
       addNum(STARTING_WEIGHT_TAG, startWt);
       addNum(WEIGHT_LB_TAG, curWt);
       addNum(GOAL_WEIGHT_TAG, goalWt);
-      const { error } = await supabase.from('clients').insert({
-        trainer_id: user.id,
-        full_name: name.trim(),
-        email: email.trim() || null,
-        goals: goals.trim() || null,
-        status: 'active',
-        tags,
-      });
-      if (error) throw error;
+      // Use .select() so we get the inserted row back (or a clear error).
+      const { data, error } = await supabase
+        .from('clients')
+        .insert({
+          trainer_id: user.id,
+          full_name: name.trim(),
+          email: email.trim() || null,
+          goals: goals.trim() || null,
+          status: 'active',
+          tags,
+        })
+        .select()
+        .single();
+      if (error) {
+        // Bubble up the postgres error message so the user can see it.
+        // Common failure modes: FK violation (no trainer row), RLS
+        // mismatch (auth.uid() differs), unique constraint, etc.
+        // eslint-disable-next-line no-console
+        console.error('[nutrition] clients insert failed:', error);
+        throw new Error(error.message + (error.hint ? ` — ${error.hint}` : ''));
+      }
+      return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['nutrition-clients'] });
+    onSuccess: async () => {
+      // refetch (not just invalidate) so the new client appears before
+      // we close the modal — guarantees the user sees the row land.
+      await qc.refetchQueries({ queryKey: ['nutrition-clients'] });
       onClose();
     },
   });

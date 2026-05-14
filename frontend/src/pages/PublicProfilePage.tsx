@@ -15,6 +15,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { formatMoney } from '../lib/format';
 import type { PublicProfile, Testimonial, PackageDefinition } from '../lib/database.types';
+import { NutritionPublicProfile } from '../nutrition/pages/NutritionPublicProfile';
 
 interface ProfilePayload {
   trainer: {
@@ -24,6 +25,8 @@ interface ProfilePayload {
     primary_color: string | null;
     logo_url: string | null;
     currency: string | null;
+    // Added in migration 35 — drives which themed layout we render.
+    template_slugs?: string[] | null;
   };
   profile: PublicProfile;
   packages: PackageDefinition[];
@@ -80,6 +83,22 @@ export function PublicProfilePage() {
   }
 
   const { trainer, profile, packages, testimonials } = data;
+
+  // Template-driven fork — if the trainer's primary template is
+  // nutrition_coach (or other themed ones), render the dedicated
+  // themed public profile instead of the generic trainer one.
+  const primaryTemplate = trainer.template_slugs?.[0];
+  if (primaryTemplate === 'nutrition_coach') {
+    return (
+      <NutritionPublicProfile
+        trainer={trainer}
+        profile={profile}
+        packages={packages}
+        testimonials={testimonials}
+      />
+    );
+  }
+
   const heading = trainer.business_name || trainer.full_name;
   const heroTitle = profile.hero.title || `Train with ${trainer.full_name.split(' ')[0]}.`;
   const heroSubtitle =
