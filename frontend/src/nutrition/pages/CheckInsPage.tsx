@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { nutritionRpc } from '../lib/nutritionRpc';
+import { PhotoUpload } from '../components/PhotoUpload';
 import {
   N,
   SERIF_FONT,
@@ -182,6 +183,7 @@ function CheckInLetter({
   clientName: string;
   qc: ReturnType<typeof useQueryClient>;
 }) {
+  const { user } = useAuth();
   const [reply, setReply] = useState(checkIn.coach_reply ?? '');
 
   const send = useMutation({
@@ -193,6 +195,17 @@ function CheckInLetter({
           status: 'reviewed',
           reviewed_at: new Date().toISOString(),
         })
+        .eq('id', checkIn.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['nutrition-check-ins'] }),
+  });
+
+  const updatePhoto = useMutation({
+    mutationFn: async (photo_url: string | null) => {
+      const { error } = await supabase
+        .from('nutrition_check_ins')
+        .update({ photo_url })
         .eq('id', checkIn.id);
       if (error) throw error;
     },
@@ -242,6 +255,26 @@ function CheckInLetter({
         <StatPair label="Hunger" value={checkIn.hunger_1_5 != null ? `${checkIn.hunger_1_5}/5` : null} />
         <StatPair label="Sleep" value={checkIn.sleep_hours_avg != null ? `${checkIn.sleep_hours_avg.toFixed(1)}h` : null} />
       </div>
+
+      {/* Progress photo — uploaded by the coach (V1) or the client
+          via the portal (V2). Renders or shows the upload widget. */}
+      {user?.id && (
+        <div className="mb-4">
+          <p
+            className="text-[10px] uppercase tracking-wide font-semibold mb-2"
+            style={{ color: N.mute }}
+          >
+            Progress photo
+          </p>
+          <PhotoUpload
+            trainerId={user.id}
+            clientId={checkIn.client_id}
+            currentUrl={checkIn.photo_url}
+            onUploaded={(url) => updatePhoto.mutate(url)}
+            onCleared={() => updatePhoto.mutate(null)}
+          />
+        </div>
+      )}
 
       {/* The "letter" body — italic indented */}
       {checkIn.client_notes && (

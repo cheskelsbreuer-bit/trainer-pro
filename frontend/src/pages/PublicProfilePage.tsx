@@ -16,6 +16,8 @@ import { supabase } from '../lib/supabase';
 import { formatMoney } from '../lib/format';
 import type { PublicProfile, Testimonial, PackageDefinition } from '../lib/database.types';
 import { NutritionPublicProfile } from '../nutrition/pages/NutritionPublicProfile';
+import { BoxingPublicProfile } from '../boxing/pages/BoxingPublicProfile';
+import { DojoPublicProfile } from '../dojo/pages/DojoPublicProfile';
 
 interface ProfilePayload {
   trainer: {
@@ -84,13 +86,33 @@ export function PublicProfilePage() {
 
   const { trainer, profile, packages, testimonials } = data;
 
-  // Template-driven fork — if the trainer's primary template is
-  // nutrition_coach (or other themed ones), render the dedicated
-  // themed public profile instead of the generic trainer one.
+  // Template-driven fork — render the dedicated themed public profile
+  // matching the trainer's primary template instead of the generic
+  // trainer layout.
   const primaryTemplate = trainer.template_slugs?.[0];
   if (primaryTemplate === 'nutrition_coach') {
     return (
       <NutritionPublicProfile
+        trainer={trainer}
+        profile={profile}
+        packages={packages}
+        testimonials={testimonials}
+      />
+    );
+  }
+  if (primaryTemplate === 'boxing_gym') {
+    return (
+      <BoxingPublicProfile
+        trainer={trainer}
+        profile={profile}
+        packages={packages}
+        testimonials={testimonials}
+      />
+    );
+  }
+  if (primaryTemplate === 'martial_arts') {
+    return (
+      <DojoPublicProfile
         trainer={trainer}
         profile={profile}
         packages={packages}

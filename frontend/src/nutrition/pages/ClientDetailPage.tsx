@@ -23,7 +23,10 @@ import {
   MapPin,
   Phone,
   Calendar,
+  Download,
+  ClipboardList,
 } from 'lucide-react';
+import { buildClientCsv, downloadCsv } from '../lib/exportClient';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Client, Payment, Session } from '../../lib/database.types';
@@ -468,6 +471,11 @@ export function ClientDetailPage() {
             <CardHead title="Quick actions" />
             <div className="p-3 space-y-2">
               <ActionRow
+                icon={<ClipboardList size={14} />}
+                label="Edit intake form"
+                to={`/clients/${client.id}/intake`}
+              />
+              <ActionRow
                 icon={<Sparkles size={14} />}
                 label="Ask the coach about this client"
                 to="/ask"
@@ -479,9 +487,27 @@ export function ClientDetailPage() {
               />
               <ActionRow
                 icon={<Target size={14} />}
-                label="Browse Practices Library"
+                label="Browse Habit library"
                 to="/plans"
               />
+              <button
+                onClick={() => {
+                  if (!client) return;
+                  const csv = buildClientCsv(
+                    client,
+                    checkIns ?? [],
+                    clientSessions ?? [],
+                    payments ?? [],
+                  );
+                  const safeName = client.full_name.replace(/[^a-zA-Z0-9-_]/g, '-');
+                  downloadCsv(`${safeName}-history.csv`, csv);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-[var(--nut-inset)] transition-colors"
+                style={{ color: N.ink }}
+              >
+                <Download size={14} style={{ color: N.coral }} />
+                <span className="font-medium">Export history (CSV)</span>
+              </button>
             </div>
           </Card>
 
