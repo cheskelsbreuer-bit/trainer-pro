@@ -13,9 +13,9 @@ import type { Trainer } from '../../lib/database.types';
 const SECTIONS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
   { to: '/clients', label: 'Clients' },
+  { to: '/sessions', label: 'Sessions' },
   { to: '/check-ins', label: 'Check-ins' },
   { to: '/plans', label: 'Library' },
-  { to: '/habits', label: 'Habits' },
   { to: '/ask', label: 'Ask coach' },
   { to: '/plate', label: 'Billing' },
   { to: '/pantry', label: 'Settings' },

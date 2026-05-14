@@ -10,10 +10,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { UserPlus, BookOpen, MessageSquare, Sparkles, ArrowRight } from 'lucide-react';
+import { UserPlus, BookOpen, MessageSquare, Sparkles, ArrowRight, Video, MapPin, Phone } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { Client, Trainer } from '../../lib/database.types';
+import type { Client, Session, Trainer } from '../../lib/database.types';
 import {
   N,
   SERIF_FONT,
@@ -60,6 +60,25 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
   const tableMissing =
     checkInErr &&
     (checkInErr as Error).message?.toLowerCase().includes('nutrition_check_ins');
+
+  // Today's coaching sessions — the daily-use thing a real coach checks
+  // first thing in the morning. Surfaces prominently on the home page.
+  const { data: todaysSessions } = useQuery({
+    queryKey: ['nutrition-sessions-today', user?.id],
+    queryFn: async () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start.getTime() + 86400000);
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*, clients(full_name)')
+        .gte('starts_at', start.toISOString())
+        .lt('starts_at', end.toISOString())
+        .order('starts_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as (Session & { clients: { full_name: string } | null })[];
+    },
+  });
 
   const pending = useMemo(
     () => (checkIns ?? []).filter((c) => c.status === 'pending'),
@@ -170,6 +189,13 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
 
       {tableMissing && (
         <SetupNotice />
+      )}
+
+      {/* Today's sessions — prominent on the home page because PN
+          coaching IS weekly live calls. If there's nothing today,
+          this section quietly stays out of the way. */}
+      {(todaysSessions ?? []).length > 0 && (
+        <TodaysSessionsCard sessions={todaysSessions ?? []} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
@@ -562,6 +588,135 @@ function EmptyNote({ text }: { text: string }) {
     >
       {text}
     </p>
+  );
+}
+
+/** Today's coaching sessions card — surfaces video / in-person /
+ *  phone sessions on the home page. The first thing a real coach
+ *  wants to see in the morning. */
+function TodaysSessionsCard({
+  sessions,
+}: {
+  sessions: (Session & { clients: { full_name: string } | null })[];
+}) {
+  return (
+    <section
+      className="rounded-xl overflow-hidden mb-6"
+      style={{
+        background: N.card,
+        border: `1px solid ${N.rule}`,
+      }}
+    >
+      <header
+        className="px-4 py-3 flex items-baseline justify-between gap-3 border-b"
+        style={{ borderColor: N.rule }}
+      >
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-sm font-semibold" style={{ color: N.ink }}>
+            Today's sessions
+          </h2>
+          <span className="text-xs" style={{ color: N.mute }}>
+            {sessions.length} {sessions.length === 1 ? 'call' : 'calls'} on the calendar
+          </span>
+        </div>
+        <Link
+          to="/sessions"
+          className="text-xs font-semibold hover:underline"
+          style={{ color: N.coral }}
+        >
+          All sessions →
+        </Link>
+      </header>
+      <ul className="divide-y" style={{ borderColor: N.rule }}>
+        {sessions.map((s) => {
+          const start = new Date(s.starts_at);
+          const isVideoLink = s.location && /^https?:\/\//.test(s.location);
+          const kindIcon =
+            s.session_type === 'in_person' ? (
+              <MapPin size={13} />
+            ) : s.session_type === 'phone' ? (
+              <Phone size={13} />
+            ) : (
+              <Video size={13} />
+            );
+          return (
+            <li
+              key={s.id}
+              className="px-4 py-3 flex items-center gap-3"
+            >
+              <div
+                className="shrink-0 rounded-lg w-14 h-12 flex flex-col items-center justify-center"
+                style={{ background: N.inset }}
+              >
+                <span
+                  className="font-bold leading-none tabular-nums"
+                  style={{
+                    color: N.ink,
+                    fontSize: '1.0625rem',
+                    fontFamily: SERIF_FONT,
+                  }}
+                >
+                  {start.toLocaleTimeString(undefined, {
+                    hour: 'numeric',
+                  })}
+                </span>
+                <span
+                  className="text-[10px] uppercase font-bold tracking-wide mt-0.5"
+                  style={{ color: N.mute }}
+                >
+                  {start.toLocaleTimeString(undefined, {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                  })
+                    .split(' ')[1]}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <Link
+                  to={`/clients/${s.client_id}`}
+                  className="font-semibold hover:underline"
+                  style={{ color: N.ink, fontSize: '0.9375rem' }}
+                >
+                  {s.clients?.full_name ?? 'Unknown client'}
+                </Link>
+                <p
+                  className="text-xs flex items-center gap-1.5 mt-0.5"
+                  style={{ color: N.mute }}
+                >
+                  {kindIcon}
+                  {s.session_type === 'in_person'
+                    ? 'In person'
+                    : s.session_type === 'phone'
+                      ? 'Phone'
+                      : 'Video call'}
+                  {s.ends_at && (
+                    <>
+                      {' · '}
+                      {Math.round(
+                        (new Date(s.ends_at).getTime() - start.getTime()) / 60000,
+                      )}{' '}
+                      min
+                    </>
+                  )}
+                </p>
+              </div>
+              {isVideoLink && s.location && (
+                <a
+                  href={s.location}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-95"
+                  style={{ background: N.coral, color: '#FFF' }}
+                >
+                  <Video size={12} /> Join
+                </a>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

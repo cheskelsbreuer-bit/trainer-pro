@@ -19,10 +19,14 @@ import {
   MessageSquare,
   Sparkles,
   Ruler,
+  Video,
+  MapPin,
+  Phone,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { Client, Payment } from '../../lib/database.types';
+import type { Client, Payment, Session } from '../../lib/database.types';
 import { formatMoney } from '../../lib/format';
 import { MessageThread } from '../components/MessageThread';
 import {
@@ -84,6 +88,22 @@ export function ClientDetailPage() {
         throw error;
       }
       return (data ?? []) as CheckInRow[];
+    },
+    enabled: !!id,
+  });
+
+  const { data: clientSessions } = useQuery({
+    queryKey: ['nutrition-client-sessions', id],
+    queryFn: async () => {
+      if (!id) return [] as Session[];
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('client_id', id)
+        .order('starts_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? []) as Session[];
     },
     enabled: !!id,
   });
@@ -353,6 +373,9 @@ export function ClientDetailPage() {
 
           {/* Body measurements — pulled from the latest check-in with data */}
           <MeasurementsCard checkIns={checkIns ?? []} />
+
+          {/* Live coaching sessions — past + upcoming with this client */}
+          <ClientSessionsCard sessions={clientSessions ?? []} />
 
           {/* Coach ↔ client messaging thread */}
           {user?.id && (
@@ -764,6 +787,163 @@ function MeasurementsCard({ checkIns }: { checkIns: CheckInRow[] }) {
         })}
       </div>
     </Card>
+  );
+}
+
+/** Sessions card on the client detail page — shows the next upcoming
+ *  session prominently + a short list of past sessions. Empty state
+ *  with a "Book a session" CTA when there are none. */
+function ClientSessionsCard({ sessions }: { sessions: Session[] }) {
+  const now = Date.now();
+  const upcoming = sessions
+    .filter((s) => new Date(s.starts_at).getTime() >= now)
+    .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+  const past = sessions
+    .filter((s) => new Date(s.starts_at).getTime() < now)
+    .slice(0, 5);
+  const next = upcoming[0];
+
+  if (sessions.length === 0) {
+    return (
+      <Card>
+        <CardHead title="Live sessions" />
+        <div className="px-4 py-6 text-center">
+          <Calendar
+            size={20}
+            className="mx-auto mb-2"
+            style={{ color: N.mute }}
+          />
+          <p className="text-sm mb-3" style={{ color: N.mute }}>
+            No sessions booked yet.
+          </p>
+          <Link
+            to="/sessions"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+            style={{
+              background: N.coral,
+              color: '#FFF',
+            }}
+          >
+            Book a session
+          </Link>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHead
+        title="Live sessions"
+        hint={`${upcoming.length} upcoming · ${past.length} past`}
+        action={
+          <Link
+            to="/sessions"
+            className="text-xs font-medium hover:underline"
+            style={{ color: N.coral }}
+          >
+            Book →
+          </Link>
+        }
+      />
+      {next && <SessionLine session={next} highlight />}
+      {past.map((s) => (
+        <SessionLine key={s.id} session={s} />
+      ))}
+      {upcoming.slice(1).map((s) => (
+        <SessionLine key={s.id} session={s} />
+      ))}
+    </Card>
+  );
+}
+
+function SessionLine({
+  session,
+  highlight = false,
+}: {
+  session: Session;
+  highlight?: boolean;
+}) {
+  const start = new Date(session.starts_at);
+  const isPast = start.getTime() < Date.now();
+  const isVideoLink = session.location && /^https?:\/\//.test(session.location);
+  const kindIcon =
+    session.session_type === 'in_person' ? (
+      <MapPin size={11} />
+    ) : session.session_type === 'phone' ? (
+      <Phone size={11} />
+    ) : (
+      <Video size={11} />
+    );
+  return (
+    <div
+      className="px-4 py-3 border-t flex items-center gap-3"
+      style={{
+        borderColor: N.rule,
+        background: highlight ? N.coralSoft : 'transparent',
+      }}
+    >
+      <div
+        className="shrink-0 rounded-lg w-10 h-10 flex flex-col items-center justify-center"
+        style={{
+          background: highlight ? '#FFFFFF' : N.inset,
+        }}
+      >
+        <span
+          className="text-[9px] uppercase font-bold tracking-wide"
+          style={{ color: highlight ? N.coral : N.mute }}
+        >
+          {start.toLocaleDateString(undefined, { month: 'short' })}
+        </span>
+        <span
+          className="font-bold leading-none tabular-nums"
+          style={{
+            color: highlight ? N.coralDeep : N.ink,
+            fontSize: '0.9375rem',
+            fontFamily: SERIF_FONT,
+          }}
+        >
+          {start.getDate()}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p
+          className="text-sm font-medium"
+          style={{ color: highlight ? N.coralDeep : N.ink }}
+        >
+          {highlight && !isPast ? 'Next session · ' : ''}
+          {start.toLocaleString(undefined, {
+            weekday: 'short',
+            hour: 'numeric',
+            minute: '2-digit',
+          })}
+        </p>
+        <p
+          className="text-xs flex items-center gap-1 mt-0.5"
+          style={{ color: highlight ? N.coralDeep : N.mute, opacity: highlight ? 0.85 : 1 }}
+        >
+          {kindIcon}
+          {session.session_type === 'in_person'
+            ? 'In person'
+            : session.session_type === 'phone'
+              ? 'Phone'
+              : 'Video'}
+          {session.status === 'completed' && ' · completed'}
+          {session.status === 'no_show' && ' · no-show'}
+        </p>
+      </div>
+      {isVideoLink && session.location && !isPast && (
+        <a
+          href={session.location}
+          target="_blank"
+          rel="noreferrer"
+          className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+          style={{ background: N.coral, color: '#FFF' }}
+        >
+          <Video size={10} /> Join
+        </a>
+      )}
+    </div>
   );
 }
 
