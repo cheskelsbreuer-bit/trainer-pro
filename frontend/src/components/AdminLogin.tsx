@@ -48,12 +48,19 @@ export function AdminLogin() {
           </div>
           <h1 className="text-xl font-bold text-slate-900 mb-2">Check your email</h1>
           <p className="text-slate-600 text-sm">
-            We sent a sign-in link to <strong>{email}</strong>. Click the link in the email to
-            enter the admin panel.
+            We sent a sign-in link to <strong>{email}</strong>. Click it as soon as
+            it arrives.
           </p>
-          <p className="text-xs text-slate-400 mt-4">
-            The link expires in an hour. If you don't see it, check spam.
-          </p>
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-left">
+            <p className="text-xs font-semibold text-amber-900 mb-1">
+              ⚠ Click fast — once only
+            </p>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              The link is single-use and expires within an hour. Gmail / Outlook
+              anti-spam can pre-click links and use them up before you do — if
+              that happens, just request a new one.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => {

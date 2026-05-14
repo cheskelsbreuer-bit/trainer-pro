@@ -192,6 +192,57 @@ function NotFound() {
   );
 }
 
+/** Page shown when Supabase redirected back with an OTP / magic-link
+ *  error in the URL fragment (e.g. expired, already-used, or pre-fetched
+ *  by Gmail/Outlook's anti-spam scanner). Without this the user lands on
+ *  whatever the root route resolves to with no idea what went wrong. */
+function ExpiredMagicLink({ description }: { description: string }) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="bg-white border border-slate-200 rounded-2xl p-8 max-w-md w-full text-center shadow-xl">
+        <div className="inline-flex w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 items-center justify-center mb-4 text-2xl">
+          ⏰
+        </div>
+        <h1 className="text-xl font-bold text-slate-900 mb-2">
+          Sign-in link expired
+        </h1>
+        <p className="text-slate-600 text-sm mb-3">
+          {description || 'That magic link is no longer valid.'}
+        </p>
+        <p className="text-slate-500 text-xs mb-6 leading-relaxed">
+          Two common reasons: too much time passed (links expire in an hour),
+          or your email client pre-fetched the link before you clicked it
+          (Gmail / Outlook anti-spam scanners click links to test them, which
+          uses up the single-use token). Try requesting a fresh link and
+          clicking it as soon as the email arrives.
+        </p>
+        <a
+          href="/chesky"
+          className="block w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl font-semibold"
+        >
+          Request a new sign-in link
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/** Returns the parsed Supabase auth error from the URL fragment if one is
+ *  present (e.g. "#error=access_denied&error_code=otp_expired&..."). */
+function readAuthErrorFromHash():
+  | { code: string; description: string }
+  | null {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash;
+  if (!hash || !hash.includes('error=')) return null;
+  // Hash starts with '#' — strip it before URLSearchParams.
+  const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+  const code = params.get('error_code') ?? params.get('error') ?? '';
+  if (!code) return null;
+  const desc = (params.get('error_description') ?? '').replace(/\+/g, ' ');
+  return { code, description: desc };
+}
+
 function isLandingHost() {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname;
@@ -199,6 +250,24 @@ function isLandingHost() {
 }
 
 export default function App() {
+  // Magic-link error detector — runs before any routing. If Supabase
+  // bounced the user back with an OTP / access_denied error in the URL
+  // fragment, show a friendly "link expired" page instead of dumping
+  // them on whatever the root route happens to resolve to.
+  const authError = readAuthErrorFromHash();
+  if (
+    authError &&
+    (authError.code === 'otp_expired' ||
+      authError.code === 'access_denied' ||
+      authError.code === 'invalid_request')
+  ) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ExpiredMagicLink description={authError.description} />
+      </QueryClientProvider>
+    );
+  }
+
   // Apex / www domain serves the marketing site + public-facing pages.
   // Wrapped in BrowserRouter so trainer cards on /find-trainers can deep-link
   // into /p/:slug and /book/:slug — without this, those URLs fall through to
