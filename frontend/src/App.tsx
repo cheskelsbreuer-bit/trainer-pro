@@ -157,11 +157,13 @@ function AdminShell() {
       </div>
     );
   }
-  // Verified device, but Supabase session is briefly gone — keep the 7-day
-  // verification intact and show the regular login. Once they sign back in,
-  // they jump straight into admin without another magic link.
+  // Verified device, but Supabase session is briefly gone. Stay on the
+  // magic-link admin form (NOT the regular Login) — Login navigates to
+  // `/` on success which dumps the admin back into the trainer app
+  // instead of /chesky. AdminLogin sends a magic link that lands back
+  // here with the verified=1 marker, preserving the admin context.
   if (!user) {
-    return <Login />;
+    return <AdminLogin />;
   }
   // Treat any error or non-admin as 404 — don't reveal /chesky exists.
   if (check.error || !check.data?.is_admin) {

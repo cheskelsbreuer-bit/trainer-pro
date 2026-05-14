@@ -11,10 +11,10 @@ import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 
 const SECTIONS: { to: string; label: string }[] = [
-  { to: '/', label: 'Practice' },
+  { to: '/', label: 'Home' },
   { to: '/clients', label: 'Clients' },
   { to: '/check-ins', label: 'Check-ins' },
-  { to: '/plans', label: 'Practices' },
+  { to: '/plans', label: 'Library' },
   { to: '/habits', label: 'Habits' },
   { to: '/ask', label: 'Ask coach' },
   { to: '/plate', label: 'Billing' },

@@ -154,10 +154,49 @@ export function ClientsPage() {
       </div>
 
       {/* Profile-card grid */}
-      {filtered.length === 0 ? (
+      {(clients ?? []).length === 0 ? (
+        <div
+          className="rounded-2xl p-8 text-center"
+          style={{
+            background: N.card,
+            border: `2px dashed ${N.rule}`,
+          }}
+        >
+          <div
+            className="w-12 h-12 mx-auto rounded-2xl flex items-center justify-center mb-3"
+            style={{ background: N.coralSoft, color: N.coral }}
+          >
+            <Plus size={22} />
+          </div>
+          <h3
+            className="font-semibold mb-1"
+            style={{
+              fontFamily: SERIF_FONT,
+              color: N.ink,
+              fontSize: '1.25rem',
+            }}
+          >
+            No clients yet
+          </h3>
+          <p
+            className="text-sm mb-4 max-w-md mx-auto leading-relaxed"
+            style={{ color: N.mute }}
+          >
+            Add your first client to start practicing. You'll capture their
+            goal, set a starting daily practice, and we'll do the rest.
+          </p>
+          <button
+            onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg"
+            style={{ background: N.coral, color: '#FFF' }}
+          >
+            <Plus size={14} /> Add your first client
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
         <p
-          className="text-center py-16 italic"
-          style={{ color: N.mute, fontFamily: SERIF_FONT, fontSize: '1.1rem' }}
+          className="text-center py-16 text-sm"
+          style={{ color: N.mute }}
         >
           No clients match these filters.
         </p>

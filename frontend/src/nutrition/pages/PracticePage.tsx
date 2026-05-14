@@ -10,6 +10,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { UserPlus, BookOpen, MessageSquare, Sparkles, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Client, Trainer } from '../../lib/database.types';
@@ -97,10 +98,17 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
     );
   }, [checkIns]);
 
+  // Empty-state detection — drives the welcome card and the "next step"
+  // banner. A brand-new coach shouldn't see a quiet dashboard with no
+  // idea what to do.
+  const hasClients = (clients ?? []).length > 0;
+  const hasCheckIns = (checkIns ?? []).length > 0;
+  const isBrandNew = !hasClients && !hasCheckIns && !tableMissing;
+
   return (
     <div className="px-4 sm:px-8 py-8 max-w-6xl mx-auto">
       {/* Page header — left-aligned, app-style */}
-      <section className="mb-8">
+      <section className="mb-6">
         <p
           className="text-xs font-medium mb-1"
           style={{ color: N.mute }}
@@ -127,11 +135,38 @@ export function PracticePage({ trainer }: { trainer: Trainer | undefined }) {
           className="mt-1.5 text-sm"
           style={{ color: N.mute }}
         >
-          {pending.length === 0
-            ? 'No check-ins waiting. A quiet start to the week.'
-            : `${pending.length} check-in${pending.length === 1 ? '' : 's'} waiting for your review.`}
+          {isBrandNew
+            ? "Welcome to your practice. Here's how to start."
+            : pending.length === 0
+              ? 'No check-ins waiting. A quiet start to the week.'
+              : `${pending.length} check-in${pending.length === 1 ? '' : 's'} waiting for your review.`}
         </p>
       </section>
+
+      {/* Welcome / next-step card. Shows different content based on
+          where the coach is in onboarding. The single most important
+          piece of guidance a new user needs. */}
+      {isBrandNew && <WelcomeCard />}
+      {!isBrandNew && hasClients && pending.length > 0 && (
+        <NextStepBanner
+          icon={<MessageSquare size={16} />}
+          tone="coral"
+          title={`${pending.length} check-in${pending.length === 1 ? '' : 's'} need your review`}
+          body="Open the inbox to read what's coming in and reply. Replies are short — a few sentences each."
+          actionLabel="Open check-ins"
+          actionTo="/check-ins"
+        />
+      )}
+      {!isBrandNew && hasClients && pending.length === 0 && drifting.length > 0 && (
+        <NextStepBanner
+          icon={<Sparkles size={16} />}
+          tone="honey"
+          title={`${drifting.length} client${drifting.length === 1 ? '' : 's'} haven't checked in lately`}
+          body="No check-in in 10+ days. Reach out before they drift further — even a one-line message helps."
+          actionLabel="See who"
+          actionTo="/clients"
+        />
+      )}
 
       {tableMissing && (
         <SetupNotice />
@@ -527,6 +562,198 @@ function EmptyNote({ text }: { text: string }) {
     >
       {text}
     </p>
+  );
+}
+
+/** Welcome card shown to a coach who has no clients and no check-ins
+ *  yet. Three clear, numbered steps with one obvious primary action. */
+function WelcomeCard() {
+  return (
+    <section
+      className="rounded-2xl p-6 sm:p-8 mb-8"
+      style={{
+        background: N.card,
+        border: `1px solid ${N.rule}`,
+        boxShadow: 'var(--nut-shadow)',
+      }}
+    >
+      <div className="flex items-start gap-3 mb-5">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: N.coralSoft, color: N.coral }}
+        >
+          <Sparkles size={20} />
+        </div>
+        <div>
+          <h2
+            className="leading-tight mb-1"
+            style={{
+              fontFamily: SERIF_FONT,
+              color: N.ink,
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            Three steps to your first coaching week
+          </h2>
+          <p className="text-sm leading-relaxed" style={{ color: N.mute }}>
+            Your practice uses the Precision Nutrition method — assign one
+            simple daily habit at a time, review weekly, layer the next.
+            Start here.
+          </p>
+        </div>
+      </div>
+
+      <ol className="space-y-3">
+        <Step
+          number={1}
+          title="Add your first client"
+          body="Capture their goal and a starting practice. We recommend starting every new client on 'Eat slowly' — PN's highest-ROI habit."
+          actionLabel="Add a client"
+          actionIcon={<UserPlus size={14} />}
+          actionTo="/clients"
+        />
+        <Step
+          number={2}
+          title="Browse the Library"
+          body="See the PN curriculum: 7 skills broken into daily practices. Pick one practice per client, work it for 2 weeks, then move on."
+          actionLabel="See the Library"
+          actionIcon={<BookOpen size={14} />}
+          actionTo="/plans"
+          tone="ghost"
+        />
+        <Step
+          number={3}
+          title="Ask the AI coach anything"
+          body='If you get stuck, ask the AI coach. It is trained on PN methodology. Try: "What practice should I start a fat-loss client on?"'
+          actionLabel="Ask the coach"
+          actionIcon={<Sparkles size={14} />}
+          actionTo="/ask"
+          tone="ghost"
+        />
+      </ol>
+    </section>
+  );
+}
+
+function Step({
+  number,
+  title,
+  body,
+  actionLabel,
+  actionIcon,
+  actionTo,
+  tone = 'primary',
+}: {
+  number: number;
+  title: string;
+  body: string;
+  actionLabel: string;
+  actionIcon: React.ReactNode;
+  actionTo: string;
+  tone?: 'primary' | 'ghost';
+}) {
+  return (
+    <li className="flex items-start gap-4">
+      <span
+        className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+        style={{
+          background: tone === 'primary' ? N.coral : N.inset,
+          color: tone === 'primary' ? '#FFF' : N.mute,
+        }}
+      >
+        {number}
+      </span>
+      <div className="flex-1 min-w-0">
+        <h3
+          className="font-semibold mb-0.5"
+          style={{ color: N.ink, fontSize: '0.9375rem' }}
+        >
+          {title}
+        </h3>
+        <p
+          className="text-sm leading-relaxed mb-2"
+          style={{ color: N.inkSoft }}
+        >
+          {body}
+        </p>
+        <Link
+          to={actionTo}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-95"
+          style={
+            tone === 'primary'
+              ? { background: N.coral, color: '#FFF' }
+              : {
+                  background: 'transparent',
+                  color: N.coral,
+                  border: `1px solid ${N.coral}55`,
+                }
+          }
+        >
+          {actionIcon} {actionLabel}
+        </Link>
+      </div>
+    </li>
+  );
+}
+
+/** Smart banner shown at the top of the home page once a coach has
+ *  clients but there's a specific thing they should do next. */
+function NextStepBanner({
+  icon,
+  tone,
+  title,
+  body,
+  actionLabel,
+  actionTo,
+}: {
+  icon: React.ReactNode;
+  tone: 'coral' | 'honey' | 'sage';
+  title: string;
+  body: string;
+  actionLabel: string;
+  actionTo: string;
+}) {
+  const palette =
+    tone === 'coral'
+      ? { bg: N.coralSoft, fg: N.coralDeep, accent: N.coral }
+      : tone === 'honey'
+        ? { bg: N.honeySoft, fg: N.honey, accent: N.honey }
+        : { bg: N.sageSoft, fg: N.sageDeep, accent: N.sage };
+  return (
+    <section
+      className="rounded-xl px-4 sm:px-5 py-4 mb-6 flex items-start gap-3"
+      style={{ background: palette.bg, border: `1px solid ${palette.accent}33` }}
+    >
+      <div
+        className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+        style={{ background: '#FFFFFF', color: palette.accent }}
+      >
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p
+          className="font-semibold leading-tight mb-0.5"
+          style={{ color: N.ink, fontSize: '0.9375rem' }}
+        >
+          {title}
+        </p>
+        <p
+          className="text-sm leading-relaxed"
+          style={{ color: N.inkSoft }}
+        >
+          {body}
+        </p>
+      </div>
+      <Link
+        to={actionTo}
+        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-95 mt-0.5"
+        style={{ background: palette.accent, color: '#FFF' }}
+      >
+        {actionLabel} <ArrowRight size={12} />
+      </Link>
+    </section>
   );
 }
 
