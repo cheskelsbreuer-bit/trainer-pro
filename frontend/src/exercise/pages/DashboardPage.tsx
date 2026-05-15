@@ -109,6 +109,16 @@ export function DashboardPage() {
         <Stat value={String(stats.pausedCount)} label="Paused" tone="orange" />
       </div>
 
+      {/* Birthdays this month */}
+      {cfg && (
+        <BirthdaysPanel clients={clients} />
+      )}
+
+      {/* Upcoming holidays / canceled classes */}
+      {cfg && cfg.holidays.length > 0 && (
+        <HolidaysPanel holidays={cfg.holidays} />
+      )}
+
       {/* Owe table */}
       <SectionHead>
         ⚠ Members Who Owe Money
@@ -456,6 +466,113 @@ export function btn(bg: string): React.CSSProperties {
     alignItems: 'center',
     gap: 5,
   };
+}
+
+function BirthdaysPanel({
+  clients,
+}: {
+  clients: import('../../lib/database.types').Client[];
+}) {
+  const thisMonth = new Date().getMonth();
+  const today = new Date();
+  const todayMD = `${today.getMonth() + 1}-${today.getDate()}`;
+  const rows = clients
+    .filter((c) => c.status === 'active' && c.date_of_birth)
+    .map((c) => {
+      const d = new Date(c.date_of_birth as string);
+      if (Number.isNaN(d.getTime())) return null;
+      return {
+        client: c,
+        month: d.getMonth(),
+        day: d.getDate(),
+        thisYear: d.getMonth() === thisMonth,
+        isToday: `${d.getMonth() + 1}-${d.getDate()}` === todayMD,
+        age: today.getFullYear() - d.getFullYear() - (today.getMonth() < d.getMonth() || (today.getMonth() === d.getMonth() && today.getDate() < d.getDate()) ? 1 : 0),
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null && r.thisYear)
+    .sort((a, b) => a.day - b.day);
+  if (rows.length === 0) return null;
+  return (
+    <>
+      <SectionHead style={{ marginTop: 0 }}>🎂 Birthdays this month</SectionHead>
+      <TableWrap>
+        <table style={tableStyles}>
+          <thead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Date</Th>
+              <Th>Turning</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <Tr key={r.client.id}>
+                <Td>
+                  <strong style={{ color: r.isToday ? E.green : E.primaryDeep }}>
+                    {r.isToday ? '🎉 ' : ''}
+                    {r.client.full_name}
+                  </strong>
+                </Td>
+                <Td>
+                  {new Date(r.client.date_of_birth as string).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Td>
+                <Td style={{ fontWeight: 600 }}>{r.age + 1}</Td>
+              </Tr>
+            ))}
+          </tbody>
+        </table>
+      </TableWrap>
+      <div style={{ height: 18 }} />
+    </>
+  );
+}
+
+function HolidaysPanel({
+  holidays,
+}: {
+  holidays: import('../lib/exerciseConfig').Holiday[];
+}) {
+  const now = Date.now();
+  const upcoming = holidays
+    .filter((h) => new Date(h.date + 'T00:00:00').getTime() >= now - 86_400_000)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5);
+  if (upcoming.length === 0) return null;
+  return (
+    <>
+      <SectionHead style={{ marginTop: 0 }}>📅 Upcoming canceled classes</SectionHead>
+      <TableWrap>
+        <table style={tableStyles}>
+          <thead>
+            <tr>
+              <Th>Date</Th>
+              <Th>Reason</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {upcoming.map((h) => (
+              <Tr key={h.id}>
+                <Td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: E.primaryDeep }}>
+                  {new Date(h.date + 'T12:00:00').toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </Td>
+                <Td>{h.label || <span style={{ color: E.muteFaint }}>—</span>}</Td>
+              </Tr>
+            ))}
+          </tbody>
+        </table>
+      </TableWrap>
+      <div style={{ height: 18 }} />
+    </>
+  );
 }
 
 /** Generic "send to all" SMS link. iOS supports multiple recipients

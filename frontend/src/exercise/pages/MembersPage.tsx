@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useExerciseClients, useExercisePayments } from '../lib/exerciseData';
+import { useExerciseConfig } from '../lib/exerciseConfig';
 import { useEditMode } from '../components/AppShell';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { AddMemberModal } from '../components/AddMemberModal';
@@ -27,10 +28,12 @@ type BalFilter = '' | 'owes' | 'credit' | 'even';
 export function MembersPage() {
   const { data: clients = [] } = useExerciseClients();
   const { data: payments = [] } = useExercisePayments();
+  const { data: cfg } = useExerciseConfig();
   const [editMode] = useEditMode();
   const [q, setQ] = useState('');
   const [balFilter, setBalFilter] = useState<BalFilter>('');
   const [groupFilter, setGroupFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState<string>('');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [payingClientId, setPayingClientId] = useState<string | null>(null);
@@ -64,6 +67,7 @@ export function MembersPage() {
     if (balFilter === 'owes') r = r.filter((c) => readBalance(c) > 0);
     if (balFilter === 'credit') r = r.filter((c) => readBalance(c) < 0);
     if (balFilter === 'even') r = r.filter((c) => readBalance(c) === 0);
+    if (tagFilter) r = r.filter((c) => (c.tags ?? []).includes(`mtag:${tagFilter}`));
 
     r = r.slice().sort((a, b) => {
       let cmp = 0;
@@ -72,7 +76,7 @@ export function MembersPage() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return r;
-  }, [clients, q, balFilter, groupFilter, sortKey, sortDir]);
+  }, [clients, q, balFilter, groupFilter, tagFilter, sortKey, sortDir]);
 
   function toggleSort(k: SortKey) {
     if (k === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -130,6 +134,47 @@ export function MembersPage() {
           </button>
         )}
       </div>
+
+      {cfg && cfg.tags.length > 0 && (
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 12 }}>
+          <button
+            onClick={() => setTagFilter('')}
+            style={{
+              background: !tagFilter ? E.primary : '#fff',
+              color: !tagFilter ? '#fff' : E.ink,
+              border: `1px solid ${!tagFilter ? E.primary : E.rule}`,
+              borderRadius: 16,
+              padding: '4px 12px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            All
+          </button>
+          {cfg.tags.map((t) => {
+            const on = tagFilter === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTagFilter(on ? '' : t.id)}
+                style={{
+                  background: on ? t.color : t.color + '22',
+                  color: on ? '#fff' : t.color,
+                  border: `1px solid ${t.color}`,
+                  borderRadius: 16,
+                  padding: '4px 12px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {t.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <TableWrap>
         <table style={tableStyles}>

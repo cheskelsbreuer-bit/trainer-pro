@@ -19,6 +19,9 @@ import {
   DEFAULT_SETTINGS,
   type ExerciseSettings,
   type Category,
+  type Holiday,
+  type Tag,
+  type CustomField,
 } from '../lib/exerciseConfig';
 import { useExerciseClients, useExercisePayments } from '../lib/exerciseData';
 import { membersCsv, paymentsCsv, downloadCsv } from '../lib/csvExport';
@@ -145,6 +148,51 @@ export function SettingsPage() {
             onChange={(next) =>
               saveCfg.mutate(
                 appendLog({ ...cfg, settings: next }, 'settings', 'Updated safety settings'),
+              )
+            }
+          />
+        ) : (
+          <p style={dim}>Loading…</p>
+        )}
+      </SettingsSection>
+
+      <SettingsSection title="Class holidays / canceled days" emoji="📅">
+        {cfg ? (
+          <HolidaysPanel
+            holidays={cfg.holidays}
+            onChange={(next) =>
+              saveCfg.mutate(
+                appendLog({ ...cfg, holidays: next }, 'settings', 'Updated holidays'),
+              )
+            }
+          />
+        ) : (
+          <p style={dim}>Loading…</p>
+        )}
+      </SettingsSection>
+
+      <SettingsSection title="Member tags" emoji="🏷">
+        {cfg ? (
+          <TagsPanel
+            tags={cfg.tags}
+            onChange={(next) =>
+              saveCfg.mutate(
+                appendLog({ ...cfg, tags: next }, 'settings', 'Updated tags'),
+              )
+            }
+          />
+        ) : (
+          <p style={dim}>Loading…</p>
+        )}
+      </SettingsSection>
+
+      <SettingsSection title="Custom member fields" emoji="✏">
+        {cfg ? (
+          <CustomFieldsPanel
+            fields={cfg.customFields}
+            onChange={(next) =>
+              saveCfg.mutate(
+                appendLog({ ...cfg, customFields: next }, 'settings', 'Updated custom fields'),
               )
             }
           />
@@ -708,6 +756,231 @@ function ProfilePanel({
       {save.isSuccess && (
         <span style={{ color: E.greenDeep, marginLeft: 12, fontSize: '0.85rem' }}>Saved!</span>
       )}
+    </div>
+  );
+}
+
+function HolidaysPanel({
+  holidays,
+  onChange,
+}: {
+  holidays: Holiday[];
+  onChange: (next: Holiday[]) => void;
+}) {
+  const [date, setDate] = useState('');
+  const [label, setLabel] = useState('');
+  function add() {
+    if (!date) return;
+    onChange([
+      ...holidays,
+      { id: `hd-${Date.now()}`, date, label: label.trim() },
+    ]);
+    setDate('');
+    setLabel('');
+  }
+  function rm(id: string) {
+    onChange(holidays.filter((h) => h.id !== id));
+  }
+  const sorted = holidays.slice().sort((a, b) => a.date.localeCompare(b.date));
+  return (
+    <div>
+      <p style={help}>
+        Dates when class is canceled (yom tov, illness, vacation). Shown on the dashboard
+        so you don't accidentally charge anyone.
+      </p>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inp} />
+        <input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Reason (optional)"
+          style={inp}
+        />
+        <button onClick={add} style={btnGreen}>+ Add</button>
+      </div>
+      {sorted.length === 0 ? (
+        <p style={dim}>No holidays added yet.</p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {sorted.map((h) => (
+            <li
+              key={h.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 10px',
+                borderBottom: `1px solid ${E.ruleSoft}`,
+              }}
+            >
+              <span style={{ fontSize: '0.88rem' }}>
+                <strong>{new Date(h.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>
+                {h.label && <span style={{ color: E.mute, marginLeft: 10 }}>{h.label}</span>}
+              </span>
+              <button
+                onClick={() => rm(h.id)}
+                style={{ background: 'transparent', border: 'none', color: E.mute, cursor: 'pointer' }}
+                aria-label="Remove"
+              >
+                <X size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function TagsPanel({
+  tags,
+  onChange,
+}: {
+  tags: Tag[];
+  onChange: (next: Tag[]) => void;
+}) {
+  const [name, setName] = useState('');
+  const [color, setColor] = useState('#2d6a9f');
+  function add() {
+    if (!name.trim()) return;
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24);
+    if (tags.find((t) => t.id === id)) return;
+    onChange([...tags, { id, name: name.trim(), color }]);
+    setName('');
+  }
+  function rm(id: string) {
+    if (!confirm('Remove this tag? Members already tagged with it will keep the tag value.')) return;
+    onChange(tags.filter((t) => t.id !== id));
+  }
+  return (
+    <div>
+      <p style={help}>
+        Free-form labels — "VIP", "newcomer", "needs spotter", anything. Filter the
+        Members tab by tag.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+        {tags.map((t) => (
+          <span
+            key={t.id}
+            style={{
+              background: t.color + '22',
+              color: t.color,
+              border: `1px solid ${t.color}`,
+              borderRadius: 16,
+              padding: '4px 11px 4px 13px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            {t.name}
+            <button
+              onClick={() => rm(t.id)}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+              aria-label="Remove"
+            >
+              <X size={11} />
+            </button>
+          </span>
+        ))}
+        {tags.length === 0 && <span style={dim}>No tags yet.</span>}
+      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          style={{ width: 38, height: 36, border: '1px solid #ccc', borderRadius: 6, cursor: 'pointer' }}
+        />
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Tag name"
+          onKeyDown={(e) => e.key === 'Enter' && add()}
+          style={{ ...inp, maxWidth: 220 }}
+        />
+        <button onClick={add} style={btnGreen}>+ Add</button>
+      </div>
+    </div>
+  );
+}
+
+function CustomFieldsPanel({
+  fields,
+  onChange,
+}: {
+  fields: CustomField[];
+  onChange: (next: CustomField[]) => void;
+}) {
+  const [label, setLabel] = useState('');
+  const [type, setType] = useState<CustomField['type']>('text');
+  function add() {
+    if (!label.trim()) return;
+    const id = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24);
+    if (fields.find((f) => f.id === id)) return;
+    onChange([...fields, { id, label: label.trim(), type }]);
+    setLabel('');
+  }
+  function rm(id: string) {
+    if (!confirm('Remove this field? Members keep their existing values for it.')) return;
+    onChange(fields.filter((f) => f.id !== id));
+  }
+  return (
+    <div>
+      <p style={help}>
+        Extra fields shown on the Edit-member modal — emergency contact, allergies,
+        spouse's name, anything you want to track per person.
+      </p>
+      {fields.length === 0 ? (
+        <p style={dim}>No custom fields yet.</p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px' }}>
+          {fields.map((f) => (
+            <li
+              key={f.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 10px',
+                borderBottom: `1px solid ${E.ruleSoft}`,
+                fontSize: '0.88rem',
+              }}
+            >
+              <span>
+                <strong>{f.label}</strong>
+                <span style={{ color: E.mute, marginLeft: 8, fontSize: '0.78rem' }}>
+                  {f.type}
+                </span>
+              </span>
+              <button
+                onClick={() => rm(f.id)}
+                style={{ background: 'transparent', border: 'none', color: E.mute, cursor: 'pointer' }}
+                aria-label="Remove"
+              >
+                <X size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Field label (e.g. Allergies)"
+          onKeyDown={(e) => e.key === 'Enter' && add()}
+          style={{ ...inp, maxWidth: 260 }}
+        />
+        <select value={type} onChange={(e) => setType(e.target.value as CustomField['type'])} style={{ ...inp, maxWidth: 110 }}>
+          <option value="text">Text</option>
+          <option value="number">Number</option>
+          <option value="date">Date</option>
+        </select>
+        <button onClick={add} style={btnGreen}>+ Add</button>
+      </div>
     </div>
   );
 }

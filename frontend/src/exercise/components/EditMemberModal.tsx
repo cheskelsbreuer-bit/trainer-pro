@@ -1,11 +1,13 @@
 // Edit-member modal — change name, phone, group(s), rate, and the
 // running balance number directly. Also lets you archive from inside.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Trash2, Archive } from 'lucide-react';
 import type { Client } from '../../lib/database.types';
 import { useUpsertClient, useSetClientStatus } from '../lib/exerciseData';
 import { useExerciseConfig, appendLog } from '../lib/exerciseConfig';
+import { supabase } from '../../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 import { E, WEEKDAY_GROUPS, readGroupSlug, readRate, readBalance } from '../theme';
 
 export function EditMemberModal({
@@ -21,6 +23,7 @@ export function EditMemberModal({
 
   const [name, setName] = useState(client.full_name);
   const [phone, setPhone] = useState(client.phone ?? '');
+  const [dob, setDob] = useState(client.date_of_birth ?? '');
   const [rate, setRate] = useState(String(readRate(client)));
   const [balance, setBalance] = useState(String(readBalance(client)));
   const [days, setDays] = useState<string[]>(() =>
@@ -30,6 +33,33 @@ export function EditMemberModal({
       .map((d) => d.charAt(0).toUpperCase() + d.slice(1)),
   );
   const [err, setErr] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  // Pull current custom-field values + applied tags from client.tags
+  // (we store them as `cf:<id>:<value>` and `mtag:<id>` respectively).
+  const customValues = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const t of client.tags ?? []) {
+      if (t.startsWith('cf:')) {
+        const rest = t.slice(3);
+        const colon = rest.indexOf(':');
+        if (colon > 0) out[rest.slice(0, colon)] = rest.slice(colon + 1);
+      }
+    }
+    return out;
+  }, [client.tags]);
+  const [cfVals, setCfVals] = useState<Record<string, string>>(customValues);
+  useEffect(() => setCfVals(customValues), [customValues]);
+
+  const appliedTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of client.tags ?? []) {
+      if (t.startsWith('mtag:')) set.add(t.slice(5));
+    }
+    return set;
+  }, [client.tags]);
+  const [selTags, setSelTags] = useState<Set<string>>(appliedTags);
+  useEffect(() => setSelTags(appliedTags), [appliedTags]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -48,18 +78,20 @@ export function EditMemberModal({
     const bal = parseFloat(balance);
     const out: string[] = [];
     // Keep ALL tags that aren't ones we manage, then re-add managed ones.
-    const managed = new Set([
-      'group:',
-      'rate:',
-      'balance:',
-    ]);
+    const managedPrefixes = ['group:', 'rate:', 'balance:', 'cf:', 'mtag:'];
     for (const t of client.tags ?? []) {
-      const handled = Array.from(managed).some((p) => t.startsWith(p));
+      const handled = managedPrefixes.some((p) => t.startsWith(p));
       if (!handled) out.push(t);
     }
     if (days.length) out.push('group:' + days.map((d) => d.toLowerCase()).join('-'));
     if (Number.isFinite(r) && r > 0) out.push(`rate:${Math.round(r)}`);
     if (Number.isFinite(bal)) out.push(`balance:${Math.round(bal)}`);
+    // Custom field values
+    for (const [id, value] of Object.entries(cfVals)) {
+      if (value && value.trim()) out.push(`cf:${id}:${value.trim()}`);
+    }
+    // Tag selections
+    for (const id of selTags) out.push(`mtag:${id}`);
     return out;
   }
 
@@ -70,12 +102,22 @@ export function EditMemberModal({
       return;
     }
     try {
+      // 1. Save the regular fields via the existing upsert hook
       await upsert.mutateAsync({
         id: client.id,
         full_name: name.trim(),
         phone: phone.trim() || null,
         tags: buildTags(),
       });
+      // 2. Save the date_of_birth column separately
+      //    (useUpsertClient doesn't currently surface it)
+      if (dob !== (client.date_of_birth ?? '')) {
+        await supabase
+          .from('clients')
+          .update({ date_of_birth: dob || null })
+          .eq('id', client.id);
+        qc.invalidateQueries({ queryKey: ['exercise-clients'] });
+      }
       if (cfg) {
         saveCfg.mutate(
           appendLog(cfg, 'member', `Edited ${name.trim()}`),
@@ -116,6 +158,12 @@ export function EditMemberModal({
           </Field>
           <Field label="Phone">
             <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="optional" style={inp} />
+          </Field>
+          <Field label="Date of birth (optional)">
+            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} style={inp} />
+            <span style={{ fontSize: '0.74rem', color: E.muteFaint }}>
+              Shows up on the dashboard during her birthday month.
+            </span>
           </Field>
           <Field label="Class days">
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -165,6 +213,73 @@ export function EditMemberModal({
               </span>
             </Field>
           </div>
+
+          {cfg && cfg.tags.length > 0 && (
+            <Field label="Tags">
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {cfg.tags.map((t) => {
+                  const on = selTags.has(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        const n = new Set(selTags);
+                        if (on) n.delete(t.id);
+                        else n.add(t.id);
+                        setSelTags(n);
+                      }}
+                      style={{
+                        background: on ? t.color : t.color + '22',
+                        color: on ? '#fff' : t.color,
+                        border: `1px solid ${t.color}`,
+                        borderRadius: 16,
+                        padding: '4px 12px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontFamily: 'Arial, sans-serif',
+                      }}
+                    >
+                      {on ? '✓ ' : ''}{t.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          )}
+
+          {cfg && cfg.customFields.length > 0 && (
+            <div>
+              <div
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  color: E.inkSoft,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.3px',
+                  marginBottom: 6,
+                }}
+              >
+                Custom fields
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {cfg.customFields.map((f) => (
+                  <Field key={f.id} label={f.label}>
+                    <input
+                      type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}
+                      value={cfVals[f.id] ?? ''}
+                      onChange={(e) =>
+                        setCfVals({ ...cfVals, [f.id]: e.target.value })
+                      }
+                      style={inp}
+                    />
+                  </Field>
+                ))}
+              </div>
+            </div>
+          )}
+
           {err && (
             <div
               style={{

@@ -74,6 +74,27 @@ export interface PauseRecord {
   stillPaused: boolean;
 }
 
+/** Holiday — a date when class is canceled. Optional label. */
+export interface Holiday {
+  id: string;
+  date: string; // YYYY-MM-DD
+  label: string;
+}
+
+/** A tag the coach can apply to members for filtering. */
+export interface Tag {
+  id: string;
+  name: string;
+  color: string; // hex
+}
+
+/** A custom field appears as an extra input in EditMemberModal. */
+export interface CustomField {
+  id: string;
+  label: string;
+  type: 'text' | 'number' | 'date';
+}
+
 export interface ExerciseAppConfig {
   combos: Combo[];
   folders: NoteFolder[];
@@ -81,6 +102,9 @@ export interface ExerciseAppConfig {
   settings: ExerciseSettings;
   log: LogEntry[];
   pauses: PauseRecord[];
+  holidays: Holiday[];
+  tags: Tag[];
+  customFields: CustomField[];
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────
@@ -121,6 +145,9 @@ export const EMPTY_CONFIG: ExerciseAppConfig = {
   settings: DEFAULT_SETTINGS,
   log: [],
   pauses: [],
+  holidays: [],
+  tags: [],
+  customFields: [],
 };
 
 // ── Merge utility: hydrate from a partial saved config ─────────────────
@@ -137,6 +164,9 @@ function hydrate(raw: unknown): ExerciseAppConfig {
     settings: { ...DEFAULT_SETTINGS, ...(r.settings ?? {}) },
     log: Array.isArray(r.log) ? r.log : [],
     pauses: Array.isArray(r.pauses) ? r.pauses : [],
+    holidays: Array.isArray(r.holidays) ? r.holidays : [],
+    tags: Array.isArray(r.tags) ? r.tags : [],
+    customFields: Array.isArray(r.customFields) ? r.customFields : [],
   };
 }
 

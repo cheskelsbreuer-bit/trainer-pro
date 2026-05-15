@@ -8,6 +8,7 @@ import { LogOut } from 'lucide-react';
 import type { Trainer } from '../../lib/database.types';
 import { supabase } from '../../lib/supabase';
 import { E } from '../theme';
+import { TourWizard, useTourAutoShow } from './TourWizard';
 
 interface Tab {
   to: string;
@@ -58,6 +59,7 @@ export function useEditMode(): [boolean, (v: boolean) => void] {
 
 export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const [editMode, setEditMode] = useEditMode();
+  const [tourOpen, closeTour] = useTourAutoShow();
   const navigate = useNavigate();
 
   async function signOut() {
@@ -230,6 +232,8 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
       <main style={{ padding: '18px 22px', maxWidth: 1200, margin: '0 auto' }}>
         <Outlet />
       </main>
+
+      {tourOpen && <TourWizard onClose={closeTour} />}
     </div>
   );
 }
