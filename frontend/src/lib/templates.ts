@@ -305,6 +305,37 @@ export const TEMPLATES: Template[] = [
     },
   },
   {
+    slug: 'exercise_group',
+    name: 'Exercise group',
+    emoji: '💪',
+    tagline: 'Recurring weekly group classes, per-class billing, who-owes tracking.',
+    description:
+      'Built around weekly group exercise classes. Members pay per class. Tracks balances, payment history, paused/returned members, and class groups by day of the week. Designed for mom-and-pop fitness groups, women\'s exercise classes, neighborhood movement circles.',
+    bestFor: [
+      'Group exercise instructors',
+      'Per-class billing (not monthly)',
+      'Same students, 1-2 classes per week',
+      'Owner needs balance + payment tracking',
+    ],
+    matchSpecialties: ['group_classes', 'general_fitness'],
+    matchKeywords: [
+      'exercise',
+      'group',
+      'class',
+      'weekly',
+      'women',
+      'movement',
+      'per class',
+    ],
+    defaults: {
+      packages: [
+        { name: 'Per-class rate', sessions: 1, price: 15 },
+      ],
+      booking_settings: { default_duration_min: 60, lead_hours: 0, buffer_min: 0 },
+      booking_enabled: false,
+    },
+  },
+  {
     slug: 'nutrition_coach',
     name: 'Nutrition coach',
     emoji: '🥗',

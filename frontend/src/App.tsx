@@ -32,6 +32,7 @@ import { pickTemplateUx } from './lib/templateUx';
 import { DojoApp } from './dojo/DojoApp';
 import { BoxingApp } from './boxing/BoxingApp';
 import { NutritionApp } from './nutrition/NutritionApp';
+import { ExerciseApp } from './exercise/ExerciseApp';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,6 +79,7 @@ function ProtectedShell() {
   if (variant === 'martial') return <DojoApp trainer={trainer} />;
   if (variant === 'boxing') return <BoxingApp trainer={trainer} />;
   if (variant === 'nutrition') return <NutritionApp trainer={trainer} />;
+  if (variant === 'exercise') return <ExerciseApp trainer={trainer} />;
   return <Layout />;
 }
 

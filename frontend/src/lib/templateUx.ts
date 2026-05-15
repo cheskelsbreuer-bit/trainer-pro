@@ -33,7 +33,8 @@ export type DashboardVariant =
   | 'studio'
   | 'martial'
   | 'boxing'
-  | 'nutrition';
+  | 'nutrition'
+  | 'exercise';
 
 export interface TemplateUx {
   slug: string;
@@ -242,6 +243,28 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
       addressPlaceholder: 'Worldwide · or e.g., USA + Canada',
       emailPlaceholder: 'coach@example.com',
       instagramPlaceholder: '@yourcoaching',
+    },
+  },
+  exercise_group: {
+    slug: 'exercise_group',
+    clientNoun: 'member',
+    clientNounPlural: 'members',
+    dashboardHeadline: 'Your exercise group',
+    dashboardSubtitle: 'Who owes money, recent payments, who paused, who came back.',
+    spaceNoun: 'group',
+    primaryCtaLabel: 'Record a payment',
+    primaryCtaPath: '/payments',
+    dashboardVariant: 'exercise',
+    publicProfile: {
+      heroHeadline: 'Move together. Sweat together.',
+      heroCta: 'Try a class',
+      heroSubtitle: 'Weekly exercise classes for women — fun, fast, no equipment needed. Drop in any week.',
+      aboutHeadline: 'About the class',
+      aboutBody: 'Tell prospective members about what to expect: the vibe, the schedule, the cost, who comes.',
+      addressLabel: 'Where we meet',
+      addressPlaceholder: 'e.g., Main shul basement, 123 Maple St.',
+      emailPlaceholder: 'hello@yourgroup.com',
+      instagramPlaceholder: '@yourgroup',
     },
   },
   nutrition_coach: {
