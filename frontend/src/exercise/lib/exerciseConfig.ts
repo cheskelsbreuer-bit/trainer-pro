@@ -60,12 +60,27 @@ export interface LogEntry {
   action: string;
   details?: string;
 }
+
+/** Explicit pause record — when a member took a break from a specific
+ *  class. fromDate/toDate are ISO YYYY-MM-DD strings. stillPaused=true
+ *  means they haven't returned yet (toDate is empty). */
+export interface PauseRecord {
+  id: string;
+  name: string;
+  group: string;
+  fromDate: string | null;
+  toDate: string | null;
+  classesPaused: number;
+  stillPaused: boolean;
+}
+
 export interface ExerciseAppConfig {
   combos: Combo[];
   folders: NoteFolder[];
   categories: Category[];
   settings: ExerciseSettings;
   log: LogEntry[];
+  pauses: PauseRecord[];
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────
@@ -105,6 +120,7 @@ export const EMPTY_CONFIG: ExerciseAppConfig = {
   categories: DEFAULT_CATEGORIES,
   settings: DEFAULT_SETTINGS,
   log: [],
+  pauses: [],
 };
 
 // ── Merge utility: hydrate from a partial saved config ─────────────────
@@ -120,6 +136,7 @@ function hydrate(raw: unknown): ExerciseAppConfig {
         : DEFAULT_CATEGORIES,
     settings: { ...DEFAULT_SETTINGS, ...(r.settings ?? {}) },
     log: Array.isArray(r.log) ? r.log : [],
+    pauses: Array.isArray(r.pauses) ? r.pauses : [],
   };
 }
 
