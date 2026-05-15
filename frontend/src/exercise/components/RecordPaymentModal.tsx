@@ -4,6 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useExerciseClients, useRecordPayment } from '../lib/exerciseData';
+import { useExerciseConfig, appendLog } from '../lib/exerciseConfig';
 import { E, readGroup } from '../theme';
 
 const METHODS = ['cash', 'check', 'venmo', 'zelle', 'other'] as const;
@@ -16,6 +17,7 @@ export function RecordPaymentModal({
   onClose: () => void;
 }) {
   const { data: clients = [] } = useExerciseClients();
+  const { data: cfg, save: saveCfg } = useExerciseConfig();
   const record = useRecordPayment();
   const [clientId, setClientId] = useState<string>(initialClientId ?? '');
   const [amount, setAmount] = useState<string>('');
@@ -55,6 +57,17 @@ export function RecordPaymentModal({
         method: method || null,
         currentTags: selected.tags ?? [],
       });
+      // Append to activity log (best-effort)
+      if (cfg) {
+        saveCfg.mutate(
+          appendLog(
+            cfg,
+            'payment',
+            `Recorded $${amt.toFixed(0)} from ${selected.full_name}`,
+            method ? `method: ${method}` : undefined,
+          ),
+        );
+      }
       onClose();
     } catch (e) {
       setErr((e as Error).message);

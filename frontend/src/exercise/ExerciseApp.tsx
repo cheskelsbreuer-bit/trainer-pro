@@ -13,6 +13,8 @@ import { PausedPage } from './pages/PausedPage';
 import { ArchivedPage } from './pages/ArchivedPage';
 import { LookupPage } from './pages/LookupPage';
 import { NotesPage } from './pages/NotesPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { LogPage } from './pages/LogPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 export function ExerciseApp({ trainer }: { trainer: Trainer | undefined }) {
@@ -27,6 +29,8 @@ export function ExerciseApp({ trainer }: { trainer: Trainer | undefined }) {
         <Route path="archived" element={<ArchivedPage />} />
         <Route path="lookup" element={<LookupPage />} />
         <Route path="notes" element={<NotesPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="log" element={<LogPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -24,6 +24,8 @@ const TABS: Tab[] = [
   { to: '/payments', label: 'Payments', emoji: '💰' },
   { to: '/groups', label: 'Groups', emoji: '🗂' },
   { to: '/notes', label: 'Notes', emoji: '📝' },
+  { to: '/reports', label: 'Reports', emoji: '📈' },
+  { to: '/log', label: 'Log', emoji: '📜' },
   { to: '/paused', label: 'Paused', emoji: '⏸', corner: true },
   { to: '/archived', label: 'Former', emoji: '🗃', corner: true },
   { to: '/lookup', label: 'Lookup', emoji: '🔍', corner: true },
