@@ -16,9 +16,12 @@ import {
   useExerciseConfig,
   appendLog,
   DEFAULT_CATEGORIES,
+  DEFAULT_SETTINGS,
   type ExerciseSettings,
   type Category,
 } from '../lib/exerciseConfig';
+import { useExerciseClients, useExercisePayments } from '../lib/exerciseData';
+import { membersCsv, paymentsCsv, downloadCsv } from '../lib/csvExport';
 import { StripeStatusCard } from '../../components/StripeStatusCard';
 import { GoogleCalendarCard } from '../../components/GoogleCalendarCard';
 import { BookingSettingsCard } from '../../components/BookingSettingsCard';
@@ -148,6 +151,10 @@ export function SettingsPage() {
         ) : (
           <p style={dim}>Loading…</p>
         )}
+      </SettingsSection>
+
+      <SettingsSection title="Data & maintenance" emoji="💾">
+        <DataMaintenancePanel />
       </SettingsSection>
 
       {/* ── Standard Trainer Pro panels ────────────────────────────── */}
@@ -704,6 +711,94 @@ function ProfilePanel({
     </div>
   );
 }
+
+function DataMaintenancePanel() {
+  const { data: cfg, save: saveCfg } = useExerciseConfig();
+  const { data: clients = [] } = useExerciseClients();
+  const { data: payments = [] } = useExercisePayments();
+
+  function exportMembers() {
+    const csv = membersCsv(clients);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`members-${stamp}.csv`, csv);
+  }
+  function exportPayments() {
+    const csv = paymentsCsv(payments, clients);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`payments-${stamp}.csv`, csv);
+  }
+  function resetSms() {
+    if (!cfg) return;
+    if (!confirm('Reset the SMS reminder template to the default text?')) return;
+    saveCfg.mutate(
+      appendLog(
+        { ...cfg, settings: { ...cfg.settings, smsTemplate: DEFAULT_SETTINGS.smsTemplate } },
+        'settings',
+        'Reset SMS template to default',
+      ),
+    );
+  }
+  function clearLog() {
+    if (!cfg) return;
+    if (!confirm('Clear the entire activity log? This cannot be undone.')) return;
+    saveCfg.mutate({ ...cfg, log: [] });
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div>
+        <Lbl>Export data</Lbl>
+        <p style={help}>Download a spreadsheet copy. Open in Excel or Google Sheets.</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+          <button onClick={exportMembers} style={btnPrimaryLite}>
+            📊 Members CSV ({clients.length})
+          </button>
+          <button onClick={exportPayments} style={btnPrimaryLite}>
+            💰 Payments CSV ({payments.length})
+          </button>
+        </div>
+      </div>
+      <div>
+        <Lbl>SMS template</Lbl>
+        <p style={help}>Restore the default reminder wording.</p>
+        <button onClick={resetSms} style={btnGray}>
+          ↻ Reset SMS template to default
+        </button>
+      </div>
+      <div>
+        <Lbl>Activity log</Lbl>
+        <p style={help}>
+          Wipes all {cfg?.log.length ?? 0} entries. New actions will start logging again
+          immediately.
+        </p>
+        <button onClick={clearLog} style={btnDanger}>
+          🗑 Clear activity log
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const btnPrimaryLite: React.CSSProperties = {
+  background: '#fff',
+  color: E.primary,
+  border: `1px solid ${E.primary}`,
+  padding: '8px 14px',
+  borderRadius: 8,
+  cursor: 'pointer',
+  fontWeight: 600,
+  fontSize: '0.85rem',
+};
+const btnDanger: React.CSSProperties = {
+  background: 'transparent',
+  color: E.redDeep,
+  border: `1px solid ${E.red}`,
+  padding: '8px 14px',
+  borderRadius: 8,
+  cursor: 'pointer',
+  fontWeight: 600,
+  fontSize: '0.85rem',
+};
 
 // ── Layout primitives ────────────────────────────────────────────────
 

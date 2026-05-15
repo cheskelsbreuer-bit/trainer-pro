@@ -4,7 +4,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useExerciseClients, useExercisePayments } from '../lib/exerciseData';
+import { useExerciseConfig } from '../lib/exerciseConfig';
 import { useEditMode } from '../components/AppShell';
+import { fillTemplate, smsLink } from '../lib/reminders';
 import {
   E,
   readBalance,
@@ -17,6 +19,7 @@ import { RecordPaymentModal } from '../components/RecordPaymentModal';
 export function DashboardPage() {
   const { data: clients = [] } = useExerciseClients();
   const { data: payments = [] } = useExercisePayments();
+  const { data: cfg } = useExerciseConfig();
   const [editMode] = useEditMode();
   const [payingClientId, setPayingClientId] = useState<string | null>(null);
 
@@ -107,7 +110,26 @@ export function DashboardPage() {
       </div>
 
       {/* Owe table */}
-      <SectionHead>⚠ Members Who Owe Money</SectionHead>
+      <SectionHead>
+        ⚠ Members Who Owe Money
+        {editMode && oweRows.length > 0 && cfg && (
+          <a
+            href={buildBulkSmsLink(oweRows.map((r) => r.client), cfg.settings)}
+            style={{
+              background: E.orange,
+              color: '#fff',
+              padding: '5px 11px',
+              borderRadius: 6,
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              marginLeft: 'auto',
+            }}
+          >
+            📱 SMS everyone
+          </a>
+        )}
+      </SectionHead>
       <TableWrap>
         <table style={tableStyles}>
           <thead>
@@ -143,9 +165,23 @@ export function DashboardPage() {
                   <Td>{shortDate(r.lastPaid)}</Td>
                   {editMode && (
                     <Td>
-                      <button onClick={() => setPayingClientId(r.client.id)} style={btnSm(E.green)}>
-                        💰 Record
-                      </button>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button onClick={() => setPayingClientId(r.client.id)} style={btnSm(E.green)} title="Record payment">
+                          💰
+                        </button>
+                        {cfg && r.client.phone && (
+                          <a
+                            href={smsLink(
+                              r.client.phone,
+                              fillTemplate(cfg.settings.smsTemplate, r.client, cfg.settings),
+                            )}
+                            style={{ ...btnSm(E.orange), textDecoration: 'none' }}
+                            title="Send SMS reminder"
+                          >
+                            📱
+                          </a>
+                        )}
+                      </div>
                     </Td>
                   )}
                 </Tr>
@@ -420,4 +456,24 @@ export function btn(bg: string): React.CSSProperties {
     alignItems: 'center',
     gap: 5,
   };
+}
+
+/** Generic "send to all" SMS link. iOS supports multiple recipients
+ *  separated by commas; Android may only pick the first — either way
+ *  it opens the user's SMS app so they can review before sending. */
+function buildBulkSmsLink(
+  clients: import('../../lib/database.types').Client[],
+  settings: import('../lib/exerciseConfig').ExerciseSettings,
+): string {
+  const phones = clients
+    .map((c) => (c.phone || '').replace(/[^\d+]/g, ''))
+    .filter((p) => p);
+  if (phones.length === 0) return 'sms:';
+  // A single generic message — once SMS app opens, mom can review per
+  // recipient. Most coaches text the same nudge to everyone anyway.
+  const generic = settings.smsTemplate
+    .replace(/\{firstName\}/g, 'there')
+    .replace(/\{currency\}/g, settings.currency || '$')
+    .replace(/\{balance\}/g, 'your balance');
+  return `sms:${phones.join(',')}?&body=${encodeURIComponent(generic)}`;
 }

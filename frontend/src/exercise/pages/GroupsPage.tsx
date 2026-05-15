@@ -3,6 +3,8 @@
 
 import { useMemo, useState } from 'react';
 import { useExerciseClients, useExercisePayments } from '../lib/exerciseData';
+import { useEditMode } from '../components/AppShell';
+import { ChargeGroupModal } from '../components/ChargeGroupModal';
 import {
   E,
   readBalance,
@@ -18,7 +20,9 @@ import { TableWrap, Th, Td, Tr, tableStyles } from './DashboardPage';
 export function GroupsPage() {
   const { data: clients = [] } = useExerciseClients();
   const { data: payments = [] } = useExercisePayments();
+  const [editMode] = useEditMode();
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [chargeMode, setChargeMode] = useState<null | 'charge' | 'credit'>(null);
 
   const groups = useMemo(() => uniqueGroups(clients), [clients]);
 
@@ -69,7 +73,49 @@ export function GroupsPage() {
               {activeGroup} class — {members.length} active members
             </strong>
           </div>
+          {editMode && members.length > 0 && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setChargeMode('charge')}
+                style={{
+                  background: E.green,
+                  color: '#fff',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '0.86rem',
+                }}
+              >
+                💰 Charge this class
+              </button>
+              <button
+                onClick={() => setChargeMode('credit')}
+                style={{
+                  background: E.orange,
+                  color: '#fff',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '0.86rem',
+                }}
+              >
+                ↩ Credit this class
+              </button>
+            </div>
+          )}
         </div>
+
+        {chargeMode && (
+          <ChargeGroupModal
+            group={activeGroup}
+            mode={chargeMode}
+            onClose={() => setChargeMode(null)}
+          />
+        )}
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
           <Stat value={String(members.length)} label="Active in this group" tone="primary" />

@@ -7,6 +7,7 @@ import { useExerciseClients, useExercisePayments } from '../lib/exerciseData';
 import { useEditMode } from '../components/AppShell';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { AddMemberModal } from '../components/AddMemberModal';
+import { EditMemberModal } from '../components/EditMemberModal';
 import {
   E,
   readBalance,
@@ -33,6 +34,7 @@ export function MembersPage() {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [payingClientId, setPayingClientId] = useState<string | null>(null);
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   const groups = useMemo(() => uniqueGroups(clients), [clients]);
@@ -188,11 +190,16 @@ export function MembersPage() {
                     <Td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {editMode && (
-                          <button onClick={() => setPayingClientId(c.id)} style={btnSm(E.green)}>
-                            💰
-                          </button>
+                          <>
+                            <button onClick={() => setPayingClientId(c.id)} style={btnSm(E.green)} title="Record payment">
+                              💰
+                            </button>
+                            <button onClick={() => setEditingClientId(c.id)} style={btnSm(E.primary)} title="Edit">
+                              ✎
+                            </button>
+                          </>
                         )}
-                        <Link to={`/lookup?id=${c.id}`} style={{ ...btnSm(E.primary), textDecoration: 'none' }}>
+                        <Link to={`/lookup?id=${c.id}`} style={{ ...btnSm(E.gray), textDecoration: 'none' }}>
                           View
                         </Link>
                       </div>
@@ -216,6 +223,16 @@ export function MembersPage() {
         />
       )}
       {adding && <AddMemberModal onClose={() => setAdding(false)} />}
+      {editingClientId && (() => {
+        const c = clients.find((x) => x.id === editingClientId);
+        if (!c) return null;
+        return (
+          <EditMemberModal
+            client={c}
+            onClose={() => setEditingClientId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

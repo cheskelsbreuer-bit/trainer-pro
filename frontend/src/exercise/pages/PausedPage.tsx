@@ -1,28 +1,35 @@
-// Paused — two sections:
-//   1. Explicit pause records (with from-date + classes-paused count)
-//      pulled from public_profile.exercise.pauses
-//   2. Members whose status = 'paused' but with no explicit record
+// Paused — explicit pause records on top + status='paused' members below.
+// In edit mode: "+ Add pause" button at the top, "End pause" per row
+// (flips client back to active AND marks the pause record as ended).
 
 import { useMemo, useState } from 'react';
 import {
   useExerciseClients,
   useSetClientStatus,
 } from '../lib/exerciseData';
-import { useExerciseConfig } from '../lib/exerciseConfig';
+import { useExerciseConfig, appendLog } from '../lib/exerciseConfig';
+import { AddPauseModal } from '../components/AddPauseModal';
 import { useEditMode } from '../components/AppShell';
-import { E, readGroup, readPausedClasses, readStartDate, readEndDate, shortDate } from '../theme';
+import {
+  E,
+  readGroup,
+  readPausedClasses,
+  readStartDate,
+  readEndDate,
+  shortDate,
+} from '../theme';
 import { TableWrap, Th, Td, Tr, tableStyles, btnSm, SectionHead } from './DashboardPage';
 
 export function PausedPage() {
   const { data: clients = [] } = useExerciseClients();
-  const { data: cfg } = useExerciseConfig();
+  const { data: cfg, save: saveCfg } = useExerciseConfig();
   const setStatus = useSetClientStatus();
   const [editMode] = useEditMode();
   const [q, setQ] = useState('');
+  const [adding, setAdding] = useState(false);
 
   const explicitPauses = useMemo(
-    () =>
-      (cfg?.pauses ?? []).filter((p) => p.stillPaused),
+    () => (cfg?.pauses ?? []).filter((p) => p.stillPaused),
     [cfg],
   );
 
@@ -36,7 +43,50 @@ export function PausedPage() {
 
   async function markReturned(id: string) {
     if (!confirm('Mark this member as returned (status: active)?')) return;
+    const client = clients.find((c) => c.id === id);
     await setStatus.mutateAsync({ id, status: 'active' });
+    if (cfg && client) {
+      // Also end any matching explicit pause record(s) for this person
+      const nameKey = client.full_name.trim().toLowerCase();
+      const nextPauses = cfg.pauses.map((p) =>
+        p.name.trim().toLowerCase() === nameKey && p.stillPaused
+          ? { ...p, stillPaused: false, toDate: new Date().toISOString().slice(0, 10) }
+          : p,
+      );
+      saveCfg.mutate(
+        appendLog(
+          { ...cfg, pauses: nextPauses },
+          'pause',
+          `Ended pause for ${client.full_name}`,
+        ),
+      );
+    }
+  }
+
+  async function endExplicitPause(pauseId: string) {
+    if (!cfg) return;
+    const pause = cfg.pauses.find((p) => p.id === pauseId);
+    if (!pause) return;
+    if (!confirm(`Mark ${pause.name} as returned?`)) return;
+    // Flip matching client (by name) back to active if currently paused
+    const match = clients.find(
+      (c) => c.full_name.trim().toLowerCase() === pause.name.trim().toLowerCase(),
+    );
+    if (match && match.status === 'paused') {
+      await setStatus.mutateAsync({ id: match.id, status: 'active' });
+    }
+    const nextPauses = cfg.pauses.map((p) =>
+      p.id === pauseId
+        ? { ...p, stillPaused: false, toDate: new Date().toISOString().slice(0, 10) }
+        : p,
+    );
+    saveCfg.mutate(
+      appendLog(
+        { ...cfg, pauses: nextPauses },
+        'pause',
+        `Ended pause for ${pause.name}`,
+      ),
+    );
   }
 
   return (
@@ -52,8 +102,8 @@ export function PausedPage() {
           marginBottom: 14,
         }}
       >
-        ⏸ Members currently on a break. The first section is explicit pause records (with start
-        date); the second is members marked paused without a specific record.
+        ⏸ Members currently on a break. Explicit pause records (with from-dates) appear up top;
+        members marked paused without an explicit record below.
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 13 }}>
@@ -71,9 +121,14 @@ export function PausedPage() {
             fontFamily: 'Arial, sans-serif',
           }}
         />
+        {editMode && (
+          <button onClick={() => setAdding(true)} style={btnSm(E.green)}>
+            + Add pause
+          </button>
+        )}
       </div>
 
-      {/* ── Section 1: explicit pause records ────────────────────── */}
+      {/* Section 1: explicit pause records */}
       {explicitPauses.length > 0 && (
         <>
           <SectionHead>📋 Pause records ({explicitPauses.length})</SectionHead>
@@ -85,6 +140,7 @@ export function PausedPage() {
                   <Th>Class</Th>
                   <Th>Paused since</Th>
                   <Th>Classes missed</Th>
+                  {editMode && <Th>Action</Th>}
                 </tr>
               </thead>
               <tbody>
@@ -98,10 +154,18 @@ export function PausedPage() {
                       <Td>{p.group}</Td>
                       <Td>{shortDate(p.fromDate)}</Td>
                       <Td>
-                        <strong style={{ color: E.orangeDeep }}>
-                          {p.classesPaused}
-                        </strong>
+                        <strong style={{ color: E.orangeDeep }}>{p.classesPaused}</strong>
                       </Td>
+                      {editMode && (
+                        <Td>
+                          <button
+                            onClick={() => endExplicitPause(p.id)}
+                            style={btnSm(E.green)}
+                          >
+                            ✓ End pause
+                          </button>
+                        </Td>
+                      )}
                     </Tr>
                   ))}
               </tbody>
@@ -110,7 +174,7 @@ export function PausedPage() {
         </>
       )}
 
-      {/* ── Section 2: status=paused clients ─────────────────────── */}
+      {/* Section 2: status='paused' clients */}
       <SectionHead style={{ marginTop: explicitPauses.length > 0 ? 24 : 0 }}>
         ⏸ Members with paused status ({rows.length})
       </SectionHead>
@@ -159,6 +223,8 @@ export function PausedPage() {
           </tbody>
         </table>
       </TableWrap>
+
+      {adding && <AddPauseModal onClose={() => setAdding(false)} />}
     </div>
   );
 }
