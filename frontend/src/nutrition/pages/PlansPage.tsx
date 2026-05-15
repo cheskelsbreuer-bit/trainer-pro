@@ -1,28 +1,28 @@
-// The Habit Library — the head coach's curriculum, organized as
-// Level 1 (Foundational Habits) → Level 2 (Balanced Eating). Inside
-// each level the practices are grouped by skill. The coach scans this
-// page to pick which 2-week practice to assign next, then opens the
-// client to set it.
+// The Habit Library — the active methodology's curriculum, organized
+// as Level 1 → Level 2. Inside each level the practices are grouped
+// by skill. The coach scans this page to pick which 2-week practice
+// to assign next, then opens the client to set it.
 //
-// Also hosts the canonical PN Hand Portions reference panel at the top
-// so coaches can show it to a new client.
+// Reads the active methodology via useActiveMethodology() — content
+// swaps automatically when the coach picks a different methodology
+// in Settings.
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   N,
   SERIF_FONT,
-  NUTRITION_SKILLS,
-  NUTRITION_PRACTICES,
-  NUTRITION_LEVELS,
   HAND_PORTIONS,
   PRACTICE_WINDOW_DAYS,
+  useActiveMethodology,
   type NutritionSkill,
   type NutritionLevel,
+  type Methodology,
 } from '../theme';
 
 export function PlansPage() {
   const navigate = useNavigate();
+  const [methodology] = useActiveMethodology();
   const [openLevel, setOpenLevel] = useState<1 | 2>(1);
 
   return (
@@ -31,9 +31,9 @@ export function PlansPage() {
       <section className="text-center mb-10">
         <p
           className="text-[10px] uppercase tracking-[0.5em] mb-2"
-          style={{ color: N.coral }}
+          style={{ color: methodology.color }}
         >
-          The Curriculum
+          {methodology.shortLabel} · The Curriculum
         </p>
         <h2
           className="leading-tight"
@@ -50,69 +50,95 @@ export function PlansPage() {
           className="mt-3 text-sm italic max-w-2xl mx-auto leading-relaxed"
           style={{ color: N.mute, fontFamily: SERIF_FONT, fontSize: '1rem' }}
         >
-          Coaches assign <em>one</em> practice at a time. The client works it
-          for {PRACTICE_WINDOW_DAYS} days. When the client can do it at
-          9-or-10-of-10 confidence, the next practice is layered in.
+          {methodology.philosophy}
           <br />
           <span style={{ color: N.muteFaint, fontStyle: 'italic' }}>
-            — built on Precision Nutrition's coaching framework
+            Coaches assign <em>one</em> {methodology.practiceWord} at a time
+            for ~{PRACTICE_WINDOW_DAYS} days, then layer in the next.
           </span>
         </p>
       </section>
 
-      {/* Hand portions reference — coach's signature visual */}
-      <HandPortionsPanel />
+      {/* Hand portions reference — only for methodologies that use it */}
+      {methodology.usesHandPortions && <HandPortionsPanel />}
+
+      {/* Empty-library prompt for the Custom methodology */}
+      {methodology.practices.length === 0 && (
+        <div
+          className="rounded-2xl px-6 py-10 text-center"
+          style={{ background: N.card, border: `1px dashed ${N.rule}` }}
+        >
+          <h3
+            className="mb-2"
+            style={{
+              fontFamily: SERIF_FONT,
+              color: N.ink,
+              fontSize: '1.5rem',
+              fontWeight: 600,
+            }}
+          >
+            Your custom library is empty
+          </h3>
+          <p className="text-sm italic max-w-md mx-auto" style={{ color: N.mute }}>
+            The Custom methodology lets you build your own habit library.
+            Habit-creation UI is coming next — for now, switch to one of the
+            ready-made methodologies in Settings → Coaching methodology.
+          </p>
+        </div>
+      )}
 
       {/* Level 1 / Level 2 toggle */}
-      <section className="mt-12">
-        <div
-          className="flex flex-col sm:flex-row items-stretch gap-3 mb-7"
-        >
-          {NUTRITION_LEVELS.map((lvl) => {
-            const active = openLevel === lvl.id;
-            return (
-              <button
-                key={lvl.id}
-                onClick={() => setOpenLevel(lvl.id)}
-                className="flex-1 text-left rounded-2xl px-5 py-4 transition-all"
-                style={{
-                  background: active ? `${lvl.color}14` : N.card,
-                  border: `2px solid ${active ? lvl.color : N.rule}`,
-                }}
-              >
-                <p
-                  className="text-[10px] uppercase tracking-[0.4em] mb-1.5"
-                  style={{ color: lvl.color, fontFamily: SERIF_FONT }}
-                >
-                  Level {lvl.id}
-                </p>
-                <h3
-                  className="leading-tight mb-1"
+      {methodology.practices.length > 0 && (
+        <section className={methodology.usesHandPortions ? 'mt-12' : 'mt-2'}>
+          <div className="flex flex-col sm:flex-row items-stretch gap-3 mb-7">
+            {methodology.levels.map((lvl) => {
+              const active = openLevel === lvl.id;
+              return (
+                <button
+                  key={lvl.id}
+                  onClick={() => setOpenLevel(lvl.id)}
+                  className="flex-1 text-left rounded-2xl px-5 py-4 transition-all"
                   style={{
-                    fontFamily: SERIF_FONT,
-                    color: N.ink,
-                    fontSize: '1.375rem',
-                    fontWeight: 600,
+                    background: active ? `${lvl.color}14` : N.card,
+                    border: `2px solid ${active ? lvl.color : N.rule}`,
                   }}
                 >
-                  {lvl.label.replace(/^Level \d+ — /, '')}
-                </h3>
-                <p
-                  className="text-xs italic"
-                  style={{ color: N.inkSoft, fontFamily: SERIF_FONT }}
-                >
-                  {lvl.tagline}
-                </p>
-              </button>
-            );
-          })}
-        </div>
+                  <p
+                    className="text-[10px] uppercase tracking-[0.4em] mb-1.5"
+                    style={{ color: lvl.color, fontFamily: SERIF_FONT }}
+                  >
+                    Level {lvl.id}
+                  </p>
+                  <h3
+                    className="leading-tight mb-1"
+                    style={{
+                      fontFamily: SERIF_FONT,
+                      color: N.ink,
+                      fontSize: '1.375rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {stripLevelPrefix(lvl.label)}
+                  </h3>
+                  <p
+                    className="text-xs italic"
+                    style={{ color: N.inkSoft, fontFamily: SERIF_FONT }}
+                  >
+                    {lvl.tagline}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Selected level — header + skills + practices */}
-        {NUTRITION_LEVELS.filter((l) => l.id === openLevel).map((lvl) => (
-          <LevelSection key={lvl.id} level={lvl} />
-        ))}
-      </section>
+          {/* Selected level — header + skills + practices */}
+          {methodology.levels
+            .filter((l) => l.id === openLevel)
+            .map((lvl) => (
+              <LevelSection key={lvl.id} level={lvl} methodology={methodology} />
+            ))}
+        </section>
+      )}
 
       {/* CTA to clients page */}
       <section className="mt-12 text-center">
@@ -120,7 +146,8 @@ export function PlansPage() {
           className="italic mb-4"
           style={{ color: N.inkSoft, fontFamily: SERIF_FONT, fontSize: '1.05rem' }}
         >
-          Pick the right practice for the right client. Then go assign it.
+          Pick the right {methodology.practiceWord} for the right client.
+          Then go assign it.
         </p>
         <button
           onClick={() => navigate('/clients')}
@@ -134,13 +161,25 @@ export function PlansPage() {
   );
 }
 
-function LevelSection({ level }: { level: NutritionLevel }) {
+function stripLevelPrefix(label: string): string {
+  // "Level 1 — Foundational Habits" → "Foundational Habits"
+  // "Phase 1 — Rebuild trust" → "Rebuild trust"
+  return label.replace(/^(Level|Phase)\s+\d+\s*[—–-]\s*/, '');
+}
+
+function LevelSection({
+  level,
+  methodology,
+}: {
+  level: NutritionLevel;
+  methodology: Methodology;
+}) {
   // Pull the skills that have at least one practice at this level,
   // and within each skill list the level-N practices in order.
-  const skillsWithPractices = NUTRITION_SKILLS
+  const skillsWithPractices = methodology.skills
     .map((s) => ({
       skill: s,
-      practices: NUTRITION_PRACTICES
+      practices: methodology.practices
         .filter((p) => p.skillId === s.id && p.level === level.id)
         .sort((a, b) => a.order - b.order),
     }))
@@ -160,7 +199,7 @@ function LevelSection({ level }: { level: NutritionLevel }) {
           className="text-[10px] uppercase tracking-[0.4em] mb-2"
           style={{ color: level.color, fontFamily: SERIF_FONT }}
         >
-          Level {level.id} · {level.tagline}
+          {level.tagline}
         </p>
         <h3
           className="leading-tight mb-2"
@@ -171,7 +210,7 @@ function LevelSection({ level }: { level: NutritionLevel }) {
             fontWeight: 600,
           }}
         >
-          {level.label.replace(/^Level \d+ — /, '')}
+          {stripLevelPrefix(level.label)}
         </h3>
         <p
           className="text-sm italic max-w-3xl"
@@ -196,7 +235,7 @@ function SkillCard({
   practices,
 }: {
   skill: NutritionSkill;
-  practices: typeof NUTRITION_PRACTICES;
+  practices: Methodology['practices'];
 }) {
   return (
     <section

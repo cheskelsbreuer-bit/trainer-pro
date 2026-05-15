@@ -1,29 +1,28 @@
-// Ask the Coach — a chat with a PN-trained assistant for the nutrition
-// COACH (not the client). When the coach isn't sure what a term means,
-// what practice to assign next, or how to handle a stuck client, they
-// can ask here and get PN-grounded guidance.
+// Ask the Coach — a chat with a methodology-trained assistant for the
+// nutrition COACH (not the client). When the coach isn't sure what a
+// term means, what practice to assign next, or how to handle a stuck
+// client, they can ask here and get methodology-grounded guidance.
+//
+// The system prompt is composed from the universal coaching rules
+// (answer style, hard limits) PLUS the active methodology's persona
+// (from lib/methodologies.ts). When the coach swaps methodology in
+// Settings, this chat retunes automatically.
 //
 // Wired to a Supabase Edge Function at /functions/v1/coach-assistant
-// which proxies to Claude with the PN system prompt. See
-// supabase/functions/coach-assistant/index.ts.
+// which proxies to Claude with the system prompt.
 
 import { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, RotateCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { N, SERIF_FONT, BODY_FONT } from '../theme';
+import { N, SERIF_FONT, BODY_FONT, useActiveMethodology, type Methodology } from '../theme';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-// The canonical PN system prompt — sent from the frontend so we can
-// iterate on the bot's behavior without re-deploying the edge function.
-// The edge function uses its own default if this is omitted.
-const SYSTEM_PROMPT = `You are a PN-trained nutrition coaching assistant for
-the COACH (not the client).
-
-ANSWER STYLE — STRICT:
+// Universal coaching-assistant guard rails — applied to every methodology.
+const UNIVERSAL_RULES = `ANSWER STYLE — STRICT:
 - Lead with the direct answer in 1–4 sentences. That's the whole reply for
   simple questions.
 - If the question is complex, after the direct answer add ONE short
@@ -33,38 +32,64 @@ ANSWER STYLE — STRICT:
 - Plain English. Short sentences. Stay under 120 words total unless the
   coach explicitly asks for depth.
 
-CORE PN METHOD (use this as the lens):
-- Goal → Skill → Practice. Assign ONE daily practice at a time, ~2 weeks
-  per practice, 9-or-10/10 confidence, then layer the next.
-- 5-S: every practice must be Simple, Segmental, Sequential, Strategic,
-  Supported.
-- Signature practices by ROI: eat slowly · eat to 80% full · protein with
-  every meal (palm) · veggies with every meal (fist) · whole foods 5 of 7
-  days · hand portions (palm/fist/cupped/thumb) · 7+h sleep · 5 breaths
-  before eating · 10-min stress walk · "something not nothing".
-- Anti-patterns to coach against: macro counting before hunger awareness,
-  all-or-nothing thinking, restriction, ignoring sleep/stress.
-- When asked about a specific client, ask what their CURRENT practice is
-  + how many days in BEFORE recommending. Default to the simplest next
-  step. Lean toward adding, not subtracting.
-
 HARD LIMITS:
-- No medical advice, no ED treatment, no supplement dosing.
-- No calorie prescriptions before hunger-awareness practices.
-- If you don't know, say so. Never invent research.`;
+- No medical advice, no eating-disorder treatment, no supplement dosing.
+- If you don't know, say so. Never invent research.
+- When asked about a specific client, ask what their CURRENT practice/habit
+  is + how many days in BEFORE recommending the next step.`;
 
-// Prompt suggestions surfaced when the chat is empty — gives the coach
-// an idea of what they can ask. All are real PN-shaped questions.
-const SUGGESTIONS = [
-  "What's the difference between adherence and compliance in PN?",
-  'My client lost 2 lb in week 1 then stalled. What now?',
-  'When should I move from "eat slowly" to "eat to 80% full"?',
-  "Client says they hate vegetables. What's a PN-shaped move?",
-  "How do I coach someone with all-or-nothing thinking?",
-  'How do hand portions work for a tall, lean male athlete?',
-];
+function buildSystemPrompt(m: Methodology): string {
+  return `${m.chatbotPersona}\n\nMETHODOLOGY PHILOSOPHY (your lens):\n${m.philosophy}\n\n${UNIVERSAL_RULES}`;
+}
+
+// Methodology-specific suggestion prompts. The chat empty-state surfaces
+// these so the coach has an idea of what to ask. Each set is tuned to the
+// methodology's vocabulary and signature concerns.
+const SUGGESTIONS_BY_METHODOLOGY: Record<Methodology['id'], string[]> = {
+  pn: [
+    "What's the difference between adherence and compliance in PN?",
+    'My client lost 2 lb in week 1 then stalled. What now?',
+    'When should I move from "eat slowly" to "eat to 80% full"?',
+    "Client says they hate vegetables. What's a PN-shaped move?",
+    'How do I coach someone with all-or-nothing thinking?',
+    'How do hand portions work for a tall, lean male athlete?',
+  ],
+  rp: [
+    'How do I set macros for a 30-year-old female fat-loss client?',
+    'My client is hitting protein but stalling. What do I adjust?',
+    'When should we run a refeed vs. a full diet break?',
+    'How long should a cut phase last before a maintenance break?',
+    'How do I cycle carbs around 4 training days a week?',
+    'Client is hungry mid-afternoon. What volume foods do I add?',
+  ],
+  ie: [
+    'How do I introduce Principle 3 (Make Peace with Food) without scaring my client?',
+    'My client wants to lose weight. How do I respond in IE terms?',
+    "What's the difference between honoring hunger and grazing?",
+    'How do I challenge the food police without dismissing the client?',
+    'My client says they can\'t feel fullness. How do we rebuild interoception?',
+    'When is it okay to talk about nutrition (Principle 10)?',
+  ],
+  iin: [
+    'How do I introduce the Circle of Life exercise to a new client?',
+    'My client is craving sugar at night. What primary-food question do I ask?',
+    'How do I coach bio-individuality with someone who wants a meal plan?',
+    'What does "crowd in" actually look like for a fast-food eater?',
+    'My client is in a hard career season. How do we make food easier?',
+    "Client's relationship is stressful. How does that show up in food?",
+  ],
+  custom: [
+    "What's a good way to write a new daily-habit prompt for my clients?",
+    "How do I sequence habits from simple to complex?",
+    "What's the difference between a habit and a goal?",
+    'How do I tell when a client is ready for the next habit?',
+    'My client keeps slipping on Habit 1. What\'s a smaller version?',
+    'How do I coach someone with all-or-nothing thinking?',
+  ],
+};
 
 export function AskCoachPage() {
+  const [methodology] = useActiveMethodology();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -74,6 +99,16 @@ export function AskCoachPage() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sending]);
+
+  // Reset the chat when the coach switches methodology — the assistant's
+  // voice and method will be different, so old context is stale.
+  useEffect(() => {
+    setMessages([]);
+    setError(null);
+  }, [methodology.id]);
+
+  const SYSTEM_PROMPT = buildSystemPrompt(methodology);
+  const SUGGESTIONS = SUGGESTIONS_BY_METHODOLOGY[methodology.id];
 
   async function send(text: string) {
     const trimmed = text.trim();
@@ -110,9 +145,12 @@ export function AskCoachPage() {
       {/* App-style header, left-aligned */}
       <section className="mb-6">
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles size={16} style={{ color: N.coral }} />
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: N.coral }}>
-            PN-trained assistant
+          <Sparkles size={16} style={{ color: methodology.color }} />
+          <p
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: methodology.color }}
+          >
+            {methodology.shortLabel}-trained assistant
           </p>
         </div>
         <h1
@@ -131,8 +169,8 @@ export function AskCoachPage() {
           className="mt-1.5 text-sm leading-relaxed"
           style={{ color: N.mute }}
         >
-          Stuck on a client? Ask about a practice, a stalled scale, or
-          all-or-nothing thinking. Short answers, PN-shaped.
+          Stuck on a client? Ask about a {methodology.practiceWord}, a stalled
+          scale, or a sticky pattern. Short answers, {methodology.shortLabel}-shaped.
         </p>
       </section>
 

@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
-import { N, SERIF_FONT } from '../theme';
+import { N, SERIF_FONT, useActiveMethodology, METHODOLOGIES } from '../theme';
 import { StripeStatusCard } from '../../components/StripeStatusCard';
 import { GoogleCalendarCard } from '../../components/GoogleCalendarCard';
 import { BookingSettingsCard } from '../../components/BookingSettingsCard';
@@ -17,6 +17,7 @@ import { FeedbackCard } from '../../components/FeedbackCard';
 
 type Section =
   | 'practice'
+  | 'methodology'
   | 'coach'
   | 'coaching-defaults'
   | 'units-cadence'
@@ -29,6 +30,12 @@ type Section =
 
 const INDEX: { id: Section; title: string; blurb: string }[] = [
   { id: 'practice', title: 'The Practice', blurb: 'Your practice name and identity.' },
+  {
+    id: 'methodology',
+    title: 'Coaching methodology',
+    blurb:
+      'Pick the program your app runs on — PN, RP, Intuitive Eating, IIN, or your own. Habit library, AI coach, and tone all swap.',
+  },
   { id: 'coach', title: 'You, the Coach', blurb: 'Name, contact, timezone, currency, notifications.' },
   {
     id: 'coaching-defaults',
@@ -151,6 +158,7 @@ export function PantryPage() {
       </button>
 
       {section === 'practice' && <PracticeIdentity trainer={trainer} userId={user?.id} qc={qc} />}
+      {section === 'methodology' && <MethodologyPicker />}
       {section === 'coach' && trainer && <CoachProfile trainer={trainer} userId={user?.id} qc={qc} />}
       {section === 'coaching-defaults' && <CoachingDefaults />}
       {section === 'units-cadence' && <UnitsCadence />}
@@ -161,6 +169,87 @@ export function PantryPage() {
       {section === 'directory' && trainer && <SolarWrap title="Find-a-practitioner directory"><DirectorySettingsCard trainer={trainer} /></SolarWrap>}
       {section === 'support' && <SolarWrap title="Help & feedback"><FeedbackCard /></SolarWrap>}
     </div>
+  );
+}
+
+/** Methodology picker — pick which coaching program drives the app.
+ *  The active methodology controls the Habit Library, the Add-client
+ *  practice picker, the home headline copy, and the AI coach\'s tone.
+ *  Persisted to localStorage; switches take effect immediately. */
+function MethodologyPicker() {
+  const [active, setActive] = useActiveMethodology();
+  return (
+    <article>
+      <SectionTitle>Coaching methodology</SectionTitle>
+      <p
+        className="text-sm leading-relaxed mb-5"
+        style={{ color: N.inkSoft }}
+      >
+        Pick the program your app runs on. Each methodology has its own
+        habit library, vocabulary, and AI coach voice. Switching is
+        instant — you can change your mind any time.
+      </p>
+
+      <div className="space-y-3">
+        {METHODOLOGIES.map((m) => {
+          const isActive = active.id === m.id;
+          return (
+            <button
+              key={m.id}
+              onClick={() => setActive(m.id)}
+              className="w-full text-left rounded-2xl px-5 py-4 transition-all"
+              style={{
+                background: isActive ? `${m.color}14` : N.card,
+                border: `2px solid ${isActive ? m.color : N.rule}`,
+              }}
+            >
+              <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                <h3
+                  style={{
+                    fontFamily: SERIF_FONT,
+                    color: N.ink,
+                    fontSize: '1.25rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {m.label}
+                </h3>
+                {isActive && (
+                  <span
+                    className="text-[10px] uppercase tracking-[0.3em] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                    style={{
+                      background: m.color,
+                      color: '#FFF',
+                      fontFamily: SERIF_FONT,
+                    }}
+                  >
+                    Active
+                  </span>
+                )}
+              </div>
+              <p
+                className="text-xs italic mb-2"
+                style={{ color: m.color, fontFamily: SERIF_FONT }}
+              >
+                {m.tagline}
+              </p>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: N.inkSoft }}
+              >
+                {m.philosophy}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-xs mt-5 italic" style={{ color: N.muteFaint }}>
+        Your choice saves instantly to this browser. Existing client
+        practice assignments are preserved across switches — they keep
+        whatever practice they were on.
+      </p>
+    </article>
   );
 }
 

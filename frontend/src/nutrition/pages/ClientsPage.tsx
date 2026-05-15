@@ -18,11 +18,10 @@ import {
   NUTRITION_GOALS,
   FEATURED_GOAL_IDS,
   suggestStartingPractice,
-  NUTRITION_SKILLS,
-  NUTRITION_PRACTICES,
   PRACTICE_BY_ID,
   SKILL_BY_ID,
   PRACTICE_WINDOW_DAYS,
+  useActiveMethodology,
   readGoal,
   readCalorieTarget,
   readProteinTarget,
@@ -463,10 +462,17 @@ function AddClientModal({
   qc: ReturnType<typeof useQueryClient>;
 }) {
   const { user } = useAuth();
+  const [methodology] = useActiveMethodology();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [goal, setGoal] = useState('maintenance');
-  const [practice, setPractice] = useState('eat-slowly');
+  // Default starting practice = first Level-1 practice for this methodology,
+  // falling back to no practice if the methodology has none (Custom).
+  const defaultStart =
+    methodology.practices
+      .filter((p) => p.level === 1)
+      .sort((a, b) => a.order - b.order)[0]?.id ?? '';
+  const [practice, setPractice] = useState(defaultStart);
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -574,29 +580,27 @@ function AddClientModal({
               className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
               style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
             >
-              <option value="">— no practice yet —</option>
-              {([1, 2] as const).map((lvl) => (
-                <optgroup
-                  key={lvl}
-                  label={
-                    lvl === 1
-                      ? 'LEVEL 1 — Foundational habits (start here)'
-                      : 'LEVEL 2 — Balanced eating (after Level 1 is solid)'
-                  }
-                >
-                  {NUTRITION_SKILLS.flatMap((s) =>
-                    NUTRITION_PRACTICES.filter(
-                      (p) => p.skillId === s.id && p.level === lvl,
-                    )
-                      .sort((a, b) => a.order - b.order)
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {s.label} — {p.label}
-                        </option>
-                      )),
-                  )}
-                </optgroup>
-              ))}
+              <option value="">— no {methodology.practiceWord} yet —</option>
+              {methodology.levels.map((lvl) => {
+                const lvlPractices = methodology.practices.filter(
+                  (p) => p.level === lvl.id,
+                );
+                if (lvlPractices.length === 0) return null;
+                return (
+                  <optgroup key={lvl.id} label={lvl.label.toUpperCase()}>
+                    {methodology.skills.flatMap((s) =>
+                      lvlPractices
+                        .filter((p) => p.skillId === s.id)
+                        .sort((a, b) => a.order - b.order)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {s.label} — {p.label}
+                          </option>
+                        )),
+                    )}
+                  </optgroup>
+                );
+              })}
             </select>
             {practice && PRACTICE_BY_ID[practice] && (
               <p
