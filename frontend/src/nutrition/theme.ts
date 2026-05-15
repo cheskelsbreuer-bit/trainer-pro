@@ -210,106 +210,113 @@ export interface NutritionPractice {
   rationale: string;
   /** How the client logs it daily (yes/no, count, scale, etc.). */
   measure: string;
+  /** Curriculum level. 1 = Foundational Habits (stability & awareness),
+   *  2 = Balanced Eating (the next layer up). */
+  level: 1 | 2;
 }
 
+// Level metadata — mirrors the curriculum the head coach uses.
+// Level 1 builds stability and awareness; Level 2 builds balanced
+// eating without obsession. Coaches always finish a Level 1 base
+// before layering Level 2 practices on top.
+export interface NutritionLevel {
+  id: 1 | 2;
+  label: string;
+  tagline: string;
+  blurb: string;
+  color: string;
+}
+
+export const NUTRITION_LEVELS: NutritionLevel[] = [
+  {
+    id: 1,
+    label: 'Level 1 — Foundational Habits',
+    tagline: 'Create stability and awareness.',
+    blurb:
+      'The base layer. Hydration, sleep, slowing down at the table, daily movement, consistency. Every client starts here, no exceptions.',
+    color: '#D87456',
+  },
+  {
+    id: 2,
+    label: 'Level 2 — Balanced Eating',
+    tagline: 'Building satisfying balanced meals without obsession.',
+    blurb:
+      'Once Level 1 is automatic, layer in balanced plates, portion awareness, hunger/fullness, and the harder behaviors — emotional eating, nighttime eating, liquid calories — handled without guilt.',
+    color: '#6B8E5A',
+  },
+];
+
 export const NUTRITION_PRACTICES: NutritionPractice[] = [
+  // ── LEVEL 1 — FOUNDATIONAL HABITS ─────────────────────────────────
+  // The base layer. Stability and awareness before any "balanced
+  // eating" work begins.
+
   // Hunger awareness — the canonical PN starting place
   {
     id: 'eat-slowly',
     label: 'Eat slowly',
-    blurb: 'Take 15-20 minutes for each meal. Put the fork down between bites.',
+    blurb: 'Take 15-20 minutes for each meal. Chew well, put the fork down between bites.',
     skillId: 'hunger-awareness',
     order: 1,
+    level: 1,
     rationale:
       'Slowing down lets satiety signals catch up before you overshoot. The single highest-ROI habit in PN.',
     measure: 'yes/no per meal',
   },
   {
-    id: 'eat-to-80',
-    label: 'Eat to 80% full',
-    blurb: 'Stop at "satisfied," not "stuffed." Leave the table able to take a brisk walk.',
+    id: 'no-screens-meals',
+    label: 'No screens at meals',
+    blurb: 'Eat without phone, TV, or laptop. Plate, table, food. That\'s it.',
     skillId: 'hunger-awareness',
     order: 2,
+    level: 1,
     rationale:
-      'Builds the appetite-awareness skill. Pairs naturally with "eat slowly" once that one is automatic.',
-    measure: '1–10 fullness rating per meal',
+      'Distracted eating dulls satiety cues — people consistently eat 20–50% more in front of a screen and remember less of the meal afterward.',
+    measure: 'yes/no per meal',
   },
-  // Food quality
+  // Food quality — Level 1 basics
+  {
+    id: 'hydration',
+    label: 'Drink water throughout the day',
+    blurb: 'Aim for ~2–3 litres of water daily. Glass on waking, glass before each meal.',
+    skillId: 'food-quality',
+    order: 1,
+    level: 1,
+    rationale:
+      'Mild dehydration is misread by the brain as hunger. Most "snack cravings" between meals are thirst in disguise.',
+    measure: 'glasses or litres per day',
+  },
   {
     id: 'protein-each-meal',
     label: 'Protein with every meal',
     blurb: '1–2 palm-sized portions of protein at each meal (1 for women, 2 for men).',
     skillId: 'food-quality',
-    order: 1,
+    order: 2,
+    level: 1,
     rationale:
       'Protein is the most satiating macronutrient. Anchors the meal and prevents grazing.',
     measure: 'meals containing protein / total meals',
   },
+  // Meal frequency — Level 1: getting the rhythm right
   {
-    id: 'veggies-each-meal',
-    label: 'Veggies with every meal',
-    blurb: '1–2 fist-sized portions of vegetables at each meal.',
-    skillId: 'food-quality',
-    order: 2,
-    rationale:
-      'Volume, fiber, micronutrients. Crowds out less helpful foods without restriction.',
-    measure: 'meals containing veggies / total meals',
-  },
-  {
-    id: 'whole-foods-most',
-    label: 'Whole foods most of the time',
-    blurb: 'Aim for ~80% of meals built around minimally-processed foods.',
-    skillId: 'food-quality',
-    order: 3,
-    rationale:
-      'PN\'s "5-2" version — 5 days a week of whole foods, 2 days flexibility, no rigidity.',
-    measure: '% of meals that are whole-food based',
-  },
-  // Portion awareness — hand portions
-  {
-    id: 'hand-portion-protein',
-    label: 'Hand-portion protein',
-    blurb: 'Use your palm to portion protein at each meal — no scale, no app.',
-    skillId: 'portions',
+    id: 'meal-rhythm',
+    label: 'Eat on a steady rhythm',
+    blurb: '3 meals at roughly the same times each day. Don\'t skip; don\'t graze in between.',
+    skillId: 'meal-frequency',
     order: 1,
+    level: 1,
     rationale:
-      'Calorie control without counting. The palm scales with body size, so each person\'s portion is right for them.',
-    measure: 'yes/no per meal',
+      'A predictable rhythm regulates hunger hormones and stops the late-day "I haven\'t eaten all day, now I\'ll eat everything" pattern.',
+    measure: 'days following the rhythm / 7',
   },
-  {
-    id: 'hand-portion-veggies',
-    label: 'Hand-portion veggies',
-    blurb: 'Use your fist to portion vegetables — at least one fist per meal.',
-    skillId: 'portions',
-    order: 2,
-    rationale: 'Fiber + volume, naturally scaled to body size.',
-    measure: 'yes/no per meal',
-  },
-  {
-    id: 'hand-portion-carbs',
-    label: 'Hand-portion carbs',
-    blurb: 'Use your cupped hand to portion starches — 1 cupped hand for fat loss, more around training.',
-    skillId: 'portions',
-    order: 3,
-    rationale: 'Carbs are an energy lever. Pull them down to lose fat, push them up to fuel training.',
-    measure: 'yes/no per meal',
-  },
-  {
-    id: 'hand-portion-fats',
-    label: 'Hand-portion fats',
-    blurb: 'Use your thumb to portion added fats (oil, nuts, dressings, cheese).',
-    skillId: 'portions',
-    order: 4,
-    rationale: 'Easy to under-track. The thumb prevents the slow drift up that derails fat-loss phases.',
-    measure: 'yes/no per meal',
-  },
-  // Environment & planning
+  // Environment — Level 1: consistency
   {
     id: 'meal-prep-3x',
     label: 'Prep 3 meals each week',
     blurb: 'Block 60–90 min once a week to cook 3 meals ahead.',
     skillId: 'environment',
     order: 1,
+    level: 1,
     rationale:
       'Eliminates the "what\'s for dinner" decision-fatigue moment that wrecks adherence on busy nights.',
     measure: '# of meals prepped this week',
@@ -320,16 +327,18 @@ export const NUTRITION_PRACTICES: NutritionPractice[] = [
     blurb: 'Write a grocery list before each shop. Stick to it.',
     skillId: 'environment',
     order: 2,
+    level: 1,
     rationale: 'Decisions get made in the kitchen, not at the checkout. Buy the right things, eat the right things.',
     measure: 'yes/no per shopping trip',
   },
-  // Recovery
+  // Recovery — Level 1: sleep, stress, breath, daily movement
   {
     id: 'sleep-7h',
     label: '7+ hours of sleep',
     blurb: 'Lights out at the same time most nights. Aim for 7 hours minimum.',
     skillId: 'recovery',
     order: 1,
+    level: 1,
     rationale:
       'Insufficient sleep wrecks hunger hormones and willpower. PN puts sleep on par with food.',
     measure: 'avg hours per night',
@@ -340,8 +349,9 @@ export const NUTRITION_PRACTICES: NutritionPractice[] = [
     blurb: 'Before each meal, take 5 slow breaths. Notice hunger level.',
     skillId: 'recovery',
     order: 2,
+    level: 1,
     rationale:
-      'Down-shifts the nervous system into rest-and-digest. Slows the meal automatically.',
+      'Down-shifts the nervous system into rest-and-digest. Slows the meal automatically. Builds stress awareness.',
     measure: 'yes/no per meal',
   },
   {
@@ -350,29 +360,192 @@ export const NUTRITION_PRACTICES: NutritionPractice[] = [
     blurb: 'One 10-minute walk a day, no phone. Mid-day if possible.',
     skillId: 'recovery',
     order: 3,
+    level: 1,
     rationale:
       'Movement + sunlight + non-screen time. Down-regulates stress, supports sleep, breaks workday grind.',
     measure: 'yes/no per day',
   },
-  // Mindset
+  {
+    id: 'movement-weekly',
+    label: 'Move your body 3–5x a week',
+    blurb: 'A mix of cardio (walks, runs, classes) and strength (weights, bodyweight). Anything that gets you breathing harder.',
+    skillId: 'recovery',
+    order: 4,
+    level: 1,
+    rationale:
+      'Movement is non-negotiable for body composition, mood, sleep, and metabolic health. The exact form matters less than consistency.',
+    measure: 'sessions per week',
+  },
+  // Mindset — Level 1: consistency over perfection
   {
     id: 'something-not-nothing',
     label: 'Something is better than nothing',
     blurb: 'When the perfect plan falls apart, do the something-version. Always.',
     skillId: 'mindset',
     order: 1,
+    level: 1,
     rationale:
-      'PN\'s antidote to all-or-nothing thinking. A 5-minute workout still beats no workout.',
+      'PN\'s antidote to all-or-nothing thinking. A 5-minute workout still beats no workout. Consistency, not intensity, wins.',
     measure: 'yes/no per day',
+  },
+
+  // ── LEVEL 2 — BALANCED EATING ────────────────────────────────────
+  // Layered in only after Level 1 is automatic. Builds satisfying
+  // balanced meals without obsession.
+
+  // Hunger awareness — Level 2: hunger/fullness scale
+  {
+    id: 'eat-to-80',
+    label: 'Eat to 80% full',
+    blurb: 'Stop at "satisfied," not "stuffed." Leave the table able to take a brisk walk.',
+    skillId: 'hunger-awareness',
+    order: 3,
+    level: 2,
+    rationale:
+      'Builds the appetite-awareness skill. Pairs naturally with "eat slowly" once that one is automatic.',
+    measure: '1–10 fullness rating per meal',
+  },
+  {
+    id: 'nighttime-cutoff',
+    label: 'Stop eating after dinner',
+    blurb: 'Close the kitchen 2–3 hours before bed. Tea, water, brushed teeth — done for the day.',
+    skillId: 'hunger-awareness',
+    order: 4,
+    level: 2,
+    rationale:
+      'Nighttime eating is rarely about hunger — it\'s usually decompression, boredom, or screen-time grazing. Cutting it off resets sleep, morning hunger, and total intake.',
+    measure: 'nights with kitchen closed / 7',
+  },
+  // Food quality — Level 2: balanced plate, calorie density, liquid cals
+  {
+    id: 'veggies-each-meal',
+    label: 'Veggies with every meal',
+    blurb: '1–2 fist-sized portions of vegetables at each meal — fibre that keeps you full.',
+    skillId: 'food-quality',
+    order: 3,
+    level: 2,
+    rationale:
+      'Volume, fibre, micronutrients. Crowds out less helpful foods without restriction. The "stay full longer" lever.',
+    measure: 'meals containing veggies / total meals',
+  },
+  {
+    id: 'balanced-plate',
+    label: 'Build a balanced plate',
+    blurb: 'Every meal: a palm of protein + a fist of veggies + a thumb of healthy fat + (optional) a cupped hand of carbs.',
+    skillId: 'food-quality',
+    order: 4,
+    level: 2,
+    rationale:
+      'Protein + fibre + fat together is the most satisfying combination in food science. Once a client can build this plate without thinking, hunger and cravings drop in half.',
+    measure: 'meals built balanced / total meals',
+  },
+  {
+    id: 'liquid-calories',
+    label: 'Cut liquid calories',
+    blurb: 'Stop drinking your calories. Coffee creamer, juice, soda, fancy lattes, alcohol — sub for water, plain coffee, sparkling water, or tea.',
+    skillId: 'food-quality',
+    order: 5,
+    level: 2,
+    rationale:
+      'Liquid calories don\'t register as fullness — they\'re the easiest hidden source of overeating. Cutting them is often the single biggest fat-loss lever for women in their 30s–50s.',
+    measure: 'days with no liquid calories / 7',
+  },
+  {
+    id: 'volume-eating',
+    label: 'Lean on low-calorie-density foods',
+    blurb: 'Build meals around foods that are big in volume, small in calories — vegetables, broths, salads, fruit, lean proteins.',
+    skillId: 'food-quality',
+    order: 6,
+    level: 2,
+    rationale:
+      'Calorie density is the hidden lever in fat loss. Same calories, more volume = staying full on less.',
+    measure: 'meals built around volume foods / total meals',
+  },
+  {
+    id: 'whole-foods-most',
+    label: 'Whole foods most of the time',
+    blurb: 'Aim for ~80% of meals built around minimally-processed foods.',
+    skillId: 'food-quality',
+    order: 7,
+    level: 2,
+    rationale:
+      'PN\'s "80/20" principle — 80% whole foods, 20% flexibility, no rigidity, no guilt.',
+    measure: '% of meals that are whole-food based',
+  },
+  // Portion awareness — Level 2: hand portions
+  {
+    id: 'hand-portion-protein',
+    label: 'Hand-portion protein',
+    blurb: 'Use your palm to portion protein at each meal — no scale, no app.',
+    skillId: 'portions',
+    order: 1,
+    level: 2,
+    rationale:
+      'Calorie control without counting. The palm scales with body size, so each person\'s portion is right for them.',
+    measure: 'yes/no per meal',
+  },
+  {
+    id: 'hand-portion-veggies',
+    label: 'Hand-portion veggies',
+    blurb: 'Use your fist to portion vegetables — at least one fist per meal.',
+    skillId: 'portions',
+    order: 2,
+    level: 2,
+    rationale: 'Fibre + volume, naturally scaled to body size.',
+    measure: 'yes/no per meal',
+  },
+  {
+    id: 'hand-portion-carbs',
+    label: 'Hand-portion carbs',
+    blurb: 'Use your cupped hand to portion starches — 1 cupped hand for fat loss, more around training.',
+    skillId: 'portions',
+    order: 3,
+    level: 2,
+    rationale: 'Carbs are an energy lever. Pull them down to lose fat, push them up to fuel training.',
+    measure: 'yes/no per meal',
+  },
+  {
+    id: 'hand-portion-fats',
+    label: 'Hand-portion fats',
+    blurb: 'Use your thumb to portion added fats (oil, nuts, dressings, cheese).',
+    skillId: 'portions',
+    order: 4,
+    level: 2,
+    rationale: 'Easy to under-track. The thumb prevents the slow drift up that derails fat-loss phases.',
+    measure: 'yes/no per meal',
+  },
+  // Mindset — Level 2: emotional eating, mindful indulgence, identity
+  {
+    id: 'emotional-eating-pause',
+    label: 'Pause before emotional eating',
+    blurb: 'When you reach for food and you\'re not hungry, pause for 5 minutes. Name the feeling. Drink water. Then decide.',
+    skillId: 'mindset',
+    order: 2,
+    level: 2,
+    rationale:
+      'Emotional eating isn\'t a willpower failure — it\'s a coping skill that needs a substitute. The pause creates space to choose a real response (a walk, a call, a deep breath) or to eat anyway, without guilt.',
+    measure: 'pauses logged per week',
+  },
+  {
+    id: 'mindful-indulgence',
+    label: 'Mindful indulgence — "sometimes foods" without guilt',
+    blurb: 'Pick the treat you actually want. Sit down, taste every bite, enjoy it fully. No guilt afterwards.',
+    skillId: 'mindset',
+    order: 3,
+    level: 2,
+    rationale:
+      'No food is "bad." Standing-up, distracted, guilt-ridden eating leads to MORE consumption, not less. Sit, savour, move on.',
+    measure: 'mindful indulgences logged per week',
   },
   {
     id: 'identity-statement',
     label: 'Write your identity statement',
     blurb: '"I am the kind of person who ___" — fill it in, read it daily.',
     skillId: 'mindset',
-    order: 2,
+    order: 4,
+    level: 2,
     rationale:
-      'Behavior follows identity. Naming who you\'re becoming is more powerful than naming what you\'re doing.',
+      'Behaviour follows identity. Naming who you\'re becoming is more powerful than naming what you\'re doing.',
     measure: 'yes/no per day',
   },
 ];

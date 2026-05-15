@@ -575,15 +575,26 @@ function AddClientModal({
               style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
             >
               <option value="">— no practice yet —</option>
-              {NUTRITION_SKILLS.map((s) => (
-                <optgroup key={s.id} label={s.label}>
-                  {NUTRITION_PRACTICES.filter((p) => p.skillId === s.id)
-                    .sort((a, b) => a.order - b.order)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label}
-                      </option>
-                    ))}
+              {([1, 2] as const).map((lvl) => (
+                <optgroup
+                  key={lvl}
+                  label={
+                    lvl === 1
+                      ? 'LEVEL 1 — Foundational habits (start here)'
+                      : 'LEVEL 2 — Balanced eating (after Level 1 is solid)'
+                  }
+                >
+                  {NUTRITION_SKILLS.flatMap((s) =>
+                    NUTRITION_PRACTICES.filter(
+                      (p) => p.skillId === s.id && p.level === lvl,
+                    )
+                      .sort((a, b) => a.order - b.order)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {s.label} — {p.label}
+                        </option>
+                      )),
+                  )}
                 </optgroup>
               ))}
             </select>
