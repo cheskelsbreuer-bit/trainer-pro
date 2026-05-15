@@ -79,11 +79,17 @@ export function PlansPage() {
           >
             Your custom library is empty
           </h3>
-          <p className="text-sm italic max-w-md mx-auto" style={{ color: N.mute }}>
-            The Custom methodology lets you build your own habit library.
-            Habit-creation UI is coming next — for now, switch to one of the
-            ready-made methodologies in Settings → Coaching methodology.
+          <p className="text-sm italic max-w-md mx-auto mb-5" style={{ color: N.mute }}>
+            Build your own habit library — start fresh, or copy one of
+            the ready-made methodologies and edit it to fit how you coach.
           </p>
+          <button
+            onClick={() => navigate('/pantry')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-[11px] uppercase tracking-[0.3em] italic"
+            style={{ background: N.sage, color: '#FFF', fontFamily: SERIF_FONT }}
+          >
+            Open the editor →
+          </button>
         </div>
       )}
 

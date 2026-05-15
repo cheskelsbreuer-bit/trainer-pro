@@ -7,7 +7,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
-import { N, SERIF_FONT, useActiveMethodology, METHODOLOGIES } from '../theme';
+import {
+  N,
+  SERIF_FONT,
+  useActiveMethodology,
+  useCustomLibrary,
+  METHODOLOGIES,
+  METHODOLOGY_BY_ID,
+  type Methodology,
+  type NutritionPractice,
+  type NutritionSkill,
+} from '../theme';
 import { StripeStatusCard } from '../../components/StripeStatusCard';
 import { GoogleCalendarCard } from '../../components/GoogleCalendarCard';
 import { BookingSettingsCard } from '../../components/BookingSettingsCard';
@@ -249,7 +259,438 @@ function MethodologyPicker() {
         practice assignments are preserved across switches — they keep
         whatever practice they were on.
       </p>
+
+      {/* When Custom is active, the editor opens up below the picker. */}
+      {active.id === 'custom' && <CustomLibraryEditor />}
     </article>
+  );
+}
+
+/** Custom library editor — shown when the coach picks the "Custom"
+ *  methodology. Lets them either start fresh OR copy one of the
+ *  ready-made methodologies as a base, then add / edit / delete habits.
+ *  All edits are stored in localStorage via useCustomLibrary(). */
+function CustomLibraryEditor() {
+  const [library, setLibrary] = useCustomLibrary();
+  const [showAddForm, setShowAddForm] = useState<1 | 2 | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const baseMethodologies = METHODOLOGIES.filter(
+    (m) => m.id !== 'custom' && m.practices.length > 0,
+  );
+
+  function copyFromMethodology(id: Methodology['id']) {
+    const base = METHODOLOGY_BY_ID[id];
+    if (!base) return;
+    const replace =
+      library.practices.length === 0 ||
+      window.confirm(
+        `Copy ${base.label}'s habit library? This replaces your current ${library.practices.length} custom habit(s).`,
+      );
+    if (!replace) return;
+    setLibrary({
+      // Prefix the id so they don't collide with the original methodology's
+      // ids (which still live in the aggregate NUTRITION_PRACTICES lookup).
+      practices: base.practices.map((p) => ({ ...p, id: `c-${p.id}` })),
+      skills: base.skills,
+      baseFrom: id,
+    });
+  }
+
+  function startBlank() {
+    if (
+      library.practices.length > 0 &&
+      !window.confirm('Clear your current custom habits and start blank?')
+    ) {
+      return;
+    }
+    setLibrary({ practices: [] });
+  }
+
+  function clearAll() {
+    if (!window.confirm('Delete every custom habit? This can\'t be undone.')) return;
+    setLibrary({ practices: [] });
+  }
+
+  function addHabit(p: NutritionPractice) {
+    setLibrary({
+      ...library,
+      practices: [...library.practices, p],
+    });
+    setShowAddForm(null);
+  }
+
+  function updateHabit(id: string, patch: Partial<NutritionPractice>) {
+    setLibrary({
+      ...library,
+      practices: library.practices.map((p) =>
+        p.id === id ? { ...p, ...patch } : p,
+      ),
+    });
+    setEditingId(null);
+  }
+
+  function deleteHabit(id: string) {
+    if (!window.confirm('Delete this habit?')) return;
+    setLibrary({
+      ...library,
+      practices: library.practices.filter((p) => p.id !== id),
+    });
+  }
+
+  const skills =
+    library.skills && library.skills.length > 0
+      ? library.skills
+      : METHODOLOGY_BY_ID.custom.skills;
+
+  return (
+    <section
+      className="mt-8 pt-7 border-t"
+      style={{ borderColor: N.rule }}
+    >
+      <h3
+        className="leading-tight mb-2"
+        style={{
+          fontFamily: SERIF_FONT,
+          color: N.ink,
+          fontSize: '1.5rem',
+          fontWeight: 600,
+        }}
+      >
+        Build your custom library
+      </h3>
+      <p className="text-sm leading-relaxed mb-5" style={{ color: N.inkSoft }}>
+        Start from scratch, or copy a ready-made methodology as a base
+        and edit it to fit how you actually coach.
+      </p>
+
+      {/* Copy-from buttons */}
+      <div
+        className="rounded-xl p-4 mb-5"
+        style={{ background: N.inset, border: `1px solid ${N.rule}` }}
+      >
+        <p
+          className="text-[10px] uppercase tracking-[0.3em] font-semibold mb-2"
+          style={{ color: N.mute }}
+        >
+          Copy from a methodology as your base
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {baseMethodologies.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => copyFromMethodology(m.id)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md"
+              style={{
+                background: 'transparent',
+                color: m.color,
+                border: `1px solid ${m.color}`,
+              }}
+            >
+              Copy {m.shortLabel}'s habits
+            </button>
+          ))}
+          <button
+            onClick={startBlank}
+            className="text-xs font-semibold px-3 py-1.5 rounded-md"
+            style={{
+              background: 'transparent',
+              color: N.mute,
+              border: `1px dashed ${N.rule}`,
+            }}
+          >
+            ← Start blank
+          </button>
+        </div>
+        {library.baseFrom && (
+          <p className="text-xs italic mt-3" style={{ color: N.mute }}>
+            Currently based on{' '}
+            <strong style={{ color: METHODOLOGY_BY_ID[library.baseFrom].color }}>
+              {METHODOLOGY_BY_ID[library.baseFrom].label}
+            </strong>{' '}
+            — edit, add, or delete any habit below.
+          </p>
+        )}
+      </div>
+
+      {/* The library — grouped by Level */}
+      {library.practices.length === 0 ? (
+        <div
+          className="rounded-xl p-8 text-center"
+          style={{ background: N.card, border: `1px dashed ${N.rule}` }}
+        >
+          <p className="text-sm italic mb-4" style={{ color: N.mute }}>
+            Your custom library is empty. Copy a methodology above, or
+            add your first habit below.
+          </p>
+          <button
+            onClick={() => setShowAddForm(1)}
+            className="px-4 py-2 rounded-md text-[11px] uppercase tracking-[0.3em] italic"
+            style={{
+              background: N.sage,
+              color: '#FFF',
+              fontFamily: SERIF_FONT,
+            }}
+          >
+            + Add your first habit
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {([1, 2] as const).map((lvl) => {
+            const levelPractices = library.practices
+              .filter((p) => p.level === lvl)
+              .sort((a, b) => a.order - b.order);
+            return (
+              <div key={lvl}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4
+                    className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                    style={{ color: lvl === 1 ? '#D87456' : '#6B8E5A' }}
+                  >
+                    Level {lvl} · {lvl === 1 ? 'Foundational' : 'Refinement'} ({levelPractices.length})
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setShowAddForm(lvl);
+                      setEditingId(null);
+                    }}
+                    className="text-xs font-semibold"
+                    style={{ color: N.coral }}
+                  >
+                    + Add to Level {lvl}
+                  </button>
+                </div>
+
+                {levelPractices.length === 0 ? (
+                  <p className="text-xs italic py-2" style={{ color: N.muteFaint }}>
+                    No Level {lvl} habits yet.
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {levelPractices.map((p) => (
+                      <li
+                        key={p.id}
+                        className="rounded-lg p-3"
+                        style={{
+                          background: N.card,
+                          border: `1px solid ${N.rule}`,
+                        }}
+                      >
+                        {editingId === p.id ? (
+                          <HabitForm
+                            initial={p}
+                            skills={skills}
+                            level={p.level}
+                            onSave={(patch) => updateHabit(p.id, patch)}
+                            onCancel={() => setEditingId(null)}
+                          />
+                        ) : (
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className="font-semibold text-sm leading-tight"
+                                style={{ color: N.ink }}
+                              >
+                                {p.label}
+                              </p>
+                              <p
+                                className="text-xs italic mt-0.5"
+                                style={{ color: N.mute }}
+                              >
+                                {p.blurb}
+                              </p>
+                              <p
+                                className="text-[10px] uppercase tracking-[0.2em] mt-1"
+                                style={{ color: N.muteFaint }}
+                              >
+                                {skills.find((s) => s.id === p.skillId)?.label ?? p.skillId}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-1 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setEditingId(p.id);
+                                  setShowAddForm(null);
+                                }}
+                                className="text-xs font-semibold"
+                                style={{ color: N.sageDeep }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => deleteHabit(p.id)}
+                                className="text-xs font-semibold"
+                                style={{ color: N.danger }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {showAddForm === lvl && (
+                  <div
+                    className="rounded-lg p-3 mt-2"
+                    style={{
+                      background: N.card,
+                      border: `1px solid ${N.coral}`,
+                    }}
+                  >
+                    <HabitForm
+                      initial={null}
+                      skills={skills}
+                      level={lvl}
+                      onSave={(p) =>
+                        addHabit({
+                          ...p,
+                          id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                        })
+                      }
+                      onCancel={() => setShowAddForm(null)}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div className="pt-2">
+            <button
+              onClick={clearAll}
+              className="text-xs italic"
+              style={{ color: N.danger }}
+            >
+              Clear everything and start over
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** A single habit-add / habit-edit form. Used in CustomLibraryEditor. */
+function HabitForm({
+  initial,
+  skills,
+  level,
+  onSave,
+  onCancel,
+}: {
+  initial: NutritionPractice | null;
+  skills: NutritionSkill[];
+  level: 1 | 2;
+  onSave: (p: NutritionPractice) => void;
+  onCancel: () => void;
+}) {
+  const [label, setLabel] = useState(initial?.label ?? '');
+  const [blurb, setBlurb] = useState(initial?.blurb ?? '');
+  const [rationale, setRationale] = useState(initial?.rationale ?? '');
+  const [measure, setMeasure] = useState(initial?.measure ?? 'yes/no per day');
+  const [skillId, setSkillId] = useState(
+    initial?.skillId ?? skills[0]?.id ?? 'custom-foundational',
+  );
+
+  function handleSave() {
+    if (!label.trim()) {
+      alert('Habit name is required.');
+      return;
+    }
+    onSave({
+      id: initial?.id ?? '',
+      label: label.trim(),
+      blurb: blurb.trim() || label.trim(),
+      rationale: rationale.trim() || 'Coach-defined habit.',
+      measure: measure.trim() || 'yes/no per day',
+      skillId,
+      level,
+      order: initial?.order ?? 99,
+    });
+  }
+
+  return (
+    <div className="space-y-2">
+      <div>
+        <Lbl>Habit name</Lbl>
+        <input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="e.g., Drink a glass of water on waking"
+          autoFocus
+          className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+          style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
+        />
+      </div>
+      <div>
+        <Lbl>Short description (1 sentence)</Lbl>
+        <input
+          value={blurb}
+          onChange={(e) => setBlurb(e.target.value)}
+          placeholder="What the client actually does, day-to-day."
+          className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+          style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
+        />
+      </div>
+      <div>
+        <Lbl>Why this matters (rationale)</Lbl>
+        <textarea
+          value={rationale}
+          onChange={(e) => setRationale(e.target.value)}
+          rows={2}
+          placeholder="Why you assign this habit. Shown to the coach."
+          className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+          style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Lbl>Skill (category)</Lbl>
+          <select
+            value={skillId}
+            onChange={(e) => setSkillId(e.target.value)}
+            className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+            style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
+          >
+            {skills.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Lbl>How clients log it</Lbl>
+          <input
+            value={measure}
+            onChange={(e) => setMeasure(e.target.value)}
+            placeholder="e.g., yes/no per meal"
+            className="w-full px-3 py-2 text-sm rounded-md focus:outline-none"
+            style={{ background: N.inset, color: N.ink, border: `1px solid ${N.rule}` }}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={handleSave}
+          className="px-3 py-1.5 rounded-md text-xs font-semibold"
+          style={{ background: N.sage, color: '#FFF' }}
+        >
+          {initial ? 'Save changes' : 'Add habit'}
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1.5 rounded-md text-xs font-semibold"
+          style={{ background: 'transparent', color: N.mute }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
 

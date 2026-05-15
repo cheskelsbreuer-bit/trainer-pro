@@ -175,8 +175,55 @@ function readMethodologyFromStorage(): Methodology['id'] {
   return DEFAULT_METHODOLOGY_ID;
 }
 
+// ── Custom library (editable habit list backing the "Custom" methodology) ──
+// When the coach picks "Custom" in settings, the Habit Library swaps to
+// these user-defined habits. They can start fresh or copy one of the
+// other methodologies as a base and edit from there.
+export interface CustomLibrary {
+  practices: NutritionPractice[];
+  // Optional skill overrides — when copy-from-methodology is used, we
+  // also copy the source's skills so the labels/colors line up.
+  skills?: NutritionSkill[];
+  // Tracks which methodology was used as the base, if any. Just for UI
+  // (badge: "Based on PN").
+  baseFrom?: Methodology['id'];
+}
+const CUSTOM_LIBRARY_KEY = 'nutrition-custom-library';
+
+function readCustomLibrary(): CustomLibrary {
+  if (typeof window === 'undefined') return { practices: [] };
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_LIBRARY_KEY);
+    if (!raw) return { practices: [] };
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.practices)) return { practices: [] };
+    return parsed as CustomLibrary;
+  } catch {
+    return { practices: [] };
+  }
+}
+
+export function useCustomLibrary(): [CustomLibrary, (next: CustomLibrary) => void] {
+  const [lib, setLib] = useState<CustomLibrary>(readCustomLibrary);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CUSTOM_LIBRARY_KEY, JSON.stringify(lib));
+      window.dispatchEvent(new CustomEvent('custom-library:changed'));
+    }
+  }, [lib]);
+  useEffect(() => {
+    function onChange() {
+      setLib(readCustomLibrary());
+    }
+    window.addEventListener('custom-library:changed', onChange);
+    return () => window.removeEventListener('custom-library:changed', onChange);
+  }, []);
+  return [lib, setLib];
+}
+
 export function useActiveMethodology(): [Methodology, (id: Methodology['id']) => void] {
   const [id, setId] = useState<Methodology['id']>(readMethodologyFromStorage);
+  const [customLib] = useCustomLibrary();
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(METHODOLOGY_KEY, id);
@@ -193,6 +240,21 @@ export function useActiveMethodology(): [Methodology, (id: Methodology['id']) =>
     window.addEventListener('methodology:changed', onChange as EventListener);
     return () => window.removeEventListener('methodology:changed', onChange as EventListener);
   }, []);
+
+  // For the Custom methodology, overlay the user's editable library.
+  if (id === 'custom') {
+    const base = METHODOLOGY_BY_ID.custom;
+    const m: Methodology = {
+      ...base,
+      practices: customLib.practices,
+      skills:
+        customLib.skills && customLib.skills.length > 0
+          ? customLib.skills
+          : base.skills,
+    };
+    return [m, setId];
+  }
+
   const m = METHODOLOGY_BY_ID[id] ?? METHODOLOGY_BY_ID[DEFAULT_METHODOLOGY_ID];
   return [m, setId];
 }
