@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PublicProfile, Trainer } from '../lib/database.types';
+import { pickTemplateUx } from '../lib/templateUx';
 
 const DEFAULT: PublicProfile = {
   hero: { title: null, subtitle: null, photo_url: null, cta_text: 'Book a free consultation' },
@@ -35,6 +36,12 @@ function merge(p: Partial<PublicProfile> | null | undefined): PublicProfile {
 
 export function PublicProfileSettingsCard({ trainer }: { trainer: Trainer }) {
   const qc = useQueryClient();
+  // Per-template placeholders + label copy. A nutrition coach\'s editor
+  // shouldn't use personal-trainer copy; a martial-arts dojo's shouldn't
+  // either. The pickTemplateUx() registry tells us which template this
+  // trainer is on and what placeholder copy to surface.
+  const tx = pickTemplateUx(trainer.template_slugs);
+  const ph = tx.publicProfile;
   const [form, setForm] = useState<PublicProfile>(merge(trainer.public_profile));
   const [uploadingHero, setUploadingHero] = useState(false);
   const [uploadingAbout, setUploadingAbout] = useState(false);
@@ -163,7 +170,7 @@ export function PublicProfileSettingsCard({ trainer }: { trainer: Trainer }) {
             <label className={labelCls}>Headline</label>
             <input
               className={inputCls}
-              placeholder="Build your body. Transform your life."
+              placeholder={ph.heroHeadline}
               value={form.hero.title ?? ''}
               onChange={(e) => setHero('title', e.target.value || null)}
             />
@@ -172,7 +179,7 @@ export function PublicProfileSettingsCard({ trainer }: { trainer: Trainer }) {
             <label className={labelCls}>CTA button text</label>
             <input
               className={inputCls}
-              placeholder="Book a free consultation"
+              placeholder={ph.heroCta}
               value={form.hero.cta_text ?? ''}
               onChange={(e) => setHero('cta_text', e.target.value || null)}
             />
@@ -183,7 +190,7 @@ export function PublicProfileSettingsCard({ trainer }: { trainer: Trainer }) {
           <textarea
             rows={2}
             className={inputCls}
-            placeholder="Personalized 1-on-1 training designed around your body, your goals, your schedule."
+            placeholder={ph.heroSubtitle}
             value={form.hero.subtitle ?? ''}
             onChange={(e) => setHero('subtitle', e.target.value || null)}
           />
@@ -204,7 +211,7 @@ export function PublicProfileSettingsCard({ trainer }: { trainer: Trainer }) {
             <label className={labelCls}>Headline</label>
             <input
               className={inputCls}
-              placeholder="Hi, I'm Sarah."
+              placeholder={ph.aboutHeadline}
               value={form.about.headline ?? ''}
               onChange={(e) => setAbout('headline', e.target.value || null)}
             />
@@ -215,7 +222,7 @@ export function PublicProfileSettingsCard({ trainer }: { trainer: Trainer }) {
           <textarea
             rows={5}
             className={inputCls}
-            placeholder="Tell prospects who you are, who you work with, and what makes you different."
+            placeholder={ph.aboutBody}
             value={form.about.body ?? ''}
             onChange={(e) => setAbout('body', e.target.value || null)}
           />
@@ -244,7 +251,7 @@ export function PublicProfileSettingsCard({ trainer }: { trainer: Trainer }) {
             label="Email"
             value={form.contact.email}
             onChange={(v) => setContact('email', v)}
-            placeholder="hi@dee-fitness.com"
+            placeholder={ph.emailPlaceholder}
           />
           <ContactInput
             icon={<MessageCircle size={14} />}
@@ -258,16 +265,16 @@ export function PublicProfileSettingsCard({ trainer }: { trainer: Trainer }) {
             label="Instagram handle"
             value={form.contact.instagram}
             onChange={(v) => setContact('instagram', v)}
-            placeholder="@dee_fitness"
+            placeholder={ph.instagramPlaceholder}
           />
         </div>
         <div className="mt-3">
           <ContactInput
             icon={<MapPin size={14} />}
-            label="Studio address (optional)"
+            label={ph.addressLabel}
             value={form.contact.address}
             onChange={(v) => setContact('address', v)}
-            placeholder="123 Main St, Anytown"
+            placeholder={ph.addressPlaceholder}
           />
         </div>
       </Group>

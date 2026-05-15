@@ -52,6 +52,20 @@ export interface TemplateUx {
   // Which dashboard layout to render — drives a different page entirely,
   // not just labels. See DashboardVariant.
   dashboardVariant: DashboardVariant;
+  // Public profile editor placeholder copy. Each template needs its
+  // own — a martial-arts dojo's public site doesn't read like a
+  // personal trainer's. Used by components/PublicProfileSettingsCard.
+  publicProfile: {
+    heroHeadline: string;
+    heroCta: string;
+    heroSubtitle: string;
+    aboutHeadline: string;
+    aboutBody: string;
+    addressLabel: string;
+    addressPlaceholder: string;
+    emailPlaceholder: string;
+    instagramPlaceholder: string;
+  };
 }
 
 const FALLBACK: TemplateUx = {
@@ -64,6 +78,19 @@ const FALLBACK: TemplateUx = {
   primaryCtaLabel: 'Log a session',
   primaryCtaPath: '/sessions',
   dashboardVariant: 'private',
+  publicProfile: {
+    heroHeadline: 'Build your body. Transform your life.',
+    heroCta: 'Book a free consultation',
+    heroSubtitle:
+      'Personalized 1-on-1 training designed around your body, your goals, your schedule.',
+    aboutHeadline: "Hi, I'm Sarah.",
+    aboutBody:
+      'Tell prospects who you are, who you train, and what makes your coaching different.',
+    addressLabel: 'Studio address (optional)',
+    addressPlaceholder: '123 Main St, Anytown',
+    emailPlaceholder: 'hi@example-fitness.com',
+    instagramPlaceholder: '@example_fitness',
+  },
 };
 
 const TEMPLATE_UX: Record<string, TemplateUx> = {
@@ -78,6 +105,19 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     primaryCtaLabel: 'Add a member',
     primaryCtaPath: '/clients',
     dashboardVariant: 'studio',
+    publicProfile: {
+      heroHeadline: 'Stronger together. Welcome to the gym.',
+      heroCta: 'Become a member',
+      heroSubtitle:
+        'Open 5am–11pm. Group classes daily, free weights, cardio floor, locker rooms. Your second home.',
+      aboutHeadline: 'About the gym',
+      aboutBody:
+        'Tell members about your equipment, your classes, your community. What kind of gym is this?',
+      addressLabel: 'Gym address',
+      addressPlaceholder: '123 Main St, Anytown',
+      emailPlaceholder: 'hello@yourgym.com',
+      instagramPlaceholder: '@yourgym',
+    },
   },
   martial_arts: {
     slug: 'martial_arts',
@@ -91,6 +131,19 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     // Full separate app — mounts the src/dojo/ module instead of the
     // standard trainer Layout. Dark theme, belt-rank-centric workflow.
     dashboardVariant: 'martial',
+    publicProfile: {
+      heroHeadline: 'Train. Rank. Belong.',
+      heroCta: 'Book a trial class',
+      heroSubtitle:
+        'Traditional martial arts in a modern dojo. Adults, kids, and families welcome — every level, white belt to black.',
+      aboutHeadline: 'About the dojo',
+      aboutBody:
+        'Tell prospective students about your style, your lineage, and the values you teach on the mat. Who is this dojo for?',
+      addressLabel: 'Dojo address',
+      addressPlaceholder: '123 Main St, Anytown',
+      emailPlaceholder: 'sensei@yourdojo.com',
+      instagramPlaceholder: '@yourdojo',
+    },
   },
   boxing_gym: {
     slug: 'boxing_gym',
@@ -105,6 +158,19 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     // Full separate app — mounts the src/boxing/ module. Red corner /
     // blue corner aesthetic, fighter records, tier system.
     dashboardVariant: 'boxing',
+    publicProfile: {
+      heroHeadline: 'Train like a fighter.',
+      heroCta: 'Book a free trial',
+      heroSubtitle:
+        'Boxing fundamentals, strength training, real fight conditioning. Beginner-friendly. Step in the ring when you’re ready.',
+      aboutHeadline: 'About the gym',
+      aboutBody:
+        'Who runs this gym, what’s your style, who do you train? Pros, amateurs, fitness boxers — be specific.',
+      addressLabel: 'Gym address',
+      addressPlaceholder: '123 Main St, Anytown',
+      emailPlaceholder: 'coach@yourgym.com',
+      instagramPlaceholder: '@yourgym',
+    },
   },
   yoga_studio: {
     slug: 'yoga_studio',
@@ -116,6 +182,19 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     primaryCtaLabel: 'Schedule a class',
     primaryCtaPath: '/sessions',
     dashboardVariant: 'studio',
+    publicProfile: {
+      heroHeadline: 'Find your practice. Find your people.',
+      heroCta: 'Book a class',
+      heroSubtitle:
+        'Vinyasa, Hatha, Yin, restorative. Mats provided. Every body welcome. First class is free.',
+      aboutHeadline: 'About the studio',
+      aboutBody:
+        'Tell students about your style of yoga, your teachers, the kind of practice you cultivate here.',
+      addressLabel: 'Studio address',
+      addressPlaceholder: '123 Main St, Anytown',
+      emailPlaceholder: 'namaste@yourstudio.com',
+      instagramPlaceholder: '@yourstudio',
+    },
   },
   athletic_performance: {
     slug: 'athletic_performance',
@@ -127,6 +206,19 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     primaryCtaLabel: 'Log a session',
     primaryCtaPath: '/sessions',
     dashboardVariant: 'private',
+    publicProfile: {
+      heroHeadline: 'Train like the level you want to play at.',
+      heroCta: 'Apply for an evaluation',
+      heroSubtitle:
+        'Strength, speed, sport-specific conditioning. Periodized programming for high-school, collegiate, and pro athletes.',
+      aboutHeadline: 'About the program',
+      aboutBody:
+        'What sports do you train, what are your athletes\' results, what makes your programming different?',
+      addressLabel: 'Facility address',
+      addressPlaceholder: '123 Performance Way, Anytown',
+      emailPlaceholder: 'coach@yourprogram.com',
+      instagramPlaceholder: '@yourprogram',
+    },
   },
   online_coach: {
     slug: 'online_coach',
@@ -138,6 +230,19 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     primaryCtaLabel: 'Send a check-in',
     primaryCtaPath: '/clients',
     dashboardVariant: 'private',
+    publicProfile: {
+      heroHeadline: 'Online coaching that actually shows up.',
+      heroCta: 'Apply to work with me',
+      heroSubtitle:
+        'Custom programming, weekly check-ins, real accountability. Built for people who train at home, at the gym, anywhere.',
+      aboutHeadline: "Hi, I'm your coach.",
+      aboutBody:
+        'What\'s your story? Who do you coach best, and what does the experience of working with you look like?',
+      addressLabel: 'Service area (optional)',
+      addressPlaceholder: 'Worldwide · or e.g., USA + Canada',
+      emailPlaceholder: 'coach@example.com',
+      instagramPlaceholder: '@yourcoaching',
+    },
   },
   nutrition_coach: {
     slug: 'nutrition_coach',
@@ -151,6 +256,19 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
     // Full separate app — mounts src/nutrition/ with editorial magazine
     // aesthetic, serif headers, sage + cream palette, no sidebar.
     dashboardVariant: 'nutrition',
+    publicProfile: {
+      heroHeadline: 'Eat better. Feel better. Without the diet drama.',
+      heroCta: 'Book a free intro call',
+      heroSubtitle:
+        'Personalized nutrition coaching that fits your real life — built one habit at a time, no calorie spreadsheets, no shame.',
+      aboutHeadline: "Hi, I'm your nutrition coach.",
+      aboutBody:
+        'Who do you coach (women in midlife, athletes, busy parents), what method do you use (PN-style habits, intuitive eating, integrative), and what does the journey look like?',
+      addressLabel: 'Practice address (optional)',
+      addressPlaceholder: 'Online · or e.g., 123 Wellness Way',
+      emailPlaceholder: 'hello@yournutrition.com',
+      instagramPlaceholder: '@yournutrition',
+    },
   },
 };
 
