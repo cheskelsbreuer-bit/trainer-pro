@@ -16,6 +16,7 @@ import { AskCoachPage } from './pages/AskCoachPage';
 import { SessionsPage } from './pages/SessionsPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { IntakePage } from './pages/IntakePage';
+import { ResourcesPage } from './pages/ResourcesPage';
 
 export function NutritionApp({ trainer }: { trainer: Trainer | undefined }) {
   return (
@@ -27,6 +28,7 @@ export function NutritionApp({ trainer }: { trainer: Trainer | undefined }) {
         <Route path="clients/:clientId/intake" element={<IntakePage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="recipes" element={<RecipesPage />} />
+        <Route path="resources" element={<ResourcesPage />} />
         <Route path="intake" element={<IntakePage />} />
         <Route path="check-ins" element={<CheckInsPage />} />
         <Route path="plans" element={<PlansPage />} />

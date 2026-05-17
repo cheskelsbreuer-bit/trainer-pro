@@ -34,7 +34,8 @@ export type DashboardVariant =
   | 'martial'
   | 'boxing'
   | 'nutrition'
-  | 'exercise';
+  | 'exercise'
+  | 'studio_classes';
 
 export interface TemplateUx {
   slug: string;
@@ -243,6 +244,30 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
       addressPlaceholder: 'Worldwide · or e.g., USA + Canada',
       emailPlaceholder: 'coach@example.com',
       instagramPlaceholder: '@yourcoaching',
+    },
+  },
+  group_studio: {
+    slug: 'group_studio',
+    clientNoun: 'member',
+    clientNounPlural: 'members',
+    dashboardHeadline: 'Your studio today',
+    dashboardSubtitle: "Today's classes, capacity, attendance, walk-in slots.",
+    spaceNoun: 'studio',
+    primaryCtaLabel: 'Open schedule',
+    primaryCtaPath: '/schedule',
+    dashboardVariant: 'studio_classes',
+    publicProfile: {
+      heroHeadline: 'Step into the studio.',
+      heroCta: 'Book your first class',
+      heroSubtitle:
+        'Group classes for every body — yoga, spin, HIIT, pilates, more. Class packs and unlimited monthly memberships. First class free for new members.',
+      aboutHeadline: 'About the studio',
+      aboutBody:
+        'Tell prospective members about your studio vibe, your class types, your instructors, your room — and what the first-visit experience is like.',
+      addressLabel: 'Studio address',
+      addressPlaceholder: '123 Main St, Anytown',
+      emailPlaceholder: 'hello@yourstudio.com',
+      instagramPlaceholder: '@yourstudio',
     },
   },
   exercise_group: {

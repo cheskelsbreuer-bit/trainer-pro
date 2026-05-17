@@ -35,6 +35,20 @@ export interface MethodologyPractice {
   level: 1 | 2;
   rationale: string;
   measure: string;
+  /** Short coach-written mini-lessons clients see in the Resources tab
+   *  when this practice is assigned. Each has a title + 2-4 sentences of
+   *  guidance. Original content — not copied from any third-party
+   *  coaching program. */
+  resources?: Resource[];
+}
+
+/** A short coaching note clients see on the Resources tab. */
+export interface Resource {
+  id: string;
+  title: string;
+  /** Kind hint — drives the color stripe in the UI. */
+  kind: 'lesson' | 'tip' | 'pitfall';
+  body: string;
 }
 
 export interface NutritionLevel {

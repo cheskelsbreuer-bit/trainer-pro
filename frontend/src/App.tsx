@@ -33,6 +33,7 @@ import { DojoApp } from './dojo/DojoApp';
 import { BoxingApp } from './boxing/BoxingApp';
 import { NutritionApp } from './nutrition/NutritionApp';
 import { ExerciseApp } from './exercise/ExerciseApp';
+import { StudioApp } from './studio/StudioApp';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,6 +81,7 @@ function ProtectedShell() {
   if (variant === 'boxing') return <BoxingApp trainer={trainer} />;
   if (variant === 'nutrition') return <NutritionApp trainer={trainer} />;
   if (variant === 'exercise') return <ExerciseApp trainer={trainer} />;
+  if (variant === 'studio_classes') return <StudioApp trainer={trainer} />;
   return <Layout />;
 }
 

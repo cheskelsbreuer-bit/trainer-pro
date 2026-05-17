@@ -21,6 +21,7 @@ import {
   LogOut,
   ChefHat,
   ClipboardList,
+  Library,
 } from 'lucide-react';
 import { N, useNutritionTheme } from '../theme';
 import { supabase } from '../../lib/supabase';
@@ -40,6 +41,7 @@ const NAV: NavItem[] = [
   { to: '/intake', label: 'Intake forms', icon: ClipboardList },
   { to: '/recipes', label: 'Recipes', icon: ChefHat },
   { to: '/plans', label: 'Habit library', icon: BookOpen },
+  { to: '/resources', label: 'Resources', icon: Library },
   { to: '/ask', label: 'Ask coach', icon: Sparkles },
   { to: '/plate', label: 'Billing', icon: Wallet },
   { to: '/pantry', label: 'Settings', icon: Settings },
