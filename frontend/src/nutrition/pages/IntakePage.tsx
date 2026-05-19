@@ -18,155 +18,8 @@ import { supabase } from '../../lib/supabase';
 import { N, SERIF_FONT } from '../theme';
 import { nutritionRpc } from '../lib/nutritionRpc';
 import type { Client } from '../../lib/database.types';
+import { INTAKE_SECTIONS, type IntakeQuestion } from '../lib/intakeQuestions';
 
-interface IntakeQuestion {
-  id: string;
-  label: string;
-  help?: string;
-  type: 'text' | 'textarea' | 'select' | 'multiselect';
-  options?: string[];
-  required?: boolean;
-}
-
-// Default question set — built from common PN / RD intake forms.
-// A coach can override per-client if they want by editing answers
-// inline; question definitions are fixed in V1.
-const DEFAULT_QUESTIONS: { section: string; questions: IntakeQuestion[] }[] = [
-  {
-    section: 'The big picture',
-    questions: [
-      {
-        id: 'why_now',
-        label: 'Why are they here, and why now?',
-        help: "What changed? What did this client try first that didn't work?",
-        type: 'textarea',
-        required: true,
-      },
-      {
-        id: 'success',
-        label: 'What does success look like in 3 months?',
-        help: "Their words, not yours. The visible outcome they're after.",
-        type: 'textarea',
-      },
-      {
-        id: 'past_efforts',
-        label: 'What have they tried in the past?',
-        type: 'textarea',
-      },
-    ],
-  },
-  {
-    section: 'Health & medical',
-    questions: [
-      {
-        id: 'conditions',
-        label: 'Any diagnosed conditions?',
-        help: 'Diabetes, hypertension, thyroid, autoimmune, GI, etc.',
-        type: 'textarea',
-      },
-      {
-        id: 'medications',
-        label: 'Current medications & supplements?',
-        type: 'textarea',
-      },
-      {
-        id: 'allergies',
-        label: 'Food allergies or intolerances?',
-        type: 'textarea',
-      },
-      {
-        id: 'doctor_cleared',
-        label: 'Cleared by a physician for nutrition work?',
-        type: 'select',
-        options: ['Yes', 'No', 'Not sure'],
-      },
-    ],
-  },
-  {
-    section: 'Current eating',
-    questions: [
-      {
-        id: 'typical_day',
-        label: 'A typical day of eating (yesterday or last weekday)',
-        help: 'Times, foods, rough portions. No judgment — just the truth.',
-        type: 'textarea',
-      },
-      {
-        id: 'cooks',
-        label: 'Who cooks in the household?',
-        type: 'text',
-      },
-      {
-        id: 'eats_out',
-        label: 'How often do they eat out / order in?',
-        type: 'select',
-        options: ['Rarely', '1-2x/week', '3-4x/week', '5+ times/week'],
-      },
-      {
-        id: 'pattern',
-        label: 'Eating pattern style?',
-        type: 'select',
-        options: [
-          'Omnivore',
-          'Pescatarian',
-          'Vegetarian',
-          'Vegan',
-          'Mediterranean',
-          'Keto / low-carb',
-          'Other',
-        ],
-      },
-    ],
-  },
-  {
-    section: 'Lifestyle',
-    questions: [
-      {
-        id: 'training',
-        label: 'Movement / exercise routine',
-        help: 'Type, frequency, intensity, duration.',
-        type: 'textarea',
-      },
-      {
-        id: 'sleep',
-        label: 'Average sleep (hours/night)',
-        type: 'text',
-      },
-      {
-        id: 'stress',
-        label: 'Current stress level (1-10) + what drives it',
-        type: 'textarea',
-      },
-      {
-        id: 'alcohol',
-        label: 'Alcohol use',
-        type: 'select',
-        options: ['None', 'Rare (1-2x/month)', 'Social (weekends)', 'Most days'],
-      },
-    ],
-  },
-  {
-    section: 'Coaching fit',
-    questions: [
-      {
-        id: 'biggest_obstacle',
-        label: "What's the biggest obstacle in their way right now?",
-        type: 'textarea',
-      },
-      {
-        id: 'support',
-        label: 'Who supports them at home?',
-        type: 'text',
-      },
-      {
-        id: 'red_flags',
-        label: 'Any red flags I should know about?',
-        help: 'ED history, recent loss, major life changes, etc. Internal note.',
-        type: 'textarea',
-      },
-    ],
-  },
-];
 
 export function IntakePage() {
   const params = useParams<{ clientId?: string }>();
@@ -332,9 +185,9 @@ export function IntakePage() {
         </p>
       ) : (
         <div className="space-y-6">
-          {DEFAULT_QUESTIONS.map((section) => (
+          {INTAKE_SECTIONS.map((section) => (
             <section
-              key={section.section}
+              key={section.id}
               className="rounded-2xl overflow-hidden"
               style={{
                 background: N.card,
@@ -356,6 +209,14 @@ export function IntakePage() {
                 >
                   {section.section}
                 </h2>
+                {section.purpose && (
+                  <p
+                    className="text-xs italic mt-1"
+                    style={{ color: N.mute, fontFamily: SERIF_FONT }}
+                  >
+                    {section.purpose}
+                  </p>
+                )}
               </header>
               <div className="p-5 space-y-4">
                 {section.questions.map((q) => (
@@ -379,49 +240,7 @@ export function IntakePage() {
                         {q.help}
                       </p>
                     )}
-                    {q.type === 'textarea' ? (
-                      <textarea
-                        value={answers[q.id] ?? ''}
-                        onChange={(e) => setAnswer(q.id, e.target.value)}
-                        rows={3}
-                        className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none"
-                        style={{
-                          background: N.inset,
-                          color: N.ink,
-                          border: `1px solid ${N.rule}`,
-                        }}
-                      />
-                    ) : q.type === 'select' ? (
-                      <select
-                        value={answers[q.id] ?? ''}
-                        onChange={(e) => setAnswer(q.id, e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none"
-                        style={{
-                          background: N.inset,
-                          color: N.ink,
-                          border: `1px solid ${N.rule}`,
-                        }}
-                      >
-                        <option value="">—</option>
-                        {q.options?.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        value={answers[q.id] ?? ''}
-                        onChange={(e) => setAnswer(q.id, e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none"
-                        style={{
-                          background: N.inset,
-                          color: N.ink,
-                          border: `1px solid ${N.rule}`,
-                        }}
-                      />
-                    )}
+                    {renderField(q, answers[q.id] ?? '', (v) => setAnswer(q.id, v))}
                   </div>
                 ))}
               </div>
@@ -457,4 +276,146 @@ export function IntakePage() {
       )}
     </div>
   );
+}
+
+// ── Field renderer ─────────────────────────────────────────────────
+//
+// Dispatches on q.type. Supports: text, textarea, select, multiselect,
+// number, date, scale_1_10. Multi-select stores values as a JSON array
+// stringified (so we can keep the answers map flat as Record<string,
+// string>).
+
+const inputCls =
+  'w-full px-3 py-2 text-sm rounded-lg focus:outline-none';
+const inputStyle: React.CSSProperties = {
+  background: N.inset,
+  color: N.ink,
+  border: `1px solid ${N.rule}`,
+};
+
+function renderField(
+  q: IntakeQuestion,
+  value: string,
+  onChange: (v: string) => void,
+): React.ReactNode {
+  switch (q.type) {
+    case 'textarea':
+      return (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          className={inputCls}
+          style={inputStyle}
+        />
+      );
+    case 'select':
+      return (
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputCls}
+          style={inputStyle}
+        >
+          <option value="">—</option>
+          {q.options?.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      );
+    case 'multiselect': {
+      const selected: string[] = (() => {
+        try {
+          return JSON.parse(value || '[]');
+        } catch {
+          return [];
+        }
+      })();
+      function toggle(opt: string) {
+        const next = selected.includes(opt)
+          ? selected.filter((s) => s !== opt)
+          : [...selected, opt];
+        onChange(JSON.stringify(next));
+      }
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {q.options?.map((o) => {
+            const on = selected.includes(o);
+            return (
+              <button
+                key={o}
+                type="button"
+                onClick={() => toggle(o)}
+                className="text-xs px-3 py-1 rounded-full font-semibold"
+                style={{
+                  background: on ? N.coral : 'transparent',
+                  color: on ? '#fff' : N.ink,
+                  border: `1px solid ${on ? N.coral : N.rule}`,
+                }}
+              >
+                {on ? '✓ ' : ''}{o}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+    case 'number':
+      return (
+        <input
+          type="number"
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputCls}
+          style={{ ...inputStyle, maxWidth: 160 }}
+        />
+      );
+    case 'date':
+      return (
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputCls}
+          style={{ ...inputStyle, maxWidth: 200 }}
+        />
+      );
+    case 'scale_1_10':
+      return (
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
+            const sel = String(n) === value;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onChange(String(n))}
+                className="w-8 h-8 rounded-md text-sm font-semibold"
+                style={{
+                  background: sel ? N.coral : N.inset,
+                  color: sel ? '#fff' : N.inkSoft,
+                  border: `1px solid ${sel ? N.coral : N.rule}`,
+                }}
+              >
+                {n}
+              </button>
+            );
+          })}
+        </div>
+      );
+    case 'text':
+    default:
+      return (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputCls}
+          style={inputStyle}
+        />
+      );
+  }
 }
