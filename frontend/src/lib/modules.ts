@@ -210,6 +210,125 @@ export const MODULES: AppModule[] = [
   { id: 'staff-roles', name: 'Staff & roles', description: 'Add staff with limited access to your app.', icon: '🧑‍💼', category: 'business', templates: 'all' },
   { id: 'multi-location', name: 'Multiple locations', description: 'Run more than one location from one account.', icon: '📍', category: 'business', templates: 'all' },
   { id: 'branded-client-app', name: 'Branded client app', description: 'Your logo + colors on the client-facing app.', icon: '📱', category: 'business', templates: 'all' },
+
+  // ════════════════════════════════════════════════════════════════
+  //  MORE MONEY & PAYMENTS (every template)
+  // ════════════════════════════════════════════════════════════════
+  { id: 'invoicing', name: 'Invoicing', description: 'Send professional invoices clients can pay.', icon: '🧾', category: 'crosscutting', templates: 'all', suggest: 'Look professional — send proper invoices.', unlocks: ['payment-plans', 'late-fees'] },
+  { id: 'payment-plans', name: 'Payment plans', description: 'Split a big balance into scheduled installments.', icon: '📅', category: 'crosscutting', templates: 'all', unlocks: ['auto-rebill'] },
+  { id: 'partial-payments', name: 'Partial payments', description: 'Accept partial payments toward a balance.', icon: '➗', category: 'crosscutting', templates: 'all' },
+  { id: 'discounts-coupons', name: 'Discounts & coupons', description: 'Create discount codes and promos.', icon: '🏷️', category: 'crosscutting', templates: 'all' },
+  { id: 'late-fees', name: 'Late fees', description: 'Auto-add a late fee to overdue balances.', icon: '⏰', category: 'crosscutting', templates: 'all' },
+  { id: 'deposits', name: 'Deposits', description: 'Take a deposit to hold a spot or package.', icon: '💵', category: 'crosscutting', templates: 'all' },
+  { id: 'tax-reports', name: 'Tax reports', description: 'Year-end income summary for taxes.', icon: '🧮', category: 'business', templates: 'all' },
+  { id: 'refunds', name: 'Refunds & credits', description: 'Issue and track refunds and account credits.', icon: '↩️', category: 'crosscutting', templates: 'all' },
+
+  // ════════════════════════════════════════════════════════════════
+  //  MORE AI FEATURES (the smart layer, per template)
+  // ════════════════════════════════════════════════════════════════
+  { id: 'ai-weekly-digest', name: 'AI weekly digest', description: 'AI emails you a Monday summary of your whole business.', icon: '🤖', category: 'ai', templates: 'all' },
+  { id: 'ai-email-writer', name: 'AI email writer', description: 'AI drafts client emails + newsletters in your voice.', icon: '🤖', category: 'ai', templates: 'all', unlocks: ['email-marketing'] },
+  { id: 'ai-social-posts', name: 'AI social posts', description: 'AI writes social posts to promote your business.', icon: '🤖', category: 'ai', templates: 'all' },
+  { id: 'ai-pricing-advisor', name: 'AI pricing advisor', description: 'AI suggests pricing from your market + how full you are.', icon: '🤖', category: 'ai', templates: 'all' },
+  { id: 'ai-voice-notes', name: 'AI voice notes', description: 'Dictate a note; AI transcribes + files it for you.', icon: '🤖', category: 'ai', templates: 'all' },
+  { id: 'ai-translate', name: 'AI translation', description: "Auto-translate client messages to their language.", icon: '🤖', category: 'ai', templates: 'all' },
+  { id: 'ai-goal-setting', name: 'AI goal setting', description: 'AI helps set realistic client goals from their data.', icon: '🤖', category: 'ai', templates: ['nutrition_coach', 'solo_trainer', 'online_coach', 'athletic_performance'] },
+  { id: 'ai-form-feedback', name: 'AI form feedback', description: "AI reviews a client's lift video + flags form issues.", icon: '🤖', category: 'ai', templates: ['solo_trainer', 'athletic_performance', 'online_coach'] },
+  { id: 'ai-meal-photo', name: 'AI meal photo scan', description: 'Client snaps a meal; AI estimates portions + macros.', icon: '🤖', category: 'ai', templates: ['nutrition_coach'] },
+  { id: 'ai-schedule-optimizer', name: 'AI schedule optimizer', description: 'AI suggests the best class times from real demand.', icon: '🤖', category: 'ai', templates: ['group_studio', 'yoga_studio', 'gym_membership'] },
+  { id: 'ai-belt-readiness', name: 'AI test readiness', description: 'AI flags which students are ready to test for their next rank.', icon: '🤖', category: 'ai', templates: ['martial_arts'] },
+  { id: 'ai-fight-matchmaker', name: 'AI matchmaker', description: 'AI suggests fair matchups by record + weight class.', icon: '🤖', category: 'ai', templates: ['boxing_gym'] },
+
+  // ════════════════════════════════════════════════════════════════
+  //  EVEN MORE NUTRITION
+  // ════════════════════════════════════════════════════════════════
+  { id: 'calorie-database', name: 'Food database', description: 'Searchable food + calorie database for clients.', icon: '🗃️', category: 'nutrition', templates: ['nutrition_coach'] },
+  { id: 'barcode-scanner', name: 'Barcode scanner', description: 'Scan packaged foods to log them fast.', icon: '📷', category: 'nutrition', templates: ['nutrition_coach'] },
+  { id: 'fasting-tracker', name: 'Fasting tracker', description: 'Track intermittent-fasting windows.', icon: '⏳', category: 'nutrition', templates: ['nutrition_coach'] },
+  { id: 'sleep-tracker', name: 'Sleep tracker', description: 'Log sleep quality alongside nutrition.', icon: '😴', category: 'nutrition', templates: ['nutrition_coach', 'online_coach'] },
+  { id: 'mood-tracker', name: 'Mood & energy tracker', description: 'Track mood and energy with food choices.', icon: '🙂', category: 'nutrition', templates: ['nutrition_coach'] },
+  { id: 'allergen-tracker', name: 'Allergen tracker', description: 'Flag client allergies across recipes + plans.', icon: '⚠️', category: 'nutrition', templates: ['nutrition_coach'] },
+  { id: 'blood-work-tracking', name: 'Lab / blood-work tracking', description: 'Store + trend lab results over time.', icon: '🩸', category: 'nutrition', templates: ['nutrition_coach'] },
+  { id: 'meal-prep-planner', name: 'Meal-prep planner', description: 'Weekly meal-prep schedule for clients.', icon: '🥡', category: 'nutrition', templates: ['nutrition_coach'] },
+  { id: 'restaurant-guide', name: 'Eating-out guide', description: 'Smart ordering tips for restaurants.', icon: '🍴', category: 'nutrition', templates: ['nutrition_coach'] },
+  { id: 'recipe-scaler', name: 'Recipe scaler', description: 'Scale recipes to servings + macros.', icon: '⚖️', category: 'nutrition', templates: ['nutrition_coach'] },
+
+  // ════════════════════════════════════════════════════════════════
+  //  EVEN MORE MARTIAL ARTS
+  // ════════════════════════════════════════════════════════════════
+  { id: 'rank-certificates', name: 'Rank certificates', description: 'Auto-generate printable belt certificates.', icon: '📜', category: 'martial', templates: ['martial_arts'] },
+  { id: 'parent-portal', name: 'Parent portal', description: "Parents see their kids' progress + attendance.", icon: '👪', category: 'martial', templates: ['martial_arts'] },
+  { id: 'technique-video-library', name: 'Technique videos', description: 'Reference videos for each technique.', icon: '🎬', category: 'martial', templates: ['martial_arts'] },
+  { id: 'demo-team', name: 'Demo / comp team', description: 'Manage a demonstration or competition team.', icon: '🤸', category: 'martial', templates: ['martial_arts'] },
+  { id: 'dojo-store', name: 'Pro shop', description: 'Sell gis, belts, and gear to students.', icon: '🏪', category: 'business', templates: ['martial_arts'] },
+  { id: 'board-breaking-log', name: 'Breaking log', description: 'Track board-breaking achievements per student.', icon: '🪵', category: 'martial', templates: ['martial_arts'] },
+  { id: 'kids-rewards', name: 'Kids rewards', description: 'Stars + rewards to motivate young students.', icon: '🌟', category: 'martial', templates: ['martial_arts'] },
+
+  // ════════════════════════════════════════════════════════════════
+  //  EVEN MORE BOXING
+  // ════════════════════════════════════════════════════════════════
+  { id: 'training-camp-planner', name: 'Camp planner', description: 'Build a dated camp leading to fight night.', icon: '📆', category: 'boxing', templates: ['boxing_gym'] },
+  { id: 'corner-team', name: 'Corner team', description: 'Assign cutman + corner for each fighter.', icon: '🧑‍🤝‍🧑', category: 'boxing', templates: ['boxing_gym'] },
+  { id: 'recovery-tracker', name: 'Recovery tracker', description: 'Track rest, soreness, and injuries per fighter.', icon: '🩹', category: 'boxing', templates: ['boxing_gym'] },
+  { id: 'purse-tracking', name: 'Purse tracking', description: 'Track fight purses and payouts.', icon: '💰', category: 'business', templates: ['boxing_gym'] },
+  { id: 'heart-rate-zones', name: 'Heart-rate zones', description: 'Log conditioning by heart-rate zone.', icon: '❤️', category: 'boxing', templates: ['boxing_gym'] },
+
+  // ════════════════════════════════════════════════════════════════
+  //  EVEN MORE GROUP STUDIO
+  // ════════════════════════════════════════════════════════════════
+  { id: 'qr-checkin', name: 'QR check-in', description: 'Members check in by scanning a QR code.', icon: '🔳', category: 'studio', templates: ['group_studio', 'yoga_studio', 'gym_membership'], suggest: 'Speed up the front desk — let members self-check-in.' },
+  { id: 'member-kiosk', name: 'Check-in kiosk', description: 'A front-desk self-check-in screen.', icon: '🖥️', category: 'studio', templates: ['group_studio', 'yoga_studio', 'gym_membership'] },
+  { id: 'room-management', name: 'Room management', description: 'Assign classes to rooms / studios.', icon: '🚪', category: 'studio', templates: ['group_studio', 'yoga_studio'] },
+  { id: 'equipment-booking', name: 'Equipment booking', description: 'Reserve reformers / bikes per spot.', icon: '🚲', category: 'studio', templates: ['yoga_studio', 'group_studio'] },
+  { id: 'virtual-classes', name: 'Virtual classes', description: 'Stream classes live over Zoom.', icon: '💻', category: 'studio', templates: ['group_studio', 'yoga_studio'] },
+  { id: 'class-ratings', name: 'Class ratings', description: 'Members rate classes + instructors.', icon: '⭐', category: 'studio', templates: ['group_studio', 'yoga_studio'] },
+  { id: 'leaderboards', name: 'Leaderboards', description: 'Attendance + performance leaderboards.', icon: '🏆', category: 'studio', templates: ['group_studio', 'gym_membership'] },
+  { id: 'challenges', name: 'Challenges', description: 'Run 30-day challenges + track participants.', icon: '🎯', category: 'growth', templates: ['group_studio', 'yoga_studio', 'gym_membership', 'nutrition_coach'], unlocks: ['leaderboards'] },
+  { id: 'corporate-memberships', name: 'Corporate memberships', description: 'Sell memberships to local companies.', icon: '🏢', category: 'business', templates: ['group_studio', 'gym_membership', 'yoga_studio'] },
+  { id: 'guest-passes', name: 'Guest passes', description: 'Members bring a friend for free.', icon: '🎟️', category: 'studio', templates: ['group_studio', 'yoga_studio', 'gym_membership'] },
+  { id: 'locker-rental', name: 'Locker rental', description: 'Rent and track member lockers.', icon: '🔐', category: 'business', templates: ['gym_membership', 'group_studio'] },
+
+  // ════════════════════════════════════════════════════════════════
+  //  EVEN MORE EXERCISE GROUP (mom's model)
+  // ════════════════════════════════════════════════════════════════
+  { id: 'weather-cancellations', name: 'Weather cancellations', description: 'Cancel a class for weather + notify everyone.', icon: '🌧️', category: 'exercise', templates: ['exercise_group'] },
+  { id: 'monthly-statements', name: 'Monthly statements', description: 'Email each member a monthly balance statement.', icon: '📄', category: 'exercise', templates: ['exercise_group'] },
+  { id: 'class-capacity', name: 'Class capacity', description: 'Cap each day-group and show spots left.', icon: '🔢', category: 'exercise', templates: ['exercise_group'] },
+  { id: 'substitute-instructor', name: 'Substitute notes', description: 'Note when a sub covers one of your classes.', icon: '🔄', category: 'exercise', templates: ['exercise_group'] },
+
+  // ════════════════════════════════════════════════════════════════
+  //  EVEN MORE 1-ON-1 / PRIVATE
+  // ════════════════════════════════════════════════════════════════
+  { id: 'session-packs', name: 'Session packs', description: 'Sell + track blocks of 1-on-1 sessions.', icon: '🎫', category: 'private', templates: ['solo_trainer', 'athletic_performance', 'online_coach'] },
+  { id: 'wearable-sync', name: 'Wearable sync', description: 'Pull steps + heart rate from wearables.', icon: '⌚', category: 'private', templates: ['solo_trainer', 'athletic_performance', 'online_coach'] },
+  { id: '1rm-calculator', name: '1-rep-max calculator', description: 'Estimate max + working weights from a set.', icon: '🧮', category: 'private', templates: ['solo_trainer', 'athletic_performance'] },
+  { id: 'goal-milestones', name: 'Goal milestones', description: 'Set + celebrate client goal milestones.', icon: '🎉', category: 'private', templates: ['solo_trainer', 'online_coach', 'nutrition_coach'] },
+  { id: 'in-body-scans', name: 'Body-comp scans', description: 'Log InBody / DEXA body-composition scans.', icon: '🧍', category: 'private', templates: ['solo_trainer', 'athletic_performance'] },
+  { id: 'rest-timer', name: 'Rest timer', description: 'Built-in rest timer between sets.', icon: '⏱️', category: 'private', templates: ['solo_trainer', 'athletic_performance'] },
+
+  // ════════════════════════════════════════════════════════════════
+  //  MORE COMMUNICATION (every template)
+  // ════════════════════════════════════════════════════════════════
+  { id: 'group-broadcasts', name: 'Group broadcasts', description: 'Message a whole group in one tap.', icon: '📢', category: 'comms', templates: 'all', suggest: 'Message your whole group at once instead of one-by-one.' },
+  { id: 'appointment-confirmations', name: 'Auto confirmations', description: 'Auto-confirm + remind before each session.', icon: '✅', category: 'comms', templates: 'all' },
+  { id: 'two-way-sms', name: 'Two-way texting', description: 'Clients text back; you reply in-app.', icon: '💬', category: 'comms', templates: 'all' },
+  { id: 'push-notifications', name: 'Push notifications', description: 'Send push alerts to the client app.', icon: '🔔', category: 'comms', templates: 'all' },
+  { id: 'newsletter', name: 'Newsletter', description: 'Send a regular email newsletter.', icon: '📰', category: 'comms', templates: 'all', unlocks: ['email-marketing'] },
+  { id: 'client-surveys', name: 'Client surveys', description: 'Collect feedback with quick surveys.', icon: '📝', category: 'comms', templates: 'all' },
+  { id: 'announcement-board', name: 'Announcements', description: 'Post announcements clients see on login.', icon: '📌', category: 'comms', templates: 'all' },
+
+  // ════════════════════════════════════════════════════════════════
+  //  MORE GROWTH & BUSINESS (every template)
+  // ════════════════════════════════════════════════════════════════
+  { id: 'landing-pages', name: 'Landing pages', description: 'Build a marketing page for a specific offer.', icon: '🛬', category: 'growth', templates: 'all' },
+  { id: 'lead-capture', name: 'Lead capture', description: 'Capture leads from your public page.', icon: '🧲', category: 'growth', templates: 'all', unlocks: ['free-trial-offers', 'email-marketing'] },
+  { id: 'free-trial-offers', name: 'Free-trial offers', description: 'Offer a free trial and auto-convert to paid.', icon: '🆓', category: 'growth', templates: 'all' },
+  { id: 'email-marketing', name: 'Email marketing', description: 'Run email campaigns to leads + clients.', icon: '📧', category: 'growth', templates: 'all' },
+  { id: 'testimonials-wall', name: 'Testimonials', description: 'Show client testimonials on your page.', icon: '💬', category: 'growth', templates: 'all' },
+  { id: 'before-after-gallery', name: 'Transformations', description: 'Showcase client before/after results.', icon: '🖼️', category: 'growth', templates: 'all', unlocks: ['testimonials-wall'] },
+  { id: 'analytics-dashboard', name: 'Advanced analytics', description: 'Deep analytics on growth + revenue.', icon: '📊', category: 'business', templates: 'all' },
+  { id: 'expense-tracking', name: 'Expense tracking', description: 'Track business expenses + see profit.', icon: '🧾', category: 'business', templates: 'all' },
+  { id: 'google-business-sync', name: 'Google Business sync', description: 'Sync hours + reviews to your Google listing.', icon: '🔎', category: 'growth', templates: 'all' },
 ];
 
 export const MODULE_BY_ID: Record<string, AppModule> = MODULES.reduce(
