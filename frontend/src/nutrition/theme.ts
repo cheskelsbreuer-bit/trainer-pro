@@ -8,22 +8,29 @@
 
 import { useEffect, useState } from 'react';
 
+// Each token first honors the coach's chosen appearance (--tp-* vars).
+// If they haven't customized, it falls back to the nutrition app's own
+// --nut-* theme (which still drives its light/dark toggle). So: pick a
+// color in onboarding → the whole nutrition app uses it; pick nothing →
+// the signature coral/sage/cream look.
 export const N = {
-  paper: 'var(--nut-paper)',
-  card: 'var(--nut-card)',
+  paper: 'var(--tp-bg, var(--nut-paper))',
+  card: 'var(--tp-surface, var(--nut-card))',
   inset: 'var(--nut-inset)',
-  rule: 'var(--nut-rule)',
+  rule: 'var(--tp-rule, var(--nut-rule))',
   ruleSoft: 'var(--nut-rule-soft)',
-  ink: 'var(--nut-ink)',
-  inkSoft: 'var(--nut-ink-soft)',
+  ink: 'var(--tp-ink, var(--nut-ink))',
+  inkSoft: 'var(--tp-ink-soft, var(--nut-ink-soft))',
   mute: 'var(--nut-mute)',
   muteFaint: 'var(--nut-mute-faint)',
-  sage: 'var(--nut-sage)',
-  sageDeep: 'var(--nut-sage-deep)',
-  sageSoft: 'var(--nut-sage-soft)',
-  coral: 'var(--nut-coral)',
-  coralDeep: 'var(--nut-coral-deep)',
-  coralSoft: 'var(--nut-coral-soft)',
+  // Secondary accent ← the coach's chosen accent color.
+  sage: 'var(--tp-accent, var(--nut-sage))',
+  sageDeep: 'var(--tp-accent-deep, var(--nut-sage-deep))',
+  sageSoft: 'var(--tp-accent-soft, var(--nut-sage-soft))',
+  // Primary accent ← the coach's chosen primary color.
+  coral: 'var(--tp-primary, var(--nut-coral))',
+  coralDeep: 'var(--tp-primary-deep, var(--nut-coral-deep))',
+  coralSoft: 'var(--tp-primary-soft, var(--nut-coral-soft))',
   honey: 'var(--nut-honey)',
   honeySoft: 'var(--nut-honey-soft)',
   ok: 'var(--nut-ok)',
@@ -31,18 +38,13 @@ export const N = {
   danger: 'var(--nut-danger)',
 } as const;
 
-// Display font — Outfit. Warm geometric sans-serif used by current-gen
-// coaching apps (PN, Headway, Noom-adjacent). Friendly but professional;
-// reads as "I'm a real piece of software" not "I'm a magazine."
-// The variable name is kept as SERIF_FONT because every page imports it;
-// changing the name would touch dozens of files. The semantic is "the
-// display font" now.
+// Display + body fonts honor the coach's chosen font pairing, falling
+// back to the nutrition default (Outfit / Inter). The var name stays
+// SERIF_FONT because dozens of files import it.
 export const SERIF_FONT =
-  "'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
-// Body font — Inter (the de-facto standard for modern web apps,
-// including PN's own site).
+  "var(--tp-font-display, 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif)";
 export const BODY_FONT =
-  "'Inter', 'Outfit', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+  "var(--tp-font-body, 'Inter', 'Outfit', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif)";
 
 // Theme mode — defaults to LIGHT for the wellness aesthetic (most
 // nutrition apps are paper-mode by default).

@@ -151,7 +151,11 @@ export function appearanceToCss(a: AppearanceConfig): string {
   const dark = a.themeMode === 'dark';
   return `:root{
   --tp-primary:${a.primary};
+  --tp-primary-deep:color-mix(in srgb, ${a.primary} 78%, black);
+  --tp-primary-soft:color-mix(in srgb, ${a.primary} 12%, white);
   --tp-accent:${a.accent};
+  --tp-accent-deep:color-mix(in srgb, ${a.accent} 78%, black);
+  --tp-accent-soft:color-mix(in srgb, ${a.accent} 14%, white);
   --tp-bg:${dark ? '#0f172a' : '#f7f8fb'};
   --tp-surface:${dark ? '#1e293b' : '#ffffff'};
   --tp-ink:${dark ? '#f1f5f9' : '#0f172a'};
