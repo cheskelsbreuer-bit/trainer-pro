@@ -24,7 +24,7 @@ import { BookingSettingsCard } from '../../components/BookingSettingsCard';
 import { PublicProfileSettingsCard } from '../../components/PublicProfileSettingsCard';
 import { DirectorySettingsCard } from '../../components/DirectorySettingsCard';
 import { FeedbackCard } from '../../components/FeedbackCard';
-import { ModuleSwitchboard } from '../../components/ModuleSwitchboard';
+import { CustomizeStudio } from '../../components/CustomizeStudio';
 
 type Section =
   | 'customize'
@@ -173,13 +173,27 @@ export function PantryPage() {
       {section === 'customize' && (
         <SolarWrap title="Customize your app">
           <p className="text-sm mb-5" style={{ color: N.inkSoft }}>
-            This is what makes Trainer Pro yours. Every feature below is a
-            switch. Turn on what you do, hide what you don't. As you grow,
-            we'll suggest new features that fit.
+            One place for everything. <strong>Features</strong> — turn
+            capabilities on/off. <strong>Design</strong> — colors, fonts,
+            light/dark, all live. <strong>Layout</strong> — drag your menu
+            into the order you want.
           </p>
-          <ModuleSwitchboard
+          <CustomizeStudio
             templateSlug={trainer?.template_slugs?.[0] ?? 'nutrition_coach'}
             accent="#D87456"
+            navItems={[
+              { to: '/', label: '🏠 Home' },
+              { to: '/clients', label: '👥 Clients' },
+              { to: '/sessions', label: '📅 Sessions' },
+              { to: '/check-ins', label: '📥 Check-ins' },
+              { to: '/intake', label: '📋 Intake forms' },
+              { to: '/recipes', label: '🍳 Recipes' },
+              { to: '/plans', label: '🌱 Habit library' },
+              { to: '/resources', label: '📚 Resources' },
+              { to: '/ask', label: '✨ Ask coach' },
+              { to: '/plate', label: '💰 Billing' },
+              { to: '/pantry', label: '⚙️ Settings' },
+            ]}
           />
         </SolarWrap>
       )}

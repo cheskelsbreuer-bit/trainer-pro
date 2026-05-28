@@ -27,6 +27,7 @@ import { N, useNutritionTheme } from '../theme';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 import { useEnabledModules } from '../../lib/modules';
+import { useLayout, applyNavOrder } from '../../lib/layout';
 
 interface NavItem {
   to: string;
@@ -52,11 +53,13 @@ const NAV: NavItem[] = [
   { to: '/pantry', label: 'Settings', icon: Settings },
 ];
 
-/** Filter the nav to the coach's enabled modules. Core items (no
- *  module) always pass. */
+/** Filter the nav to the coach's enabled modules (core items always
+ *  pass), then sort by the coach's saved menu order. */
 function useVisibleNav(trainer: Trainer | undefined): NavItem[] {
   const { isOn } = useEnabledModules(trainer?.template_slugs?.[0]);
-  return NAV.filter((item) => !item.module || isOn(item.module));
+  const { layout } = useLayout();
+  const filtered = NAV.filter((item) => !item.module || isOn(item.module));
+  return applyNavOrder(filtered, layout.navOrder);
 }
 
 export function Masthead({ trainer }: { trainer: Trainer | undefined }) {

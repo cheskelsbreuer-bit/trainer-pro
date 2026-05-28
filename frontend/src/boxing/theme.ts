@@ -25,8 +25,10 @@ export const C = {
   text: 'var(--boxing-text)',
   textDim: 'var(--boxing-text-dim)',
   textFaint: 'var(--boxing-text-faint)',
-  red: 'var(--boxing-red)',
-  redDeep: 'var(--boxing-red-deep)',
+  // Main accent honors the coach's chosen primary; falls back to the
+  // signature boxing red. (Dark "fight poster" shell stays fixed.)
+  red: 'var(--tp-primary, var(--boxing-red))',
+  redDeep: 'var(--tp-primary-deep, var(--boxing-red-deep))',
   blueCorner: 'var(--boxing-blue-corner)',
   blueCornerDeep: 'var(--boxing-blue-corner-deep)',
   beltGold: 'var(--boxing-belt-gold)',

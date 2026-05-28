@@ -23,9 +23,11 @@ export const DOJO_COLORS = {
   textSecondary: 'var(--dojo-text-secondary)',
   textMuted: 'var(--dojo-text-muted)',
 
-  brand: 'var(--dojo-brand)',
-  brandHover: 'var(--dojo-brand-hover)',
-  brandSoft: 'var(--dojo-brand-soft)',
+  // Brand accent honors the coach's chosen primary; falls back to the
+  // signature dojo crimson. (Dark/crimson shell stays fixed.)
+  brand: 'var(--tp-primary, var(--dojo-brand))',
+  brandHover: 'var(--tp-primary-deep, var(--dojo-brand-hover))',
+  brandSoft: 'var(--tp-primary-soft, var(--dojo-brand-soft))',
   brandRing: 'var(--dojo-brand-ring)',
 
   gold: 'var(--dojo-gold)',
