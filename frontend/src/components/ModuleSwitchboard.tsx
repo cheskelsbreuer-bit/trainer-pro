@@ -12,12 +12,14 @@ import { useMemo } from 'react';
 import {
   useEnabledModules,
   modulesForTemplate,
+  suggestionsFor,
   type AppModule,
   type ModuleCategory,
 } from '../lib/modules';
 
 const CATEGORY_LABELS: Record<ModuleCategory, string> = {
   core: 'Always on',
+  ai: '🤖 AI features',
   nutrition: 'Nutrition coaching',
   martial: 'Martial arts',
   boxing: 'Boxing',
@@ -26,11 +28,13 @@ const CATEGORY_LABELS: Record<ModuleCategory, string> = {
   private: '1-on-1 training',
   comms: 'Communication',
   growth: 'Growth & extras',
+  business: 'Run the business',
   crosscutting: 'Money & payments',
 };
 
 const CATEGORY_ORDER: ModuleCategory[] = [
   'core',
+  'ai',
   'crosscutting',
   'nutrition',
   'studio',
@@ -39,6 +43,7 @@ const CATEGORY_ORDER: ModuleCategory[] = [
   'exercise',
   'private',
   'comms',
+  'business',
   'growth',
 ];
 
@@ -50,7 +55,7 @@ export function ModuleSwitchboard({
   /** Template's accent color so the switchboard feels native. */
   accent?: string;
 }) {
-  const { isOn, toggle, isLoading, saving } = useEnabledModules(templateSlug);
+  const { enabled, isOn, toggle, isLoading, saving } = useEnabledModules(templateSlug);
 
   const offered = useMemo(() => modulesForTemplate(templateSlug), [templateSlug]);
 
@@ -65,8 +70,12 @@ export function ModuleSwitchboard({
 
   const enabledCount = offered.filter((m) => isOn(m.id)).length;
 
-  // Suggestions: modules with a `suggest` line that aren't on yet.
-  const suggestions = offered.filter((m) => m.suggest && !isOn(m.id) && !m.core);
+  // Smart "do this → get more" suggestions: contextual, driven by what's
+  // already on (affinity) plus static nudges. Recomputes as they toggle.
+  const suggestions = useMemo(
+    () => suggestionsFor(enabled, templateSlug),
+    [enabled, templateSlug],
+  );
 
   if (isLoading) {
     return <p style={{ color: '#64748B', fontSize: '0.88rem' }}>Loading your app…</p>;
@@ -118,7 +127,7 @@ export function ModuleSwitchboard({
             💡 Suggested for you
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {suggestions.slice(0, 4).map((m) => (
+            {suggestions.slice(0, 4).map(({ module: m, reason }) => (
               <div
                 key={m.id}
                 style={{
@@ -133,7 +142,7 @@ export function ModuleSwitchboard({
                     {m.icon} {m.name}
                   </span>
                   <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '1px 0 0' }}>
-                    {m.suggest}
+                    {reason}
                   </p>
                 </div>
                 <button

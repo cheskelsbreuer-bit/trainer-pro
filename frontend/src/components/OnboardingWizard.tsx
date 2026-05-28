@@ -793,6 +793,7 @@ function StepTemplate({
 /* ─────────────── Step 7: Customize your app ─────────────── */
 const MODULE_CAT_LABELS: Record<ModuleCategory, string> = {
   core: 'The essentials',
+  ai: '🤖 AI features',
   crosscutting: 'Money & payments',
   nutrition: 'Nutrition coaching',
   studio: 'Group classes',
@@ -801,11 +802,12 @@ const MODULE_CAT_LABELS: Record<ModuleCategory, string> = {
   exercise: 'Group exercise',
   private: '1-on-1 training',
   comms: 'Communication',
+  business: 'Run the business',
   growth: 'Growth & extras',
 };
 const MODULE_CAT_ORDER: ModuleCategory[] = [
-  'core', 'crosscutting', 'nutrition', 'studio', 'martial', 'boxing',
-  'exercise', 'private', 'comms', 'growth',
+  'core', 'ai', 'crosscutting', 'nutrition', 'studio', 'martial', 'boxing',
+  'exercise', 'private', 'comms', 'business', 'growth',
 ];
 
 function StepModules({
