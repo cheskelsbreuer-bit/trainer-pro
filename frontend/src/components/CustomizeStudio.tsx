@@ -22,11 +22,12 @@ export interface CustomizeNavItem {
 }
 
 export function CustomizeStudio({
-  templateSlug,
+  templateSlugs,
   navItems,
   accent = '#7C3AED',
 }: {
-  templateSlug: string | undefined;
+  /** Every discipline the coach does — features combine across all of them. */
+  templateSlugs: string[] | undefined;
   /** The template's current visible menu, for the Layout tab to reorder. */
   navItems: CustomizeNavItem[];
   accent?: string;
@@ -82,8 +83,8 @@ export function CustomizeStudio({
         })}
       </div>
 
-      {tab === 'features' && <ModuleSwitchboard templateSlug={templateSlug} accent={accent} />}
-      {tab === 'design' && <AppearanceEditor templateSlug={templateSlug} />}
+      {tab === 'features' && <ModuleSwitchboard templateSlugs={templateSlugs} accent={accent} />}
+      {tab === 'design' && <AppearanceEditor templateSlug={templateSlugs?.[0]} />}
       {tab === 'layout' && <LayoutReorder navItems={navItems} accent={accent} />}
     </div>
   );

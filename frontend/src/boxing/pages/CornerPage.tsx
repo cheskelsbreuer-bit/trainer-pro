@@ -15,8 +15,10 @@ import { BookingSettingsCard } from '../../components/BookingSettingsCard';
 import { PublicProfileSettingsCard } from '../../components/PublicProfileSettingsCard';
 import { DirectorySettingsCard } from '../../components/DirectorySettingsCard';
 import { FeedbackCard } from '../../components/FeedbackCard';
+import { CustomizeStudio } from '../../components/CustomizeStudio';
 
 type Section =
+  | 'customize'
   | 'gym'
   | 'coach'
   | 'tiers'
@@ -29,6 +31,7 @@ type Section =
   | 'help';
 
 const TOC: { id: Section; label: string; blurb: string }[] = [
+  { id: 'customize', label: 'Customize App', blurb: 'Features, design, menu order.' },
   { id: 'gym', label: 'Gym Identity', blurb: 'Name, branding.' },
   { id: 'coach', label: 'Coach Profile', blurb: 'You — your timezone, currency, alerts.' },
   { id: 'tiers', label: 'Tier System', blurb: 'Rec / Amateur / Pro — fixed.' },
@@ -44,7 +47,7 @@ const TOC: { id: Section; label: string; blurb: string }[] = [
 export function CornerPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [section, setSection] = useState<Section>('gym');
+  const [section, setSection] = useState<Section>('customize');
 
   const { data: trainer } = useQuery({
     queryKey: ['trainer', user?.id],
@@ -119,6 +122,23 @@ export function CornerPage() {
 
       {/* Selected section */}
       <div className="px-4 sm:px-8 py-8">
+        {section === 'customize' && (
+          <SolarWrap>
+            <CustomizeStudio
+              templateSlugs={trainer?.template_slugs?.length ? trainer.template_slugs : ['boxing_gym']}
+              accent={trainer?.primary_color || '#E10F1F'}
+              navItems={[
+                { to: '/', label: 'The Card' },
+                { to: '/stable', label: 'Stable' },
+                { to: '/work', label: 'The Work' },
+                { to: '/fight-night', label: 'Fight Night' },
+                { to: '/climb', label: 'The Climb' },
+                { to: '/books', label: 'Books' },
+                { to: '/corner', label: 'Corner' },
+              ]}
+            />
+          </SolarWrap>
+        )}
         {section === 'gym' && <GymSection trainer={trainer} userId={user?.id} qc={qc} />}
         {section === 'coach' && trainer && <CoachSection trainer={trainer} userId={user?.id} qc={qc} />}
         {section === 'tiers' && <TiersSection />}

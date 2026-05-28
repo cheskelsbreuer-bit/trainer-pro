@@ -14,6 +14,7 @@ import { BookingSettingsCard } from '../../components/BookingSettingsCard';
 import { PublicProfileSettingsCard } from '../../components/PublicProfileSettingsCard';
 import { DirectorySettingsCard } from '../../components/DirectorySettingsCard';
 import { FeedbackCard } from '../../components/FeedbackCard';
+import { CustomizeStudio } from '../../components/CustomizeStudio';
 import { S, HEADING_FONT } from '../theme';
 
 export function SettingsPage({ trainer }: { trainer: Trainer | undefined }) {
@@ -46,6 +47,26 @@ export function SettingsPage({ trainer }: { trainer: Trainer | undefined }) {
         <p style={lbl}>Configure</p>
         <h1 style={h1}>Settings</h1>
       </div>
+
+      <Card title="🎨 Customize your app">
+        <p style={{ fontSize: '0.86rem', color: S.inkSoft, margin: '0 0 14px' }}>
+          Turn features on/off, choose your colors &amp; fonts, and arrange your menu —
+          all your disciplines combined.
+        </p>
+        <CustomizeStudio
+          templateSlugs={trainer?.template_slugs?.length ? trainer.template_slugs : ['group_studio']}
+          accent={trainer?.primary_color || '#7C3AED'}
+          navItems={[
+            { to: '/', label: 'Dashboard' },
+            { to: '/schedule', label: 'Schedule' },
+            { to: '/classes', label: 'Classes' },
+            { to: '/instructors', label: 'Instructors' },
+            { to: '/members', label: 'Members' },
+            { to: '/bookings', label: 'Bookings' },
+            { to: '/settings', label: 'Settings' },
+          ]}
+        />
+      </Card>
 
       <Card title="🏢 Studio identity">
         <div style={fieldGrid}>

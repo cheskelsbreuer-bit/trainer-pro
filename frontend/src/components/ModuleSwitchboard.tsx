@@ -11,7 +11,7 @@
 import { useMemo } from 'react';
 import {
   useEnabledModules,
-  modulesForTemplate,
+  modulesForTemplates,
   suggestionsFor,
   type AppModule,
   type ModuleCategory,
@@ -48,16 +48,20 @@ const CATEGORY_ORDER: ModuleCategory[] = [
 ];
 
 export function ModuleSwitchboard({
-  templateSlug,
+  templateSlugs,
   accent = '#7C3AED',
 }: {
-  templateSlug: string | undefined;
+  /** Every discipline the coach does — the offered set is the COMBINED
+   *  catalog across all of them (nutrition + martial arts + 1-on-1, etc.). */
+  templateSlugs: string[] | undefined;
   /** Template's accent color so the switchboard feels native. */
   accent?: string;
 }) {
-  const { enabled, isOn, toggle, isLoading, saving } = useEnabledModules(templateSlug);
+  const slugKey = (templateSlugs ?? []).join(',');
+  const { enabled, isOn, toggle, isLoading, saving } = useEnabledModules(templateSlugs);
 
-  const offered = useMemo(() => modulesForTemplate(templateSlug), [templateSlug]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const offered = useMemo(() => modulesForTemplates(templateSlugs), [slugKey]);
 
   const byCategory = useMemo(() => {
     const map = new Map<ModuleCategory, AppModule[]>();
@@ -73,8 +77,9 @@ export function ModuleSwitchboard({
   // Smart "do this → get more" suggestions: contextual, driven by what's
   // already on (affinity) plus static nudges. Recomputes as they toggle.
   const suggestions = useMemo(
-    () => suggestionsFor(enabled, templateSlug),
-    [enabled, templateSlug],
+    () => suggestionsFor(enabled, templateSlugs),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enabled, slugKey],
   );
 
   if (isLoading) {

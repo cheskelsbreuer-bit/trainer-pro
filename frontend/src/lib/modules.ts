@@ -478,9 +478,17 @@ interface TrainerModulesRow {
   public_profile: Record<string, unknown> | null;
 }
 
-export function useEnabledModules(templateSlug: string | undefined) {
+export function useEnabledModules(templateSlug: string | string[] | undefined) {
   const { user } = useAuth();
   const qc = useQueryClient();
+
+  // Accept a single slug or a list of disciplines. The default ON set for a
+  // brand-new account is the union of every picked discipline's bundle.
+  const slugs = Array.isArray(templateSlug)
+    ? templateSlug
+    : templateSlug
+      ? [templateSlug]
+      : [];
 
   const query = useQuery({
     queryKey: ['app-modules', user?.id],
@@ -498,8 +506,8 @@ export function useEnabledModules(templateSlug: string | undefined) {
       if (stored?.enabled && Array.isArray(stored.enabled)) {
         return new Set(stored.enabled);
       }
-      // No stored set yet — default to the template's starter bundle.
-      return new Set(starterBundle(templateSlug));
+      // No stored set yet — default to the combined starter bundle.
+      return new Set(starterBundleForTemplates(slugs));
     },
     enabled: !!user,
   });
@@ -527,7 +535,7 @@ export function useEnabledModules(templateSlug: string | undefined) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['app-modules'] }),
   });
 
-  const enabled = query.data ?? new Set(starterBundle(templateSlug));
+  const enabled = query.data ?? new Set(starterBundleForTemplates(slugs));
 
   function isOn(id: string): boolean {
     const mod = MODULE_BY_ID[id];

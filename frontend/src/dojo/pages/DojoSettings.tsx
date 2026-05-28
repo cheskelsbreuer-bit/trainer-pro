@@ -21,6 +21,7 @@ import {
   LifeBuoy,
   ChevronRight,
   User,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -47,9 +48,11 @@ import { BookingSettingsCard } from '../../components/BookingSettingsCard';
 import { PublicProfileSettingsCard } from '../../components/PublicProfileSettingsCard';
 import { DirectorySettingsCard } from '../../components/DirectorySettingsCard';
 import { FeedbackCard } from '../../components/FeedbackCard';
+import { CustomizeStudio } from '../../components/CustomizeStudio';
 
 type DojoSection =
   | 'overview'
+  | 'customize'
   | 'identity'
   | 'belts'
   | 'profile'
@@ -90,6 +93,13 @@ export function DojoSettings() {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <DojoHubTile
+            onClick={() => setSection('customize')}
+            icon={<SlidersHorizontal size={16} />}
+            title="Customize your app"
+            blurb="Features, colors, fonts, menu order — all your disciplines combined."
+            accent="brand"
+          />
           <DojoHubTile
             onClick={() => setSection('identity')}
             icon={<SettingsIcon size={16} />}
@@ -166,6 +176,24 @@ export function DojoSettings() {
         ← All settings
       </button>
 
+      {section === 'customize' && (
+        <SolarCardWrap title="Customize your app">
+          <CustomizeStudio
+            templateSlugs={trainer?.template_slugs?.length ? trainer.template_slugs : ['martial_arts']}
+            accent={trainer?.primary_color || '#DC2626'}
+            navItems={[
+              { to: '/', label: 'Dojo' },
+              { to: '/students', label: 'Students' },
+              { to: '/belts', label: 'Belts & Promotions' },
+              { to: '/classes', label: 'Classes' },
+              { to: '/tournaments', label: 'Tournaments' },
+              { to: '/families', label: 'Families' },
+              { to: '/billing', label: 'Billing' },
+              { to: '/settings', label: 'Settings' },
+            ]}
+          />
+        </SolarCardWrap>
+      )}
       {section === 'identity' && <IdentitySection trainer={trainer} userId={user?.id} qc={qc} />}
       {section === 'belts' && <BeltsSection />}
       {section === 'profile' && trainer && <ProfileSection trainer={trainer} userId={user?.id} qc={qc} />}

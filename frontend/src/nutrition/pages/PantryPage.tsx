@@ -179,7 +179,9 @@ export function PantryPage() {
             into the order you want.
           </p>
           <CustomizeStudio
-            templateSlug={trainer?.template_slugs?.[0] ?? 'nutrition_coach'}
+            templateSlugs={
+              trainer?.template_slugs?.length ? trainer.template_slugs : ['nutrition_coach']
+            }
             accent="#D87456"
             navItems={[
               { to: '/', label: '🏠 Home' },

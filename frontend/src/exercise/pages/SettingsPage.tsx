@@ -31,6 +31,7 @@ import { BookingSettingsCard } from '../../components/BookingSettingsCard';
 import { PublicProfileSettingsCard } from '../../components/PublicProfileSettingsCard';
 import { DirectorySettingsCard } from '../../components/DirectorySettingsCard';
 import { FeedbackCard } from '../../components/FeedbackCard';
+import { CustomizeStudio } from '../../components/CustomizeStudio';
 import { E } from '../theme';
 
 const COMMON_TZ = [
@@ -82,6 +83,26 @@ export function SettingsPage() {
       >
         ⚙ Configure your app. Most changes save instantly.
       </div>
+
+      <SettingsSection title="Customize your app" emoji="🎨" defaultOpen>
+        <CustomizeStudio
+          templateSlugs={trainer?.template_slugs?.length ? trainer.template_slugs : ['exercise_group']}
+          accent={trainer?.primary_color || '#2d6a9f'}
+          navItems={[
+            { to: '/', label: 'Dashboard' },
+            { to: '/members', label: 'Members' },
+            { to: '/payments', label: 'Payments' },
+            { to: '/groups', label: 'Groups' },
+            { to: '/notes', label: 'Notes' },
+            { to: '/reports', label: 'Reports' },
+            { to: '/log', label: 'Log' },
+            { to: '/paused', label: 'Paused' },
+            { to: '/archived', label: 'Former' },
+            { to: '/lookup', label: 'Lookup' },
+            { to: '/settings', label: 'Settings' },
+          ]}
+        />
+      </SettingsSection>
 
       <SettingsSection title="Group branding" emoji="🏷" defaultOpen>
         {cfg ? (

@@ -17,6 +17,7 @@ import {
   Megaphone,
   Wallet,
   LifeBuoy,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -31,9 +32,10 @@ import { StudioSettingsCard } from '../components/StudioSettingsCard';
 import { StripeStatusCard } from '../components/StripeStatusCard';
 import { PublicProfileSettingsCard } from '../components/PublicProfileSettingsCard';
 import { TestimonialsManagerCard } from '../components/TestimonialsManagerCard';
+import { CustomizeStudio } from '../components/CustomizeStudio';
 import type { Trainer } from '../lib/database.types';
 
-type Section = 'business' | 'public' | 'booking' | 'support' | null;
+type Section = 'business' | 'public' | 'booking' | 'customize' | 'support' | null;
 
 export function Settings() {
   const { user } = useAuth();
@@ -93,6 +95,14 @@ export function Settings() {
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <HubTile
+            onClick={() => setSection('customize')}
+            icon={<SlidersHorizontal size={22} />}
+            color="violet"
+            title="Customize your app"
+            description="Turn features on/off, pick your colors & fonts, and arrange your menu. This is what makes your app yours."
+            items={['Features (all your disciplines)', 'Colors, fonts & theme', 'Menu order']}
+          />
+          <HubTile
             onClick={() => setSection('business')}
             icon={<Briefcase size={22} />}
             color="blue"
@@ -136,6 +146,10 @@ export function Settings() {
 
   // ─── Section drilldown ─────────────────────────────────────────────
   const sectionMeta: Record<Exclude<Section, null>, { title: string; sub: string }> = {
+    customize: {
+      title: 'Customize your app',
+      sub: 'Features, design, and layout — build your exact app.',
+    },
     business: {
       title: 'Your business',
       sub: 'Your name, business name, contact info, branding, and team.',
@@ -164,6 +178,22 @@ export function Settings() {
         <ArrowLeft size={14} /> Back to Settings
       </button>
       <PageHeader title={sectionMeta[section].title} subtitle={sectionMeta[section].sub} />
+
+      {section === 'customize' && (
+        <CustomizeStudio
+          templateSlugs={trainer.template_slugs?.length ? trainer.template_slugs : ['solo_trainer']}
+          accent={trainer.primary_color || '#2563eb'}
+          navItems={[
+            { to: '/', label: 'Dashboard' },
+            { to: '/clients', label: 'Clients' },
+            { to: '/sessions', label: 'Sessions' },
+            { to: '/payments', label: 'Payments' },
+            { to: '/workouts', label: 'Workouts' },
+            { to: '/progress', label: 'Progress' },
+            { to: '/settings', label: 'Settings' },
+          ]}
+        />
+      )}
 
       {section === 'business' && (
         <div className="space-y-6">
@@ -371,7 +401,7 @@ function HubTile({
   onClick,
 }: {
   icon: React.ReactNode;
-  color: 'blue' | 'indigo' | 'amber' | 'rose';
+  color: 'blue' | 'indigo' | 'amber' | 'rose' | 'violet';
   title: string;
   description: string;
   items: string[];
@@ -382,12 +412,14 @@ function HubTile({
     indigo: 'from-indigo-50 to-violet-50 border-indigo-200 text-indigo-700',
     amber: 'from-amber-50 to-orange-50 border-amber-200 text-amber-700',
     rose: 'from-rose-50 to-pink-50 border-rose-200 text-rose-700',
+    violet: 'from-violet-50 to-fuchsia-50 border-violet-200 text-violet-700',
   };
   const iconBg: Record<string, string> = {
     blue: 'bg-blue-600',
     indigo: 'bg-indigo-600',
     amber: 'bg-amber-500',
     rose: 'bg-rose-600',
+    violet: 'bg-violet-600',
   };
   return (
     <button
