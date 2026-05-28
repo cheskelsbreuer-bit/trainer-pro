@@ -26,30 +26,43 @@ import {
 import { N, useNutritionTheme } from '../theme';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
+import { useEnabledModules } from '../../lib/modules';
 
 interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
+  /** Optional capability module that gates this tab. Items with no
+   *  module always show (they're core). When the module is off, the
+   *  tab is hidden. */
+  module?: string;
 }
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Home', icon: LayoutDashboard },
   { to: '/clients', label: 'Clients', icon: Users },
-  { to: '/sessions', label: 'Sessions', icon: CalendarClock },
-  { to: '/check-ins', label: 'Check-ins', icon: Inbox },
-  { to: '/intake', label: 'Intake forms', icon: ClipboardList },
-  { to: '/recipes', label: 'Recipes', icon: ChefHat },
-  { to: '/plans', label: 'Habit library', icon: BookOpen },
-  { to: '/resources', label: 'Resources', icon: Library },
-  { to: '/ask', label: 'Ask coach', icon: Sparkles },
-  { to: '/plate', label: 'Billing', icon: Wallet },
+  { to: '/sessions', label: 'Sessions', icon: CalendarClock, module: 'online-booking' },
+  { to: '/check-ins', label: 'Check-ins', icon: Inbox, module: 'check-ins' },
+  { to: '/intake', label: 'Intake forms', icon: ClipboardList, module: 'intake-forms' },
+  { to: '/recipes', label: 'Recipes', icon: ChefHat, module: 'recipes' },
+  { to: '/plans', label: 'Habit library', icon: BookOpen, module: 'habit-coaching' },
+  { to: '/resources', label: 'Resources', icon: Library, module: 'resources' },
+  { to: '/ask', label: 'Ask coach', icon: Sparkles, module: 'ask-coach' },
+  { to: '/plate', label: 'Billing', icon: Wallet, module: 'payments' },
   { to: '/pantry', label: 'Settings', icon: Settings },
 ];
+
+/** Filter the nav to the coach's enabled modules. Core items (no
+ *  module) always pass. */
+function useVisibleNav(trainer: Trainer | undefined): NavItem[] {
+  const { isOn } = useEnabledModules(trainer?.template_slugs?.[0]);
+  return NAV.filter((item) => !item.module || isOn(item.module));
+}
 
 export function Masthead({ trainer }: { trainer: Trainer | undefined }) {
   const navigate = useNavigate();
   const [mode, toggleMode] = useNutritionTheme();
+  const visibleNav = useVisibleNav(trainer);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -105,7 +118,7 @@ export function Masthead({ trainer }: { trainer: Trainer | undefined }) {
 
       {/* Section nav */}
       <nav className="flex-1 py-3 px-2 overflow-y-auto">
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
@@ -190,6 +203,7 @@ export function Masthead({ trainer }: { trainer: Trainer | undefined }) {
 export function MobileTopBar({ trainer }: { trainer: Trainer | undefined }) {
   const practiceName = trainer?.business_name || trainer?.full_name || 'Your Practice';
   const letterMark = (practiceName[0] || 'N').toUpperCase();
+  const visibleNav = useVisibleNav(trainer);
   return (
     <div
       className="md:hidden sticky top-0 z-30 border-b"
@@ -210,7 +224,7 @@ export function MobileTopBar({ trainer }: { trainer: Trainer | undefined }) {
         </p>
       </div>
       <div className="overflow-x-auto px-3 py-2 flex items-center gap-1">
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink

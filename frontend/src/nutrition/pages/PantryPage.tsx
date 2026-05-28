@@ -24,8 +24,10 @@ import { BookingSettingsCard } from '../../components/BookingSettingsCard';
 import { PublicProfileSettingsCard } from '../../components/PublicProfileSettingsCard';
 import { DirectorySettingsCard } from '../../components/DirectorySettingsCard';
 import { FeedbackCard } from '../../components/FeedbackCard';
+import { ModuleSwitchboard } from '../../components/ModuleSwitchboard';
 
 type Section =
+  | 'customize'
   | 'practice'
   | 'methodology'
   | 'coach'
@@ -39,6 +41,7 @@ type Section =
   | 'support';
 
 const INDEX: { id: Section; title: string; blurb: string }[] = [
+  { id: 'customize', title: 'Customize Your App', blurb: 'Turn features on or off. Your app, your way.' },
   { id: 'practice', title: 'The Practice', blurb: 'Your practice name and identity.' },
   {
     id: 'methodology',
@@ -167,6 +170,19 @@ export function PantryPage() {
         ← Back to the index
       </button>
 
+      {section === 'customize' && (
+        <SolarWrap title="Customize your app">
+          <p className="text-sm mb-5" style={{ color: N.inkSoft }}>
+            This is what makes Trainer Pro yours. Every feature below is a
+            switch. Turn on what you do, hide what you don't. As you grow,
+            we'll suggest new features that fit.
+          </p>
+          <ModuleSwitchboard
+            templateSlug={trainer?.template_slugs?.[0] ?? 'nutrition_coach'}
+            accent="#D87456"
+          />
+        </SolarWrap>
+      )}
       {section === 'practice' && <PracticeIdentity trainer={trainer} userId={user?.id} qc={qc} />}
       {section === 'methodology' && <MethodologyPicker />}
       {section === 'coach' && trainer && <CoachProfile trainer={trainer} userId={user?.id} qc={qc} />}
