@@ -1,14 +1,13 @@
 // ── Workspace switcher — flip between a coach's apps ─────────────────
 //
 // Shown ONLY when a coach owns more than one app (e.g. nutrition +
-// martial arts + 1-on-1). A small floating pill in the bottom-left
-// corner; clicking it pops up the list of the coach's apps so they can
-// jump between them. Styled neutrally with inline styles + a high z-index
-// so it sits cleanly on top of every template's very different shell
-// (dark dojo, light nutrition, fight-poster boxing, …).
+// martial arts + 1-on-1). A prominent floating bar pinned to the
+// top-center of the screen that shows every app the coach has as a
+// clickable tab — one tap jumps between them. Styled with inline styles
+// + a high z-index so it sits cleanly on top of every template's very
+// different shell (dark dojo, light nutrition, fight-poster boxing, …).
 
-import { useEffect, useRef, useState } from 'react';
-import { LayoutGrid, Check, ChevronUp } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 import type { AppKey, Workspace } from '../lib/workspaces';
 
 export function WorkspaceSwitcher({
@@ -20,119 +19,77 @@ export function WorkspaceSwitcher({
   activeKey: AppKey;
   onSwitch: (key: AppKey) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Close when clicking outside.
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
-
-  const active = workspaces.find((w) => w.key === activeKey) ?? workspaces[0];
-
   return (
     <div
-      ref={ref}
       style={{
         position: 'fixed',
-        bottom: 18,
-        left: 18,
+        top: 10,
+        left: '50%',
+        transform: 'translateX(-50%)',
         zIndex: 9999,
+        maxWidth: 'calc(100vw - 24px)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        background: '#0f172a',
+        border: '1px solid #334155',
+        borderRadius: 999,
+        padding: '6px 8px 6px 12px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+        overflowX: 'auto',
         fontFamily:
           'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       }}
     >
-      {/* Popup list */}
-      {open && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 'calc(100% + 8px)',
-            left: 0,
-            minWidth: 240,
-            background: '#0f172a',
-            border: '1px solid #1e293b',
-            borderRadius: 14,
-            padding: 6,
-            boxShadow: '0 18px 48px rgba(0,0,0,0.45)',
-          }}
-        >
-          <p
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          color: '#94a3b8',
+          fontSize: '0.72rem',
+          fontWeight: 800,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
+        <LayoutGrid size={14} />
+        My apps
+      </span>
+
+      {workspaces.map((w) => {
+        const on = w.key === activeKey;
+        return (
+          <button
+            key={w.key}
+            onClick={() => {
+              if (!on) onSwitch(w.key);
+            }}
+            title={on ? `You're in ${w.label}` : `Switch to ${w.label}`}
             style={{
-              fontSize: '0.66rem',
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: '#64748b',
-              margin: '6px 10px 8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              flexShrink: 0,
+              background: on ? '#fff' : 'transparent',
+              color: on ? '#0f172a' : '#e2e8f0',
+              border: on ? 'none' : '1px solid #475569',
+              borderRadius: 999,
+              padding: '6px 13px',
+              cursor: on ? 'default' : 'pointer',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              fontFamily: 'inherit',
             }}
           >
-            Your apps
-          </p>
-          {workspaces.map((w) => {
-            const on = w.key === activeKey;
-            return (
-              <button
-                key={w.key}
-                onClick={() => {
-                  setOpen(false);
-                  if (!on) onSwitch(w.key);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  width: '100%',
-                  textAlign: 'left',
-                  background: on ? '#1e293b' : 'transparent',
-                  border: 'none',
-                  borderRadius: 9,
-                  padding: '9px 10px',
-                  cursor: 'pointer',
-                  color: '#f1f5f9',
-                }}
-              >
-                <span style={{ fontSize: '1.15rem', lineHeight: 1 }}>{w.emoji}</span>
-                <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 600 }}>{w.label}</span>
-                {on && <Check size={15} color="#34d399" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* The pill */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 9,
-          background: '#0f172a',
-          color: '#f1f5f9',
-          border: '1px solid #1e293b',
-          borderRadius: 999,
-          padding: '9px 14px 9px 12px',
-          cursor: 'pointer',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-          fontFamily: 'inherit',
-        }}
-        title="Switch between your apps"
-      >
-        <LayoutGrid size={16} color="#94a3b8" />
-        <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{active?.emoji}</span>
-        <span style={{ fontSize: '0.86rem', fontWeight: 700 }}>{active?.label}</span>
-        <ChevronUp
-          size={15}
-          color="#94a3b8"
-          style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
-        />
-      </button>
+            <span style={{ fontSize: '1rem', lineHeight: 1 }}>{w.emoji}</span>
+            {w.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
