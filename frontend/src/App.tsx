@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { supabase } from './lib/supabase';
@@ -35,6 +35,14 @@ import { NutritionApp } from './nutrition/NutritionApp';
 import { ExerciseApp } from './exercise/ExerciseApp';
 import { StudioApp } from './studio/StudioApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
+import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
+import {
+  workspacesFor,
+  appKeyForVariant,
+  readActiveWorkspace,
+  writeActiveWorkspace,
+  type AppKey,
+} from './lib/workspaces';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +55,7 @@ const queryClient = new QueryClient({
 
 function ProtectedShell() {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   // Fetch trainer row to check onboarding status. The auth-user trigger creates
   // this row on signup, so it should always exist for an authed user.
@@ -63,6 +72,27 @@ function ProtectedShell() {
     },
     enabled: !!user,
   });
+
+  // The distinct apps this coach owns (one per discipline they picked).
+  const workspaces = useMemo(
+    () => workspacesFor(trainer?.template_slugs),
+    [trainer?.template_slugs],
+  );
+  // Which app's shell is currently mounted. Defaults to the primary
+  // template's app, but the coach can flip via the switcher and we
+  // remember their last choice per-browser.
+  const primaryKey = appKeyForVariant(pickTemplateUx(trainer?.template_slugs).dashboardVariant);
+  const [activeKey, setActiveKey] = useState<AppKey | null>(null);
+
+  // Seed / re-validate the active workspace once the trainer loads.
+  useEffect(() => {
+    if (!trainer) return;
+    const stored = readActiveWorkspace(user?.id);
+    const valid = (k: AppKey | null) => !!k && workspaces.some((w) => w.key === k);
+    if (valid(activeKey)) return;
+    setActiveKey(valid(stored) ? stored : primaryKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trainer, workspaces]);
 
   // Apply the coach's saved appearance (colors, fonts, theme, corners)
   // app-wide via :root CSS vars. Falls back to the template's design
@@ -86,16 +116,44 @@ function ProtectedShell() {
   if (!user) return <Login />;
   // First-time signup: walk them through the wizard before showing the app.
   if (trainer && !trainer.onboarded_at) return <OnboardingWizard trainer={trainer} />;
+
   // Template-driven app fork. Each combat / boxing template mounts its
   // own complete app (dark theme, dedicated pages, sport-specific
-  // vocabulary). Other variants keep the standard Layout.
-  const variant = pickTemplateUx(trainer?.template_slugs).dashboardVariant;
-  if (variant === 'martial') return <DojoApp trainer={trainer} />;
-  if (variant === 'boxing') return <BoxingApp trainer={trainer} />;
-  if (variant === 'nutrition') return <NutritionApp trainer={trainer} />;
-  if (variant === 'exercise') return <ExerciseApp trainer={trainer} />;
-  if (variant === 'studio_classes') return <StudioApp trainer={trainer} />;
-  return <Layout />;
+  // vocabulary). Other variants keep the standard Layout. A coach who
+  // picked several disciplines owns several apps and flips between them
+  // with the floating switcher.
+  const effectiveKey: AppKey =
+    activeKey && workspaces.some((w) => w.key === activeKey) ? activeKey : primaryKey;
+
+  function renderApp(key: AppKey) {
+    if (key === 'martial') return <DojoApp trainer={trainer} />;
+    if (key === 'boxing') return <BoxingApp trainer={trainer} />;
+    if (key === 'nutrition') return <NutritionApp trainer={trainer} />;
+    if (key === 'exercise') return <ExerciseApp trainer={trainer} />;
+    if (key === 'studio_classes') return <StudioApp trainer={trainer} />;
+    return <Layout />;
+  }
+
+  function switchTo(key: AppKey) {
+    writeActiveWorkspace(user?.id, key);
+    setActiveKey(key);
+    // Land on the newly-mounted app's home — paths differ per app, so
+    // resetting avoids a "route not found" flash that bounces to '/'.
+    navigate('/');
+  }
+
+  return (
+    <>
+      {renderApp(effectiveKey)}
+      {workspaces.length > 1 && (
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          activeKey={effectiveKey}
+          onSwitch={switchTo}
+        />
+      )}
+    </>
+  );
 }
 
 // /portal uses the same auth gate but doesn't render the trainer Layout —
