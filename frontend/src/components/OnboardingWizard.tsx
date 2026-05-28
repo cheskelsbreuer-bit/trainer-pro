@@ -23,8 +23,8 @@ import type { Trainer } from '../lib/database.types';
 import { SPECIALTIES } from '../lib/specialties';
 import { TEMPLATES, TEMPLATES_BY_SLUG, recommendTemplates, type Template } from '../lib/templates';
 import {
-  modulesForTemplate,
-  starterBundle,
+  modulesForTemplates,
+  starterBundleForTemplates,
   type AppModule,
   type ModuleCategory,
 } from '../lib/modules';
@@ -70,14 +70,19 @@ export function OnboardingWizard({ trainer }: Props) {
   // Which capability modules the coach wants. Seeded from the picked
   // template's starter bundle, then they add/remove on the Customize step.
   const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set());
-  // Re-seed the module set whenever the primary picked template changes,
-  // UNLESS the coach has already started customizing (don't clobber).
+  // Re-seed the module set whenever the picked templates change, UNLESS the
+  // coach has already started customizing (don't clobber). We seed from the
+  // COMBINED starter bundles of every picked discipline, so a coach who does
+  // nutrition + martial arts + 1-on-1 starts with all three turned on.
   const [touchedModules, setTouchedModules] = useState(false);
+  const templateKey = templateSlugs.join(',');
   useEffect(() => {
     if (touchedModules) return;
-    const primary = templateSlugs[0];
-    if (primary) setEnabledModules(new Set(starterBundle(primary)));
-  }, [templateSlugs, touchedModules]);
+    if (templateSlugs.length > 0) {
+      setEnabledModules(new Set(starterBundleForTemplates(templateSlugs)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateKey, touchedModules]);
   // Full appearance config — colors, fonts, theme, corners, density, nav
   // layout. Seeded from the picked template's design defaults, then the
   // coach tweaks it on the "Design your app" step. A live preview shows
@@ -131,7 +136,7 @@ export function OnboardingWizard({ trainer }: Props) {
           enabled: Array.from(
             enabledModules.size > 0
               ? enabledModules
-              : new Set(starterBundle(templateSlugs[0])),
+              : new Set(starterBundleForTemplates(templateSlugs)),
           ),
         },
         // The coach's design choices — colors, fonts, theme, layout.
@@ -269,7 +274,7 @@ export function OnboardingWizard({ trainer }: Props) {
           )}
           {step === 7 && (
             <StepModules
-              templateSlug={templateSlugs[0]}
+              templateSlugs={templateSlugs}
               enabled={enabledModules}
               onToggle={(id) => {
                 setTouchedModules(true);
@@ -811,15 +816,21 @@ const MODULE_CAT_ORDER: ModuleCategory[] = [
 ];
 
 function StepModules({
-  templateSlug,
+  templateSlugs,
   enabled,
   onToggle,
 }: {
-  templateSlug: string | undefined;
+  templateSlugs: string[];
   enabled: Set<string>;
   onToggle: (id: string) => void;
 }) {
-  const offered = useMemo(() => modulesForTemplate(templateSlug), [templateSlug]);
+  // COMBINED across every discipline the coach picked — so someone who does
+  // nutrition + martial arts + 1-on-1 sees every feature from all three.
+  const offered = useMemo(
+    () => modulesForTemplates(templateSlugs),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [templateSlugs.join(',')],
+  );
   const byCat = useMemo(() => {
     const m = new Map<ModuleCategory, AppModule[]>();
     for (const mod of offered) {
@@ -831,7 +842,18 @@ function StepModules({
 
   const onCount = offered.filter((m) => m.core || enabled.has(m.id)).length;
 
-  if (!templateSlug) {
+  // Friendly list of the picked disciplines for the subtitle.
+  const pickedNames = templateSlugs
+    .map((s) => TEMPLATES_BY_SLUG[s]?.name)
+    .filter(Boolean) as string[];
+  const namesSentence =
+    pickedNames.length === 0
+      ? ''
+      : pickedNames.length === 1
+        ? pickedNames[0]
+        : `${pickedNames.slice(0, -1).join(', ')} and ${pickedNames[pickedNames.length - 1]}`;
+
+  if (templateSlugs.length === 0) {
     return (
       <div>
         <StepHeader
@@ -849,8 +871,19 @@ function StepModules({
       <StepHeader
         eyebrow="Step 7 — this is the magic"
         title="Build your exact app"
-        subtitle="Every box below is a feature. We pre-picked what fits you — turn anything on or off. You can change it anytime later."
+        subtitle={
+          templateSlugs.length > 1
+            ? `You do ${namesSentence}, so here's every feature across all of them. We pre-picked what fits — turn anything on or off.`
+            : 'Every box below is a feature. We pre-picked what fits you — turn anything on or off. You can change it anytime later.'
+        }
       />
+
+      {templateSlugs.length > 1 && (
+        <div className="max-w-xl mx-auto mb-5 p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-900 leading-relaxed text-center">
+          One app, {pickedNames.length} disciplines combined. Each section below
+          is a different part of your business — set up all of them right here.
+        </div>
+      )}
 
       <div className="text-center mb-5">
         <span className="inline-block bg-blue-50 text-blue-700 text-sm font-semibold px-3 py-1 rounded-full">

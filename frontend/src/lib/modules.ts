@@ -393,6 +393,35 @@ export function modulesForTemplate(templateSlug: string | undefined): AppModule[
   );
 }
 
+/** Modules offered to ANY of the picked templates — the COMBINED set for a
+ *  coach who does several things at once (e.g. nutrition + martial arts +
+ *  1-on-1). De-duped, preserving catalog order so categories stay grouped. */
+export function modulesForTemplates(slugs: string[] | undefined): AppModule[] {
+  const picked = (slugs ?? []).filter(Boolean);
+  if (picked.length === 0) return MODULES.filter((m) => m.templates === 'all');
+  const set = new Set(picked);
+  return MODULES.filter(
+    (m) => m.templates === 'all' || m.templates.some((t) => set.has(t)),
+  );
+}
+
+/** The default-ON set for a coach who picked several templates — the union
+ *  of every picked template's starter bundle, de-duped. */
+export function starterBundleForTemplates(slugs: string[] | undefined): string[] {
+  const picked = (slugs ?? []).filter(Boolean);
+  if (picked.length === 0) return [...ALWAYS_CORE];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const slug of picked) {
+    for (const id of starterBundle(slug)) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
+  }
+  return out;
+}
+
 /** A contextual suggestion: a module to turn on next, plus WHY. */
 export interface ModuleSuggestion {
   module: AppModule;
@@ -407,9 +436,12 @@ export interface ModuleSuggestion {
  *  Only suggests modules offered to this template and not already on. */
 export function suggestionsFor(
   enabled: Set<string>,
-  templateSlug: string | undefined,
+  templateSlug: string | string[] | undefined,
 ): ModuleSuggestion[] {
-  const offered = new Set(modulesForTemplate(templateSlug).map((m) => m.id));
+  const offeredList = Array.isArray(templateSlug)
+    ? modulesForTemplates(templateSlug)
+    : modulesForTemplate(templateSlug);
+  const offered = new Set(offeredList.map((m) => m.id));
   const isOnOrCore = (id: string) => enabled.has(id) || !!MODULE_BY_ID[id]?.core;
   const out: ModuleSuggestion[] = [];
   const seen = new Set<string>();
