@@ -28,6 +28,16 @@ import {
   type AppModule,
   type ModuleCategory,
 } from '../lib/modules';
+import {
+  defaultAppearance,
+  applyAppearance,
+  PALETTES,
+  FONT_PAIRS,
+  type AppearanceConfig,
+  type Corners,
+  type Density,
+  type NavLayout,
+} from '../lib/appearance';
 
 type ClientCount = '0' | '1-5' | '6-15' | '16-30' | '30+';
 
@@ -68,7 +78,22 @@ export function OnboardingWizard({ trainer }: Props) {
     const primary = templateSlugs[0];
     if (primary) setEnabledModules(new Set(starterBundle(primary)));
   }, [templateSlugs, touchedModules]);
-  const [brand, setBrand] = useState(trainer.primary_color ?? '#2563eb');
+  // Full appearance config — colors, fonts, theme, corners, density, nav
+  // layout. Seeded from the picked template's design defaults, then the
+  // coach tweaks it on the "Design your app" step. A live preview shows
+  // their choices in real time.
+  const [appearance, setAppearance] = useState<AppearanceConfig>(defaultAppearance(undefined));
+  const [touchedDesign, setTouchedDesign] = useState(false);
+  useEffect(() => {
+    if (touchedDesign) return;
+    const primary = templateSlugs[0];
+    if (primary) setAppearance(defaultAppearance(primary));
+  }, [templateSlugs, touchedDesign]);
+  // Live-apply the appearance as they design, so the wizard itself can
+  // (later) reflect it and so the very next screen is themed.
+  useEffect(() => {
+    applyAppearance(appearance);
+  }, [appearance]);
   const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
   const [profileHeadline, setProfileHeadline] = useState(
     (trainer.public_profile?.hero?.title as string) ?? '',
@@ -109,6 +134,8 @@ export function OnboardingWizard({ trainer }: Props) {
               : new Set(starterBundle(templateSlugs[0])),
           ),
         },
+        // The coach's design choices — colors, fonts, theme, layout.
+        appearance,
       };
 
       const update: Record<string, unknown> = {
@@ -119,7 +146,7 @@ export function OnboardingWizard({ trainer }: Props) {
         // Persist the picked templates so Dashboard/UI can customize per
         // template post-onboarding (gym membership UI, martial arts UI, etc.)
         template_slugs: templateSlugs,
-        primary_color: brand,
+        primary_color: appearance.primary,
         public_profile: mergedProfile,
         onboarded_at: new Date().toISOString(),
       };
@@ -256,9 +283,12 @@ export function OnboardingWizard({ trainer }: Props) {
             />
           )}
           {step === 8 && (
-            <StepBrand
-              brand={brand}
-              setBrand={setBrand}
+            <StepDesign
+              appearance={appearance}
+              onChange={(next) => {
+                setTouchedDesign(true);
+                setAppearance(next);
+              }}
               businessName={businessName || fullName || 'Your business'}
             />
           )}
@@ -898,72 +928,219 @@ function StepModules({
   );
 }
 
-/* ─────────────── Step 8: Brand color ─────────────── */
-function StepBrand({
-  brand,
-  setBrand,
+/* ─────────────── Step 8: Design your app ─────────────── */
+function StepDesign({
+  appearance,
+  onChange,
   businessName,
 }: {
-  brand: string;
-  setBrand: (v: string) => void;
+  appearance: AppearanceConfig;
+  onChange: (next: AppearanceConfig) => void;
   businessName: string;
 }) {
-  const presets = [
-    '#2563eb', '#0ea5e9', '#0d9488', '#16a34a',
-    '#ca8a04', '#ea580c', '#dc2626', '#db2777',
-    '#7c3aed', '#1e293b',
-  ];
+  const set = <K extends keyof AppearanceConfig>(k: K, v: AppearanceConfig[K]) =>
+    onChange({ ...appearance, [k]: v });
+
+  const dark = appearance.themeMode === 'dark';
+  const font = FONT_PAIRS.find((f) => f.id === appearance.fontId) ?? FONT_PAIRS[0];
+  const radius =
+    appearance.corners === 'sharp' ? '4px' : appearance.corners === 'pill' ? '18px' : '12px';
+
   return (
     <div>
       <StepHeader
-        eyebrow="Step 6 of 8"
-        title="Pick your brand color."
-        subtitle="Buttons, highlights, and your client portal will use this."
+        eyebrow="Step 8 — make it beautiful"
+        title="Design your app"
+        subtitle="Colors, fonts, light or dark, the shape of everything. Watch the preview update live. Change it anytime later."
       />
 
+      {/* ── LIVE PREVIEW ── */}
       <div
-        className="rounded-2xl p-6 mb-6 max-w-md mx-auto text-center transition-colors"
+        className="mx-auto mb-7 max-w-md overflow-hidden border"
         style={{
-          background: `linear-gradient(135deg, ${brand} 0%, ${shade(brand, -20)} 100%)`,
+          borderRadius: radius,
+          borderColor: dark ? '#334155' : '#e5eaf2',
+          background: dark ? '#0f172a' : '#f7f8fb',
+          boxShadow: '0 8px 30px rgba(0,0,0,.12)',
         }}
       >
-        <div className="text-white/80 text-xs font-medium mb-1">PREVIEW</div>
-        <div className="text-white text-xl font-bold mb-3">{businessName}</div>
-        <button
-          type="button"
-          className="bg-white text-slate-900 px-4 py-2 rounded-lg font-medium text-sm shadow"
+        {/* fake topbar */}
+        <div
+          className="flex items-center gap-2 px-4 py-3"
+          style={{ background: dark ? '#1e293b' : '#fff', borderBottom: `1px solid ${dark ? '#334155' : '#e5eaf2'}` }}
         >
-          Book a session
-        </button>
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-md mx-auto">
-        {presets.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setBrand(c)}
-            aria-label={`Choose ${c}`}
-            className={`w-10 h-10 rounded-full transition ${
-              brand.toLowerCase() === c.toLowerCase()
-                ? 'ring-4 ring-offset-2 ring-slate-300 scale-110'
-                : 'hover:scale-110'
-            }`}
-            style={{ background: c }}
+          <span
+            style={{
+              width: 26, height: 26, borderRadius: radius === '18px' ? 13 : 7,
+              background: `linear-gradient(135deg, ${appearance.primary}, ${appearance.accent})`,
+              display: 'inline-block',
+            }}
           />
-        ))}
+          <span style={{ fontFamily: font.display, fontWeight: 800, color: dark ? '#f1f5f9' : '#0f172a', fontSize: '0.95rem' }}>
+            {businessName}
+          </span>
+          <span style={{ marginLeft: 'auto', color: appearance.primary, fontSize: '0.78rem', fontWeight: 700, fontFamily: font.body }}>
+            Dashboard
+          </span>
+        </div>
+        {/* fake body */}
+        <div style={{ padding: appearance.density === 'compact' ? '12px' : '18px' }}>
+          <div
+            style={{
+              background: dark ? '#1e293b' : '#fff',
+              borderRadius: radius,
+              padding: appearance.density === 'compact' ? '10px 12px' : '14px 16px',
+              border: `1px solid ${dark ? '#334155' : '#e5eaf2'}`,
+              marginBottom: 10,
+            }}
+          >
+            <div style={{ fontSize: '0.7rem', color: appearance.accent, fontWeight: 800, letterSpacing: '0.08em', fontFamily: font.body }}>THIS WEEK</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: dark ? '#f1f5f9' : '#0f172a', fontFamily: font.display }}>$2,480</div>
+          </div>
+          <button
+            type="button"
+            style={{
+              background: appearance.primary, color: '#fff', border: 'none',
+              borderRadius: appearance.corners === 'pill' ? 999 : radius,
+              padding: '8px 16px', fontWeight: 700, fontSize: '0.84rem',
+              fontFamily: font.body, cursor: 'default',
+            }}
+          >
+            Record a payment
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center justify-center gap-2">
-        <span className="text-xs text-slate-500">Or pick custom:</span>
-        <input
-          type="color"
-          value={brand}
-          onChange={(e) => setBrand(e.target.value)}
-          className="h-9 w-16 border border-slate-300 rounded-lg cursor-pointer"
-        />
-        <span className="text-xs font-mono text-slate-500">{brand}</span>
+      <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-1">
+        {/* Theme mode */}
+        <Row label="Light or dark">
+          <Segmented
+            options={[{ v: 'light', label: '☀️ Light' }, { v: 'dark', label: '🌙 Dark' }]}
+            value={appearance.themeMode}
+            onChange={(v) => set('themeMode', v as AppearanceConfig['themeMode'])}
+          />
+        </Row>
+
+        {/* Palette */}
+        <Row label="Color palette">
+          <div className="flex flex-wrap gap-2">
+            {PALETTES.map((p) => {
+              const on = appearance.paletteId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  title={p.name}
+                  onClick={() => onChange({ ...appearance, paletteId: p.id, primary: p.primary, accent: p.accent })}
+                  className={`rounded-full transition ${on ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-110'}`}
+                  style={{
+                    width: 34, height: 34,
+                    background: `linear-gradient(135deg, ${p.primary} 60%, ${p.accent} 60%)`,
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-3 mt-3">
+            <label className="flex items-center gap-1.5 text-xs text-slate-500">
+              Primary
+              <input type="color" value={appearance.primary} onChange={(e) => onChange({ ...appearance, paletteId: 'custom', primary: e.target.value })} className="h-8 w-12 border border-slate-300 rounded cursor-pointer" />
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-slate-500">
+              Accent
+              <input type="color" value={appearance.accent} onChange={(e) => onChange({ ...appearance, paletteId: 'custom', accent: e.target.value })} className="h-8 w-12 border border-slate-300 rounded cursor-pointer" />
+            </label>
+          </div>
+        </Row>
+
+        {/* Fonts */}
+        <Row label="Font style">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {FONT_PAIRS.map((f) => {
+              const on = appearance.fontId === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => set('fontId', f.id)}
+                  className={`text-left rounded-xl border p-3 transition ${on ? 'border-blue-300 bg-blue-50/60' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <span className="block text-base font-bold text-slate-900" style={{ fontFamily: f.display }}>{f.name}</span>
+                  <span className="block text-xs text-slate-500">{f.vibe}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Row>
+
+        {/* Corners */}
+        <Row label="Corner style">
+          <Segmented
+            options={[{ v: 'sharp', label: 'Sharp' }, { v: 'rounded', label: 'Rounded' }, { v: 'pill', label: 'Soft' }]}
+            value={appearance.corners}
+            onChange={(v) => set('corners', v as Corners)}
+          />
+        </Row>
+
+        {/* Density */}
+        <Row label="Spacing">
+          <Segmented
+            options={[{ v: 'comfortable', label: 'Comfortable' }, { v: 'compact', label: 'Compact' }]}
+            value={appearance.density}
+            onChange={(v) => set('density', v as Density)}
+          />
+        </Row>
+
+        {/* Nav layout */}
+        <Row label="Where the menu sits">
+          <Segmented
+            options={[{ v: 'sidebar', label: '◧ Side menu' }, { v: 'top', label: '⎺ Top bar' }]}
+            value={appearance.navLayout}
+            onChange={(v) => set('navLayout', v as NavLayout)}
+          />
+        </Row>
       </div>
+
+      <p className="text-center text-xs text-slate-400 mt-4">
+        Every coach's app looks different. That's the point.
+      </p>
+    </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+function Segmented({
+  options,
+  value,
+  onChange,
+}: {
+  options: { v: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden">
+      {options.map((o, i) => {
+        const on = value === o.v;
+        return (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(o.v)}
+            className={`px-4 py-2 text-sm font-semibold transition ${on ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'} ${i > 0 ? 'border-l border-slate-200' : ''}`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1122,17 +1299,3 @@ function StepHeader({
   );
 }
 
-function shade(hex: string, percent: number): string {
-  const m = hex.replace('#', '').match(/^([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (!m) return hex;
-  let h = m[1];
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  const f = (n: number) =>
-    Math.max(0, Math.min(255, Math.round(n + (n * percent) / 100)))
-      .toString(16)
-      .padStart(2, '0');
-  return `#${f(r)}${f(g)}${f(b)}`;
-}

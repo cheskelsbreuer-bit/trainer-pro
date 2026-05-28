@@ -34,6 +34,7 @@ import { BoxingApp } from './boxing/BoxingApp';
 import { NutritionApp } from './nutrition/NutritionApp';
 import { ExerciseApp } from './exercise/ExerciseApp';
 import { StudioApp } from './studio/StudioApp';
+import { applyAppearance, defaultAppearance } from './lib/appearance';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,6 +63,18 @@ function ProtectedShell() {
     },
     enabled: !!user,
   });
+
+  // Apply the coach's saved appearance (colors, fonts, theme, corners)
+  // app-wide via :root CSS vars. Falls back to the template's design
+  // defaults if they haven't customized yet.
+  useEffect(() => {
+    if (!trainer) return;
+    const stored = (trainer.public_profile as { appearance?: unknown } | null)?.appearance;
+    applyAppearance(
+      (stored as Parameters<typeof applyAppearance>[0]) ??
+        defaultAppearance(trainer.template_slugs?.[0]),
+    );
+  }, [trainer]);
 
   if (loading || (user && trainerLoading)) {
     return (
