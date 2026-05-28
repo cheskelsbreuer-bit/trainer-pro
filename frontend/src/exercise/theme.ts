@@ -6,20 +6,23 @@
 
 import type { Client } from '../lib/database.types';
 
+// Colors read from the coach's chosen appearance (--tp-* vars). The hex
+// after the comma is mom's exact original navy look, used as the
+// fallback — so her app stays pixel-identical unless she changes it.
 export const E = {
-  bg: '#f0f4f8',
-  ink: '#222',
-  inkSoft: '#444',
+  bg: 'var(--tp-bg, #f0f4f8)',
+  ink: 'var(--tp-ink, #222)',
+  inkSoft: 'var(--tp-ink-soft, #444)',
   mute: '#777',
   muteFaint: '#999',
-  card: '#ffffff',
-  rule: '#e5eaf0',
+  card: 'var(--tp-surface, #ffffff)',
+  rule: 'var(--tp-rule, #e5eaf0)',
   ruleSoft: '#eef',
   rowAlt: '#f8fbff',
   rowHover: '#f5f9ff',
-  primary: '#2d6a9f',
-  primaryDeep: '#1a3a5c',
-  accent: '#7ec8f5',
+  primary: 'var(--tp-primary, #2d6a9f)',
+  primaryDeep: 'color-mix(in srgb, var(--tp-primary, #2d6a9f) 72%, black)',
+  accent: 'var(--tp-accent, #7ec8f5)',
   green: '#27ae60',
   greenDeep: '#1e8449',
   orange: '#e67e22',

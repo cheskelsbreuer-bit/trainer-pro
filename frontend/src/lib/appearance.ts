@@ -105,7 +105,8 @@ export const FONT_PAIRS: FontPair[] = [
 // ── Defaults — derived loosely from the template ─────────────────────
 const TEMPLATE_DEFAULTS: Record<string, Partial<AppearanceConfig>> = {
   nutrition_coach: { paletteId: 'coral', fontId: 'friendly', navLayout: 'sidebar' },
-  exercise_group: { paletteId: 'navy', fontId: 'modern', navLayout: 'top' },
+  // Mom's exact original navy, so her imported app stays identical.
+  exercise_group: { paletteId: 'custom', primary: '#2d6a9f', accent: '#7ec8f5', fontId: 'modern', navLayout: 'top' },
   group_studio: { paletteId: 'violet', fontId: 'modern', navLayout: 'top' },
   martial_arts: { paletteId: 'crimson', fontId: 'bold', themeMode: 'dark', navLayout: 'sidebar' },
   boxing_gym: { paletteId: 'crimson', fontId: 'bold', themeMode: 'dark', navLayout: 'top' },
@@ -129,8 +130,10 @@ export function defaultAppearance(templateSlug: string | undefined): AppearanceC
   return {
     ...base,
     ...t,
-    primary: pal?.primary ?? base.primary,
-    accent: pal?.accent ?? base.accent,
+    // Explicit primary/accent in the template default win, then the
+    // palette, then the base.
+    primary: t.primary ?? pal?.primary ?? base.primary,
+    accent: t.accent ?? pal?.accent ?? base.accent,
   };
 }
 

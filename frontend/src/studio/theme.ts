@@ -6,23 +6,28 @@
 // — designed for a single instructor) and different from the dojo /
 // boxing dark themes.
 
+// Every token reads from the coach's chosen appearance (the --tp-*
+// CSS vars set by applyAppearance). The hex after the comma is just a
+// fallback for the studio's default look when nothing's been picked.
+// Deep/soft variants derive from the chosen primary via color-mix, so
+// the WHOLE palette tracks whatever color the coach selected.
 export const S = {
-  bg: '#F7F8FB',
-  ink: '#0F172A',
-  inkSoft: '#334155',
-  mute: '#64748B',
+  bg: 'var(--tp-bg, #F7F8FB)',
+  ink: 'var(--tp-ink, #0F172A)',
+  inkSoft: 'var(--tp-ink-soft, #334155)',
+  mute: 'var(--tp-ink-soft, #64748B)',
   muteFaint: '#94A3B8',
-  card: '#FFFFFF',
-  rule: '#E5EAF2',
-  ruleSoft: '#F1F4F9',
-  // Primary accent — electric violet, the modern commercial-studio look
-  primary: '#7C3AED',
-  primaryDeep: '#5B21B6',
-  primarySoft: '#EDE9FE',
-  // Secondary — bright teal for energy / "live" tags
-  accent: '#06B6D4',
-  accentDeep: '#0E7490',
-  // Status colors
+  card: 'var(--tp-surface, #FFFFFF)',
+  rule: 'var(--tp-rule, #E5EAF2)',
+  ruleSoft: 'color-mix(in srgb, var(--tp-rule, #E5EAF2) 55%, white)',
+  // Primary — the coach's chosen color.
+  primary: 'var(--tp-primary, #7C3AED)',
+  primaryDeep: 'color-mix(in srgb, var(--tp-primary, #7C3AED) 78%, black)',
+  primarySoft: 'color-mix(in srgb, var(--tp-primary, #7C3AED) 12%, white)',
+  // Secondary — the coach's chosen accent.
+  accent: 'var(--tp-accent, #06B6D4)',
+  accentDeep: 'color-mix(in srgb, var(--tp-accent, #06B6D4) 78%, black)',
+  // Status colors stay fixed — green = good, red = bad, regardless of brand.
   ok: '#16A34A',
   okSoft: '#DCFCE7',
   warn: '#F59E0B',
@@ -32,7 +37,7 @@ export const S = {
 } as const;
 
 export const HEADING_FONT =
-  "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+  "var(--tp-font-display, 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif)";
 
 /** Class-type colors — picked to feel distinct on a calendar grid. */
 export const CLASS_TYPE_COLORS = [
