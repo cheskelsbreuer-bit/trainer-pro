@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Sparkles,
@@ -15,12 +15,19 @@ import {
   Instagram,
   LayoutTemplate,
   MessageSquareText,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
 import { SPECIALTIES } from '../lib/specialties';
 import { TEMPLATES, TEMPLATES_BY_SLUG, recommendTemplates, type Template } from '../lib/templates';
+import {
+  modulesForTemplate,
+  starterBundle,
+  type AppModule,
+  type ModuleCategory,
+} from '../lib/modules';
 
 type ClientCount = '0' | '1-5' | '6-15' | '16-30' | '30+';
 
@@ -28,10 +35,11 @@ interface Props {
   trainer: Trainer;
 }
 
-// Added 2 new steps: free-form description (4) and template pick (5).
-// Previous step 4 (specialties) moves to step 3.5 — kept as step 4 visually
-// for simplicity (we renumber the StepHeader labels per step).
-const TOTAL_STEPS = 9;
+// 10-step wizard. Step 7 = "Customize your app" — pick the exact
+// features you want. This is the product's whole pitch (the most
+// customizable coaching app), so it lives in onboarding, not buried in
+// settings. Steps after it shift down by one.
+const TOTAL_STEPS = 10;
 
 export function OnboardingWizard({ trainer }: Props) {
   const { user } = useAuth();
@@ -49,6 +57,17 @@ export function OnboardingWizard({ trainer }: Props) {
   // should be able to stack all three templates so their packages list
   // contains every relevant package out of the gate.
   const [templateSlugs, setTemplateSlugs] = useState<string[]>([]);
+  // Which capability modules the coach wants. Seeded from the picked
+  // template's starter bundle, then they add/remove on the Customize step.
+  const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set());
+  // Re-seed the module set whenever the primary picked template changes,
+  // UNLESS the coach has already started customizing (don't clobber).
+  const [touchedModules, setTouchedModules] = useState(false);
+  useEffect(() => {
+    if (touchedModules) return;
+    const primary = templateSlugs[0];
+    if (primary) setEnabledModules(new Set(starterBundle(primary)));
+  }, [templateSlugs, touchedModules]);
   const [brand, setBrand] = useState(trainer.primary_color ?? '#2563eb');
   const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
   const [profileHeadline, setProfileHeadline] = useState(
@@ -80,6 +99,15 @@ export function OnboardingWizard({ trainer }: Props) {
           instagram: profileInstagram.trim()
             ? profileInstagram.trim().replace(/^@/, '')
             : existing.contact?.instagram || null,
+        },
+        // The coach's chosen feature set, picked on the Customize step.
+        // Falls back to the primary template's starter bundle.
+        modules: {
+          enabled: Array.from(
+            enabledModules.size > 0
+              ? enabledModules
+              : new Set(starterBundle(templateSlugs[0])),
+          ),
         },
       };
 
@@ -166,7 +194,7 @@ export function OnboardingWizard({ trainer }: Props) {
     return true;
   })();
 
-  const isOptionalStep = step >= 8; // booking + public profile are skippable
+  const isOptionalStep = step >= 9; // booking + public profile are skippable
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -213,16 +241,31 @@ export function OnboardingWizard({ trainer }: Props) {
             />
           )}
           {step === 7 && (
+            <StepModules
+              templateSlug={templateSlugs[0]}
+              enabled={enabledModules}
+              onToggle={(id) => {
+                setTouchedModules(true);
+                setEnabledModules((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                });
+              }}
+            />
+          )}
+          {step === 8 && (
             <StepBrand
               brand={brand}
               setBrand={setBrand}
               businessName={businessName || fullName || 'Your business'}
             />
           )}
-          {step === 8 && (
+          {step === 9 && (
             <StepBooking value={bookingEnabled} onChange={setBookingEnabled} />
           )}
-          {step === 9 && (
+          {step === 10 && (
             <StepPublicProfile
               headline={profileHeadline}
               setHeadline={setProfileHeadline}
@@ -717,7 +760,145 @@ function StepTemplate({
   );
 }
 
-/* ─────────────── Step 7: Brand color ─────────────── */
+/* ─────────────── Step 7: Customize your app ─────────────── */
+const MODULE_CAT_LABELS: Record<ModuleCategory, string> = {
+  core: 'The essentials',
+  crosscutting: 'Money & payments',
+  nutrition: 'Nutrition coaching',
+  studio: 'Group classes',
+  martial: 'Martial arts',
+  boxing: 'Boxing',
+  exercise: 'Group exercise',
+  private: '1-on-1 training',
+  comms: 'Communication',
+  growth: 'Growth & extras',
+};
+const MODULE_CAT_ORDER: ModuleCategory[] = [
+  'core', 'crosscutting', 'nutrition', 'studio', 'martial', 'boxing',
+  'exercise', 'private', 'comms', 'growth',
+];
+
+function StepModules({
+  templateSlug,
+  enabled,
+  onToggle,
+}: {
+  templateSlug: string | undefined;
+  enabled: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  const offered = useMemo(() => modulesForTemplate(templateSlug), [templateSlug]);
+  const byCat = useMemo(() => {
+    const m = new Map<ModuleCategory, AppModule[]>();
+    for (const mod of offered) {
+      if (!m.has(mod.category)) m.set(mod.category, []);
+      m.get(mod.category)!.push(mod);
+    }
+    return m;
+  }, [offered]);
+
+  const onCount = offered.filter((m) => m.core || enabled.has(m.id)).length;
+
+  if (!templateSlug) {
+    return (
+      <div>
+        <StepHeader
+          eyebrow="Step 7"
+          title="Customize your app"
+          subtitle="Pick a starting point on the previous step first, then come back here."
+        />
+        <p className="text-center text-slate-500 text-sm">← Go back and choose what you do.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <StepHeader
+        eyebrow="Step 7 — this is the magic"
+        title="Build your exact app"
+        subtitle="Every box below is a feature. We pre-picked what fits you — turn anything on or off. You can change it anytime later."
+      />
+
+      <div className="text-center mb-5">
+        <span className="inline-block bg-blue-50 text-blue-700 text-sm font-semibold px-3 py-1 rounded-full">
+          {onCount} features on
+        </span>
+      </div>
+
+      <div className="space-y-6 max-h-[52vh] overflow-y-auto pr-1">
+        {MODULE_CAT_ORDER.map((cat) => {
+          const mods = byCat.get(cat);
+          if (!mods || mods.length === 0) return null;
+          return (
+            <div key={cat}>
+              <p className="text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">
+                {MODULE_CAT_LABELS[cat]}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {mods.map((m) => {
+                  const on = m.core || enabled.has(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => !m.core && onToggle(m.id)}
+                      disabled={m.core}
+                      className={`flex items-start gap-2.5 text-left rounded-xl border p-3 transition ${
+                        on
+                          ? 'border-blue-300 bg-blue-50/60'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      } ${m.core ? 'opacity-80 cursor-default' : 'cursor-pointer'}`}
+                    >
+                      <span className="text-lg leading-none mt-0.5">{m.icon}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                          {m.name}
+                          {m.core && (
+                            <span className="text-[9px] font-bold tracking-wide text-slate-400 border border-slate-200 rounded px-1">
+                              CORE
+                            </span>
+                          )}
+                        </span>
+                        <span className="block text-xs text-slate-500 mt-0.5">{m.description}</span>
+                      </span>
+                      {/* toggle pill */}
+                      <span
+                        className="relative shrink-0 mt-0.5 rounded-full transition-colors"
+                        style={{
+                          width: 36,
+                          height: 20,
+                          background: on ? '#2563eb' : '#cbd5e1',
+                        }}
+                      >
+                        <span
+                          className="absolute rounded-full bg-white transition-all"
+                          style={{
+                            width: 16,
+                            height: 16,
+                            top: 2,
+                            left: on ? 18 : 2,
+                            boxShadow: '0 1px 2px rgba(0,0,0,.2)',
+                          }}
+                        />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-center text-xs text-slate-400 mt-4 flex items-center justify-center gap-1.5">
+        <SlidersHorizontal size={12} /> This is what makes Trainer Pro yours — no other app does this.
+      </p>
+    </div>
+  );
+}
+
+/* ─────────────── Step 8: Brand color ─────────────── */
 function StepBrand({
   brand,
   setBrand,
