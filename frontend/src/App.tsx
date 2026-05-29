@@ -36,6 +36,7 @@ import { ExerciseApp } from './exercise/ExerciseApp';
 import { StudioApp } from './studio/StudioApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
 import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
+import { UnifiedApp } from './components/UnifiedApp';
 import {
   workspacesFor,
   appKeyForVariant,
@@ -117,11 +118,24 @@ function ProtectedShell() {
   // First-time signup: walk them through the wizard before showing the app.
   if (trainer && !trainer.onboarded_at) return <OnboardingWizard trainer={trainer} />;
 
+  // A coach who does several disciplines chose at signup how they want
+  // it: ONE combined app (the neutral all-in-one shell) or SEPARATE apps
+  // they flip between (the switcher). Default to separate for existing
+  // accounts that predate the choice.
+  const appMode =
+    (trainer?.public_profile as { appMode?: 'combined' | 'separate' } | null)?.appMode ??
+    'separate';
+  const multiDiscipline = workspaces.length > 1;
+
+  if (multiDiscipline && appMode === 'combined') {
+    return <UnifiedApp trainer={trainer} />;
+  }
+
   // Template-driven app fork. Each combat / boxing template mounts its
   // own complete app (dark theme, dedicated pages, sport-specific
   // vocabulary). Other variants keep the standard Layout. A coach who
-  // picked several disciplines owns several apps and flips between them
-  // with the floating switcher.
+  // picked several disciplines (and chose "separate") owns several apps
+  // and flips between them with the floating switcher.
   const effectiveKey: AppKey =
     activeKey && workspaces.some((w) => w.key === activeKey) ? activeKey : primaryKey;
 

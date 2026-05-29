@@ -28,6 +28,7 @@ import {
   type AppModule,
   type ModuleCategory,
 } from '../lib/modules';
+import { workspacesFor } from '../lib/workspaces';
 import {
   defaultAppearance,
   applyAppearance,
@@ -67,6 +68,10 @@ export function OnboardingWizard({ trainer }: Props) {
   // should be able to stack all three templates so their packages list
   // contains every relevant package out of the gate.
   const [templateSlugs, setTemplateSlugs] = useState<string[]>([]);
+  // For a coach who picked several DIFFERENT apps: do they want one
+  // combined app or separate apps they switch between? Only asked when
+  // it's relevant (2+ distinct app shells picked).
+  const [appMode, setAppMode] = useState<'combined' | 'separate'>('combined');
   // Which capability modules the coach wants. Seeded from the picked
   // template's starter bundle, then they add/remove on the Customize step.
   const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set());
@@ -141,6 +146,8 @@ export function OnboardingWizard({ trainer }: Props) {
         },
         // The coach's design choices — colors, fonts, theme, layout.
         appearance,
+        // For multi-discipline coaches: one combined app vs separate apps.
+        appMode,
       };
 
       const update: Record<string, unknown> = {
@@ -275,6 +282,8 @@ export function OnboardingWizard({ trainer }: Props) {
           {step === 7 && (
             <StepModules
               templateSlugs={templateSlugs}
+              appMode={appMode}
+              onAppMode={setAppMode}
               enabled={enabledModules}
               onToggle={(id) => {
                 setTouchedModules(true);
@@ -817,13 +826,24 @@ const MODULE_CAT_ORDER: ModuleCategory[] = [
 
 function StepModules({
   templateSlugs,
+  appMode,
+  onAppMode,
   enabled,
   onToggle,
 }: {
   templateSlugs: string[];
+  appMode: 'combined' | 'separate';
+  onAppMode: (m: 'combined' | 'separate') => void;
   enabled: Set<string>;
   onToggle: (id: string) => void;
 }) {
+  // The distinct app shells these picks map to. Only when there's more
+  // than one do we ask "one combined app vs separate apps".
+  const distinctApps = useMemo(
+    () => workspacesFor(templateSlugs),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [templateSlugs.join(',')],
+  );
   // COMBINED across every discipline the coach picked — so someone who does
   // nutrition + martial arts + 1-on-1 sees every feature from all three.
   const offered = useMemo(
@@ -878,10 +898,47 @@ function StepModules({
         }
       />
 
-      {templateSlugs.length > 1 && (
-        <div className="max-w-xl mx-auto mb-5 p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-900 leading-relaxed text-center">
-          One app, {pickedNames.length} disciplines combined. Each section below
-          is a different part of your business — set up all of them right here.
+      {distinctApps.length > 1 && (
+        <div className="max-w-xl mx-auto mb-6">
+          <p className="text-sm font-semibold text-slate-800 mb-2 text-center">
+            You do {distinctApps.length} different things. How do you want your app?
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => onAppMode('combined')}
+              className={`text-left p-3.5 rounded-xl border-2 transition ${
+                appMode === 'combined'
+                  ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                🧩 One combined app
+              </div>
+              <p className="text-xs text-slate-600 mt-1 leading-snug">
+                Everything in a single app — one menu with all your features. Cleanest
+                if you run it all together.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => onAppMode('separate')}
+              className={`text-left p-3.5 rounded-xl border-2 transition ${
+                appMode === 'separate'
+                  ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                🗂️ Separate apps
+              </div>
+              <p className="text-xs text-slate-600 mt-1 leading-snug">
+                Keep each one its own dedicated app ({distinctApps.map((d) => d.emoji).join(' ')})
+                and switch between them with one tap.
+              </p>
+            </button>
+          </div>
         </div>
       )}
 
