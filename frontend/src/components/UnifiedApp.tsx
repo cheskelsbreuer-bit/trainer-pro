@@ -7,13 +7,14 @@
 // template, so a multi-discipline coach feels at home no matter what
 // they do.
 //
-// It is fully themed by the coach's chosen appearance (the --tp-* CSS
-// variables applied app-wide), so their colors + fonts drive it. The
-// menu is one combined list and the pages are the shared, discipline-
-// agnostic CRM screens (Dashboard, Clients, Sessions, Payments,
-// Workouts, Progress, Settings) rendered through the router Outlet.
+// Fully themed by the coach's chosen appearance (the --tp-* CSS
+// variables applied app-wide), so their colors + fonts drive it.
+//
+//   UnifiedShell  — presentational sidebar + content frame (exported so
+//                   it can be previewed in isolation)
+//   UnifiedApp    — the real app: shell + its own routes
 
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -30,17 +31,30 @@ import { pickTemplateUx } from '../lib/templateUx';
 import { workspacesFor } from '../lib/workspaces';
 import { useEnabledModules } from '../lib/modules';
 import { useLayout, applyNavOrder } from '../lib/layout';
+import { UnifiedHome } from './UnifiedHome';
+import { Clients } from '../pages/Clients';
+import { ClientDetail } from '../pages/ClientDetail';
+import { Sessions } from '../pages/Sessions';
+import { Payments } from '../pages/Payments';
+import { Workouts } from '../pages/Workouts';
+import { Progress } from '../pages/Progress';
+import { Settings } from '../pages/Settings';
 
 interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ size?: number }>;
   end?: boolean;
-  /** Optional module that gates this tab (core tabs have none). */
   module?: string;
 }
 
-export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
+export function UnifiedShell({
+  trainer,
+  children,
+}: {
+  trainer: Trainer | undefined;
+  children: React.ReactNode;
+}) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const slugs = trainer?.template_slugs ?? [];
@@ -49,11 +63,8 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
   const { isOn } = useEnabledModules(slugs);
   const { layout } = useLayout();
 
-  // Discipline-aware noun for the roster tab (clients / members / students…).
   const people = capitalize(ux.clientNounPlural);
 
-  // One combined menu. Core CRM tabs always show; capability tabs appear
-  // when the coach turned that module on (in any of their disciplines).
   const NAV: NavItem[] = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/clients', label: people, icon: Users },
@@ -86,29 +97,31 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
         fontFamily: 'var(--tp-font-body, system-ui, sans-serif)',
       }}
     >
-      {/* Sidebar */}
       <aside
         style={{
-          width: 248,
+          width: 250,
           flexShrink: 0,
           background: 'var(--tp-surface, #ffffff)',
-          borderRight: '1px solid var(--tp-rule, #e5eaf2)',
+          borderRight: '1px solid var(--tp-rule, #e8ecf3)',
           display: 'flex',
           flexDirection: 'column',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
         }}
       >
-        {/* Brand + disciplines */}
-        <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid var(--tp-rule, #e5eaf2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid var(--tp-rule, #e8ecf3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
             <div
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: 'var(--tp-radius, 11px)',
+                width: 40,
+                height: 40,
+                borderRadius: 'var(--tp-radius, 12px)',
                 background:
-                  'linear-gradient(135deg, var(--tp-primary, #4f46e5), var(--tp-accent, var(--tp-primary, #4f46e5)))',
+                  'linear-gradient(135deg, var(--tp-primary, #4f46e5), var(--tp-accent, #7c3aed))',
                 color: '#fff',
                 fontWeight: 800,
+                fontSize: '0.95rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -123,7 +136,7 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
                 style={{
                   margin: 0,
                   fontWeight: 800,
-                  fontSize: '0.95rem',
+                  fontSize: '0.98rem',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -133,13 +146,13 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
               >
                 {businessName}
               </p>
-              <p style={{ margin: 0, fontSize: '0.66rem', color: 'var(--tp-ink-soft, #64748b)' }}>
+              <p style={{ margin: 0, fontSize: '0.66rem', color: 'var(--tp-ink-soft, #94a3b8)' }}>
                 All-in-one workspace
               </p>
             </div>
           </div>
           {disciplines.length > 1 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 12 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 13 }}>
               {disciplines.map((d) => (
                 <span
                   key={d.key}
@@ -151,10 +164,10 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
                     fontSize: '0.68rem',
                     fontWeight: 700,
                     color: 'var(--tp-ink-soft, #475569)',
-                    background: 'var(--tp-bg, #f1f5f9)',
-                    border: '1px solid var(--tp-rule, #e5eaf2)',
+                    background: 'color-mix(in srgb, var(--tp-primary, #4f46e5) 8%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--tp-primary, #4f46e5) 22%, transparent)',
                     borderRadius: 999,
-                    padding: '3px 8px',
+                    padding: '3px 9px',
                   }}
                 >
                   <span>{d.emoji}</span>
@@ -165,8 +178,7 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
           )}
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: 10, overflowY: 'auto' }}>
+        <nav style={{ flex: 1, padding: 11, overflowY: 'auto' }}>
           {visible.map((item) => {
             const Icon = item.icon;
             return (
@@ -178,7 +190,7 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 11,
-                  padding: '9px 11px',
+                  padding: '10px 12px',
                   margin: '2px 0',
                   borderRadius: 'var(--tp-radius, 10px)',
                   fontSize: '0.9rem',
@@ -188,17 +200,16 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
                   background: isActive ? 'var(--tp-primary, #4f46e5)' : 'transparent',
                 })}
               >
-                <Icon size={17} />
+                <Icon size={18} />
                 {item.label}
               </NavLink>
             );
           })}
         </nav>
 
-        {/* Footer */}
-        <div style={{ padding: 12, borderTop: '1px solid var(--tp-rule, #e5eaf2)' }}>
+        <div style={{ padding: 12, borderTop: '1px solid var(--tp-rule, #e8ecf3)' }}>
           <div style={{ padding: '4px 8px 8px' }}>
-            <p style={{ margin: 0, fontSize: '0.66rem', color: 'var(--tp-ink-soft, #94a3b8)' }}>
+            <p style={{ margin: 0, fontSize: '0.64rem', color: 'var(--tp-ink-soft, #94a3b8)' }}>
               Signed in as
             </p>
             <p
@@ -211,7 +222,7 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
               }}
               title={user?.email ?? ''}
             >
-              {user?.email}
+              {user?.email ?? '—'}
             </p>
           </div>
           <button
@@ -221,7 +232,7 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
               display: 'flex',
               alignItems: 'center',
               gap: 10,
-              padding: '8px 11px',
+              padding: '9px 12px',
               borderRadius: 'var(--tp-radius, 10px)',
               border: 'none',
               background: 'transparent',
@@ -237,13 +248,31 @@ export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
         </div>
       </aside>
 
-      {/* Content */}
-      <main style={{ flex: 1, overflowY: 'auto' }}>
-        <Outlet />
-      </main>
+      <main style={{ flex: 1, minWidth: 0 }}>{children}</main>
     </div>
   );
 }
+
+export function UnifiedApp({ trainer }: { trainer: Trainer | undefined }) {
+  return (
+    <UnifiedShell trainer={trainer}>
+      <Routes>
+        <Route index element={<UnifiedHome trainer={trainer} />} />
+        <Route path="clients" element={<Clients />} />
+        <Route path="clients/:id" element={<ClientDetail />} />
+        <Route path="sessions" element={<Sessions />} />
+        <Route path="payments" element={<Payments />} />
+        <Route path="workouts" element={<Workouts />} />
+        <Route path="progress" element={<Progress />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </UnifiedShell>
+  );
+}
+
+// Outlet kept available for any future nested use.
+export { Outlet };
 
 function capitalize(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s;

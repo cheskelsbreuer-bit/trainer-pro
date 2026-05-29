@@ -36,7 +36,8 @@ import { ExerciseApp } from './exercise/ExerciseApp';
 import { StudioApp } from './studio/StudioApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
 import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
-import { UnifiedApp } from './components/UnifiedApp';
+import { UnifiedApp, UnifiedShell } from './components/UnifiedApp';
+import { UnifiedHome } from './components/UnifiedHome';
 import {
   workspacesFor,
   appKeyForVariant,
@@ -44,6 +45,14 @@ import {
   writeActiveWorkspace,
   type AppKey,
 } from './lib/workspaces';
+
+// TEMP: mock trainer for the /ui-preview design route. Remove with route.
+const PREVIEW_TRAINER = {
+  template_slugs: ['nutrition_coach', 'martial_arts', 'solo_trainer'],
+  business_name: 'Summit Coaching',
+  full_name: 'Jordan Lee',
+  public_profile: {},
+} as unknown as Trainer;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -391,6 +400,16 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            {/* TEMP: design preview of the combined app (no auth). Remove. */}
+            <Route
+              path="/ui-preview"
+              element={
+                <UnifiedShell trainer={PREVIEW_TRAINER}>
+                  <UnifiedHome trainer={PREVIEW_TRAINER} preview />
+                </UnifiedShell>
+              }
+            />
+
             {/* Marketing + legal + public directory (work on app subdomain too) */}
             <Route path="/welcome" element={<LandingPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
