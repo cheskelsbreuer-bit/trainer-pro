@@ -35,6 +35,7 @@ export type DashboardVariant =
   | 'boxing'
   | 'nutrition'
   | 'exercise'
+  | 'babysitting'
   | 'studio_classes';
 
 export interface TemplateUx {
@@ -290,6 +291,30 @@ const TEMPLATE_UX: Record<string, TemplateUx> = {
       addressPlaceholder: 'e.g., Main shul basement, 123 Maple St.',
       emailPlaceholder: 'hello@yourgroup.com',
       instagramPlaceholder: '@yourgroup',
+    },
+  },
+  babysitting: {
+    slug: 'babysitting',
+    clientNoun: 'kid',
+    clientNounPlural: 'kids',
+    dashboardHeadline: 'Your day at a glance',
+    dashboardSubtitle: "Who's here today, who owes, birthdays coming up, recent payments.",
+    spaceNoun: 'babysitting',
+    primaryCtaLabel: 'Record a payment',
+    primaryCtaPath: '/billing',
+    dashboardVariant: 'babysitting',
+    publicProfile: {
+      heroHeadline: 'Warm, safe, loving childcare.',
+      heroCta: 'Ask about a spot',
+      heroSubtitle:
+        'Small-group babysitting in a caring home. Meals, naps, play, and a sitter who treats your kids like family.',
+      aboutHeadline: 'About the babysitting',
+      aboutBody:
+        'Tell parents what a day looks like: hours, meals, naps, activities, and what makes your care special.',
+      addressLabel: 'Where we are',
+      addressPlaceholder: 'e.g., 123 Maple St.',
+      emailPlaceholder: 'hello@example.com',
+      instagramPlaceholder: '@yourbabysitting',
     },
   },
   nutrition_coach: {

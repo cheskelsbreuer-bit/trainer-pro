@@ -107,6 +107,8 @@ const TEMPLATE_DEFAULTS: Record<string, Partial<AppearanceConfig>> = {
   nutrition_coach: { paletteId: 'coral', fontId: 'friendly', navLayout: 'sidebar' },
   // Mom's exact original navy, so her imported app stays identical.
   exercise_group: { paletteId: 'custom', primary: '#2d6a9f', accent: '#7ec8f5', fontId: 'modern', navLayout: 'top' },
+  // Babysitting — warm terracotta + soft teal, friendly rounded type.
+  babysitting: { paletteId: 'custom', primary: '#d96f4e', accent: '#4f9d94', fontId: 'friendly', navLayout: 'top' },
   group_studio: { paletteId: 'violet', fontId: 'modern', navLayout: 'top' },
   martial_arts: { paletteId: 'crimson', fontId: 'bold', themeMode: 'dark', navLayout: 'sidebar' },
   boxing_gym: { paletteId: 'crimson', fontId: 'bold', themeMode: 'dark', navLayout: 'top' },
