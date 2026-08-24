@@ -33,6 +33,7 @@ export const SPECIALTIES: SpecialtyOption[] = [
   { val: 'senior_fitness', label: 'Senior fitness', emoji: '🌿' },
   { val: 'pre_postnatal', label: 'Pre / postnatal', emoji: '🤱' },
   { val: 'nutrition_coaching', label: 'Nutrition coaching', emoji: '🥗' },
+  { val: 'childcare', label: 'Babysitting / childcare', emoji: '🧸' },
 ];
 
 export const SPECIALTIES_BY_VAL: Record<string, SpecialtyOption> = SPECIALTIES.reduce(

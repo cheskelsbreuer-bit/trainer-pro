@@ -390,7 +390,7 @@ export const TEMPLATES: Template[] = [
       'Per-family weekly or hourly billing',
       'Parents who want to see their balance',
     ],
-    matchSpecialties: [],
+    matchSpecialties: ['childcare'],
     matchKeywords: [
       'babysit',
       'babysitting',
