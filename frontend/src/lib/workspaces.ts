@@ -21,6 +21,7 @@ export type AppKey =
   | 'boxing'
   | 'nutrition'
   | 'exercise'
+  | 'babysitting'
   | 'studio_classes';
 
 export function appKeyForVariant(variant: DashboardVariant): AppKey {
@@ -33,6 +34,8 @@ export function appKeyForVariant(variant: DashboardVariant): AppKey {
       return 'nutrition';
     case 'exercise':
       return 'exercise';
+    case 'babysitting':
+      return 'babysitting';
     case 'studio_classes':
       return 'studio_classes';
     // 'private' + 'studio' both ride the default trainer Layout.

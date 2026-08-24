@@ -378,6 +378,38 @@ export const TEMPLATES: Template[] = [
     },
   },
   {
+    slug: 'babysitting',
+    name: 'Babysitting / childcare',
+    emoji: '🧸',
+    tagline: 'Kids, families, running balances, weekly billing.',
+    description:
+      'For a babysitter or small home daycare: every kid with their family, allergies, and notes; flexible billing (flat weekly, hourly, or one-off); running balances per family; weekly balance reminders by text and email; a parent portal with online payment.',
+    bestFor: [
+      'Babysitters and nannies',
+      'Small home daycare',
+      'Per-family weekly or hourly billing',
+      'Parents who want to see their balance',
+    ],
+    matchSpecialties: ['childcare'],
+    matchKeywords: [
+      'babysit',
+      'babysitting',
+      'babysitter',
+      'childcare',
+      'daycare',
+      'nanny',
+      'kids',
+      'children',
+      'families',
+      'playgroup',
+    ],
+    defaults: {
+      packages: [],
+      booking_settings: { default_duration_min: 60, lead_hours: 0, buffer_min: 0 },
+      booking_enabled: false,
+    },
+  },
+  {
     slug: 'nutrition_coach',
     name: 'Nutrition coach',
     emoji: '🥗',

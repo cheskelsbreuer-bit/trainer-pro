@@ -372,6 +372,11 @@ export const STARTER_BUNDLES: Record<string, string[]> = {
     'class-billing', 'day-groups', 'pause-records', 'notes-library',
     'reports', 'activity-log', 'birthdays', 'holidays', 'tags', 'custom-fields',
   ],
+  babysitting: [
+    ...ALWAYS_CORE,
+    'family-memberships', 'day-groups', 'pause-records',
+    'reports', 'activity-log', 'birthdays', 'sms-reminders', 'email-reminders',
+  ],
   gym_membership: [...ALWAYS_CORE, 'class-schedule', 'attendance', 'packages', 'public-profile'],
   yoga_studio: [...ALWAYS_CORE, 'class-schedule', 'class-types', 'instructors', 'bookings', 'packages', 'public-profile'],
   solo_trainer: [...ALWAYS_CORE, 'session-logging', 'workout-builder', 'packages', 'public-profile'],

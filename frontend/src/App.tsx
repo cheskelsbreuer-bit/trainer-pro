@@ -33,6 +33,7 @@ import { DojoApp } from './dojo/DojoApp';
 import { BoxingApp } from './boxing/BoxingApp';
 import { NutritionApp } from './nutrition/NutritionApp';
 import { ExerciseApp } from './exercise/ExerciseApp';
+import { BabysittingApp } from './babysitting/BabysittingApp';
 import { StudioApp } from './studio/StudioApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
 import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
@@ -153,6 +154,7 @@ function ProtectedShell() {
     if (key === 'boxing') return <BoxingApp trainer={trainer} />;
     if (key === 'nutrition') return <NutritionApp trainer={trainer} />;
     if (key === 'exercise') return <ExerciseApp trainer={trainer} />;
+    if (key === 'babysitting') return <BabysittingApp trainer={trainer} />;
     if (key === 'studio_classes') return <StudioApp trainer={trainer} />;
     return <Layout />;
   }
