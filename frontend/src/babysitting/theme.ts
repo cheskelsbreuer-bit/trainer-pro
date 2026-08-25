@@ -256,9 +256,9 @@ export function tagsAfterPaymentDeleted(prev: string[], amount: number): string[
 export function tagsWithProfile(
   prev: string[] | null | undefined,
   profile: {
-    familySlug?: string;
-    parent?: string;
-    daysSlug?: string;
+    familySlug?: string | null;
+    parent?: string | null;
+    daysSlug?: string | null;
     weeklyRate?: number | null;
     hourlyRate?: number | null;
     startDate?: string | null;
