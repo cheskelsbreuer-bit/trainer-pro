@@ -4,6 +4,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Client } from '../../lib/database.types';
+import { api } from '../../lib/api';
 import { readBalance, readFamilySlug, familyLabel, formatMoney } from '../theme';
 import { useRecordPayment, useKids } from '../lib/data';
 import { useBabysittingConfig, appendLog } from '../lib/config';
@@ -65,6 +66,15 @@ export function PaymentModal({
             method,
           ),
         );
+        // Thank-you receipt to the parent — fire and forget; a receipt
+        // hiccup must never block or fail the recorded payment.
+        if (cfg.data.settings.receipts.enabled) {
+          void api('/reminders/payment-receipt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_id: selected.id, amount: amt }),
+          }).catch(() => undefined);
+        }
       }
       onClose();
     } catch (e) {

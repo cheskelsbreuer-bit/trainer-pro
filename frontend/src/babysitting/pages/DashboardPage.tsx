@@ -3,6 +3,9 @@
 
 import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
 import {
   B,
@@ -35,9 +38,35 @@ import {
 import { PaymentModal } from '../components/PaymentModal';
 import { KidModal } from '../components/KidModal';
 
+interface AbsenceRow {
+  id: string;
+  created_at: string;
+  details: { kid_name?: string; date?: string; note?: string } | null;
+}
+
 export function DashboardPage() {
   const { editMode } = useOutletContext<{ editMode: boolean }>();
+  const { user } = useAuth();
   const { data: kids, isLoading } = useKids();
+
+  const absences = useQuery({
+    queryKey: ['babysitting-absences', user?.id],
+    queryFn: async (): Promise<AbsenceRow[]> => {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 7);
+      const { data, error } = await supabase
+        .from('activity_log')
+        .select('id, created_at, details')
+        .eq('trainer_id', user!.id)
+        .eq('action', 'absence_reported')
+        .gte('created_at', cutoff.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(12);
+      if (error) throw error;
+      return (data ?? []) as AbsenceRow[];
+    },
+    enabled: !!user,
+  });
   const { data: payments } = usePayments();
   const cfg = useBabysittingConfig();
   const [payKid, setPayKid] = useState<Client | null>(null);
@@ -188,6 +217,22 @@ export function DashboardPage() {
           <div style={{ color: B.mute, fontSize: '0.88rem' }}>No kids scheduled for {todayName}. Quiet day ☕</div>
         )}
       </Card>
+
+      {/* Parent-reported absences (from the family portal) */}
+      {(absences.data?.length ?? 0) > 0 && (
+        <Card style={{ borderLeft: `4px solid ${B.accent}` }}>
+          <SectionTitle>🙋 Parents said "out"</SectionTitle>
+          <div style={{ display: 'grid', gap: 6 }}>
+            {(absences.data ?? []).map((a) => (
+              <div key={a.id} style={{ fontSize: '0.87rem' }}>
+                <b>{a.details?.kid_name ?? 'A kid'}</b> — out{' '}
+                {a.details?.date ? `on ${shortDate(a.details.date + 'T12:00:00')}` : 'today'}
+                {a.details?.note && <span style={{ color: B.inkSoft }}> · "{a.details.note}"</span>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Who owes */}
       <div>

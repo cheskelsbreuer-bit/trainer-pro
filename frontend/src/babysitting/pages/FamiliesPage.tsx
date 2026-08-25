@@ -20,6 +20,7 @@ import {
   inputStyle,
 } from '../components/ui';
 import { KidModal } from '../components/KidModal';
+import { InviteParentButton } from '../components/InviteParentButton';
 import { PaymentModal } from '../components/PaymentModal';
 import { ChargeModal } from '../components/ChargeModal';
 
@@ -236,6 +237,7 @@ export function FamiliesPage() {
                     <>
                       <Btn size="sm" onClick={() => setBillFam(f)}>🧾 Bill family</Btn>
                       <Btn size="sm" kind="soft" onClick={() => setPayKid(f.members[0])}>💛 Payment</Btn>
+                      <InviteParentButton firstKid={f.members[0]} />
                     </>
                   )}
                   {canRemind && f.phone && (

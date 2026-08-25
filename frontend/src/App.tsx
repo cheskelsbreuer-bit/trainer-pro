@@ -19,7 +19,7 @@ import { Settings } from './pages/Settings';
 import { BookingPage } from './pages/BookingPage';
 import { IntakePage } from './pages/IntakePage';
 import { JoinStudioPage } from './pages/JoinStudioPage';
-import { ClientPortal } from './pages/ClientPortal';
+import { FamilyPortalGate } from './babysitting/portal/FamilyPortalGate';
 import { PortalJoinPage } from './pages/PortalJoinPage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
 import { LandingPage } from './pages/LandingPage';
@@ -193,7 +193,9 @@ function PortalShell() {
     );
   }
   if (!user) return <Login />;
-  return <ClientPortal />;
+  // Babysitting parents get the family portal; everyone else keeps the
+  // original client portal. The gate decides from the linked rows.
+  return <FamilyPortalGate />;
 }
 
 // Admin shell — a magic-link sign-in trusts the browser for 7 days. We

@@ -505,3 +505,101 @@ def weekly_balances(
     if not trainer_resp.data:
         raise HTTPException(404, "Trainer not found")
     return _run_for_trainer(sb_admin, trainer_resp.data, req, triggered_by="trainer")
+
+
+class ReceiptRequest(BaseModel):
+    client_id: str
+    amount: float
+
+
+@router.post("/payment-receipt")
+def payment_receipt(
+    req: ReceiptRequest,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Right after the sitter records a payment: thank the parent and show
+    the fresh family balance. Fire-and-forget from the UI — never blocks
+    the payment itself."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Missing token")
+    from ..auth import get_current_user
+    from ..db import supabase_admin
+
+    user = get_current_user(authorization)
+    sb = supabase_admin()
+
+    trainer_resp = (
+        sb.table("trainers")
+        .select("id, full_name, business_name, public_profile")
+        .eq("id", user.user_id)
+        .single()
+        .execute()
+    )
+    if not trainer_resp.data:
+        raise HTTPException(404, "Trainer not found")
+    trainer = trainer_resp.data
+    bs_settings = ((trainer.get("public_profile") or {}).get("babysitting") or {}).get("settings") or {}
+    receipts = bs_settings.get("receipts") or {}
+    if not receipts.get("enabled"):
+        return {"sent": False, "reason": "receipts off"}
+
+    kid_resp = (
+        sb.table("clients")
+        .select("id, trainer_id, full_name, phone, email, tags")
+        .eq("id", req.client_id)
+        .eq("trainer_id", user.user_id)
+        .single()
+        .execute()
+    )
+    if not kid_resp.data:
+        raise HTTPException(404, "Kid not found")
+    kid = kid_resp.data
+
+    fam_slug = _tag_value(kid.get("tags"), "family:")
+    if fam_slug:
+        members_resp = (
+            sb.table("clients")
+            .select("id, full_name, phone, email, status, tags")
+            .eq("trainer_id", user.user_id)
+            .eq("status", "active")
+            .contains("tags", [f"family:{fam_slug}"])
+            .execute()
+        )
+        members = members_resp.data or [kid]
+    else:
+        members = [kid]
+
+    balance = round(sum(_kid_balance(m.get("tags")) for m in members), 2)
+    parent = next((_tag_value(m.get("tags"), "parent:") for m in members if _tag_value(m.get("tags"), "parent:")), "")
+    email = next((m.get("email") for m in members if m.get("email")), None)
+    kid_names = [m["full_name"].split(" ")[0] for m in members]
+
+    currency = bs_settings.get("currency") or "$"
+    template = receipts.get("template") or (
+        "Hi {parent}! Received {currency}{amount} — thank you! The balance for {kids} is now {currency}{balance}."
+    )
+    amount_str = f"{req.amount:.0f}" if req.amount == int(req.amount) else f"{req.amount:.2f}"
+    body = _fill_template(template.replace("{amount}", amount_str), parent, kid_names, balance, currency)
+    trainer_name = trainer.get("business_name") or trainer.get("full_name") or "Your babysitter"
+
+    if not email:
+        return {"sent": False, "reason": "no parent email on file"}
+    try:
+        channel = _send_email_for(trainer_name, bs_settings, email, "Payment received — thank you!", body)
+    except Exception as e:  # noqa: BLE001
+        return {"sent": False, "reason": str(e)[:200]}
+
+    try:
+        sb.table("activity_log").insert(
+            {
+                "trainer_id": user.user_id,
+                "actor": "system",
+                "action": "payment_receipt",
+                "entity_type": "client",
+                "entity_id": kid["id"],
+                "details": {"amount": req.amount, "channel": channel, "to": email},
+            }
+        ).execute()
+    except Exception:  # noqa: BLE001
+        pass
+    return {"sent": True, "channel": channel}

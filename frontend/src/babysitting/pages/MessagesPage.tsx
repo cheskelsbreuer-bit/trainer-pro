@@ -529,6 +529,35 @@ export function MessagesPage() {
         )}
       </Card>
 
+      {/* ── Receipts ─────────────────────────────────────────────── */}
+      <Card>
+        <SectionTitle
+          right={settings.receipts.enabled ? <Chip tone="green">On</Chip> : <Chip tone="neutral">Off</Chip>}
+        >
+          🧾 Payment receipts
+        </SectionTitle>
+        <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 12 }}>
+          When you record a payment, the parent automatically gets a thank-you email with their new balance.
+          Uses the same Gmail setup as above.
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+          {toggle(
+            settings.receipts.enabled,
+            () =>
+              saveAutomation(
+                { receipts: { ...settings.receipts, enabled: !settings.receipts.enabled } },
+                settings.receipts.enabled ? 'Payment receipts turned off' : 'Payment receipts turned on',
+              ),
+            '✓ Receipts are ON',
+            'Turn receipts on',
+          )}
+        </div>
+        <div style={{ background: B.butterSoft, borderRadius: B.radiusSm, padding: '10px 14px', fontSize: '0.84rem' }}>
+          <b>They'll get:</b>{' '}
+          {sampleFill(settings.receipts.template.replace('{amount}', '120'))}
+        </div>
+      </Card>
+
       {/* ── 3 · History ──────────────────────────────────────────── */}
       <Card>
         <SectionTitle>📜 Automatic runs</SectionTitle>

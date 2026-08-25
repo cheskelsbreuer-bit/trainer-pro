@@ -20,6 +20,11 @@ export interface GmailSending {
   appPassword: string; // Gmail "app password" — sends from her own address
 }
 
+export interface ReceiptSettings {
+  enabled: boolean;
+  template: string; // {parent} {kids} {currency}{amount} {currency}{balance}
+}
+
 export interface BabysittingSettings {
   currency: string; // '$'
   defaultWeeklyRate: number;
@@ -30,6 +35,7 @@ export interface BabysittingSettings {
   schedule: MessageSchedule;
   mutedFamilies: string[]; // family slugs left out of reminder runs
   gmail: GmailSending;
+  receipts: ReceiptSettings;
 }
 
 /** Which families were already handled in today's manual Thursday Run. */
@@ -88,6 +94,11 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
   schedule: { enabled: false, day: 4, emailAuto: true, smsAuto: false },
   mutedFamilies: [],
   gmail: { address: '', appPassword: '' },
+  receipts: {
+    enabled: false,
+    template:
+      'Hi {parent}! Received {currency}{amount} — thank you! The balance for {kids} is now {currency}{balance}.',
+  },
 };
 
 const LOG_CAP = 300;
@@ -98,6 +109,7 @@ function hydrate(raw: unknown): BabysittingConfig {
   const s = { ...DEFAULT_SETTINGS, ...(r.settings ?? {}) };
   s.schedule = { ...DEFAULT_SETTINGS.schedule, ...(r.settings?.schedule ?? {}) };
   s.gmail = { ...DEFAULT_SETTINGS.gmail, ...(r.settings?.gmail ?? {}) };
+  s.receipts = { ...DEFAULT_SETTINGS.receipts, ...(r.settings?.receipts ?? {}) };
   s.mutedFamilies = Array.isArray(r.settings?.mutedFamilies) ? r.settings!.mutedFamilies : [];
   return {
     version: typeof r.version === 'number' ? r.version : 1,
