@@ -19,6 +19,7 @@ import { fillTemplate } from '../lib/messages';
 import { kidsCsv, paymentsCsv, downloadCsv } from '../lib/csv';
 import { Card, SectionTitle, Btn, Field, inputStyle } from '../components/ui';
 import { CustomizeStudio } from '../../components/CustomizeStudio';
+import { HealthPanel } from '../components/HealthPanel';
 import { StripeStatusCard } from '../../components/StripeStatusCard';
 
 // The pretend family every template preview renders against.
@@ -277,6 +278,9 @@ export function SettingsPage() {
         </p>
         <StripeStatusCard />
       </Card>
+
+      {/* ── Health check ─────────────────────────────────────────────── */}
+      <HealthPanel />
 
       {/* ── Your data ────────────────────────────────────────────────── */}
       <Card>

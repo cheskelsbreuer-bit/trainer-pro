@@ -73,12 +73,28 @@ export interface AwayRecord {
   reason?: string;
 }
 
+/** Recycle bin — deleted payments wait here before they're truly gone. */
+export interface BinEntry {
+  id: string;
+  ts: string; // when it was deleted
+  kind: 'payment';
+  label: string; // plain English: "$120 — Rivky Gold (zelle, Aug 12)"
+  payment: {
+    client_id: string;
+    amount: number;
+    paid_at: string;
+    method: string | null;
+    description: string | null;
+  };
+}
+
 export interface BabysittingConfig {
   version: number;
   settings: BabysittingSettings;
   log: LogEntry[]; // newest first, capped
   charges: ChargeEntry[]; // newest first, capped
   away: AwayRecord[];
+  bin: BinEntry[]; // newest first, capped 50
   runState?: RunState;
 }
 
@@ -117,8 +133,23 @@ function hydrate(raw: unknown): BabysittingConfig {
     log: Array.isArray(r.log) ? r.log : [],
     charges: Array.isArray(r.charges) ? r.charges : [],
     away: Array.isArray(r.away) ? r.away : [],
+    bin: Array.isArray(r.bin) ? r.bin : [],
     runState: r.runState,
   };
+}
+
+const BIN_CAP = 50;
+
+export function appendBin(
+  cfg: BabysittingConfig,
+  entry: Omit<BinEntry, 'id' | 'ts'>,
+): BabysittingConfig {
+  const row: BinEntry = {
+    id: freshId('bin'),
+    ts: new Date().toISOString(),
+    ...entry,
+  };
+  return { ...cfg, bin: [row, ...cfg.bin].slice(0, BIN_CAP) };
 }
 
 interface TrainerProfileRow {

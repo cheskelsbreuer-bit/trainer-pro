@@ -8,8 +8,8 @@ import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import type { Client, Payment } from '../../lib/database.types';
 import { B, readFamilySlug, familyLabel, formatMoney, shortDate } from '../theme';
-import { useKids, usePayments, useDeletePayment } from '../lib/data';
-import { useBabysittingConfig, type ChargeEntry } from '../lib/config';
+import { useKids, usePayments, useDeletePayment, useAddCharge } from '../lib/data';
+import { useBabysittingConfig, appendBin, appendLog, type ChargeEntry } from '../lib/config';
 import {
   Card,
   EmptyState,
@@ -130,14 +130,59 @@ export function BillingPage() {
     setShowPicker(false);
   }
 
+  const addCharge = useAddCharge();
+
   function deletePayment(p: Payment, kid: Client) {
-    if (!window.confirm('Delete this payment? The money goes back onto the balance.')) return;
+    if (!window.confirm('Delete this payment? The money goes back onto the balance. (It waits in the Recycle Bin on the Log page in case you change your mind.)')) return;
+    if (cfg.data) {
+      cfg.save.mutate(
+        appendLog(
+          appendBin(cfg.data, {
+            kind: 'payment',
+            label: `${formatMoney(Number(p.amount))} — ${kid.full_name}${p.method ? ` (${p.method}` : ''}${p.method ? `, ${shortDate(p.paid_at)})` : ` (${shortDate(p.paid_at)})`}`,
+            payment: {
+              client_id: p.client_id,
+              amount: Number(p.amount),
+              paid_at: p.paid_at,
+              method: p.method ?? null,
+              description: p.description ?? null,
+            },
+          }),
+          'payment',
+          `Deleted payment ${formatMoney(Number(p.amount))} — ${kid.full_name}`,
+        ),
+      );
+    }
     del.mutate({
       id: p.id,
       client_id: p.client_id,
       amount: Number(p.amount),
       currentTags: kid.tags ?? [],
     });
+  }
+
+  function undoCharge(c: ChargeEntry) {
+    const kid = kidById.get(c.clientId);
+    if (!kid) {
+      window.alert('That kid is no longer here, so this charge cannot be undone automatically.');
+      return;
+    }
+    const what = c.amount < 0 ? `credit of ${formatMoney(-c.amount)}` : `charge of ${formatMoney(c.amount)}`;
+    if (!window.confirm(`Undo this ${what} for ${c.kidName}? The balance goes back to what it was.`)) return;
+    addCharge.mutate(
+      { client_id: c.clientId, amount: -c.amount, currentTags: kid.tags ?? [] },
+      {
+        onSuccess: () => {
+          if (!cfg.data) return;
+          const next = appendLog(
+            { ...cfg.data, charges: cfg.data.charges.filter((x) => x.id !== c.id) },
+            'charge',
+            `Undid ${what} — ${c.kidName}`,
+          );
+          cfg.save.mutate(next);
+        },
+      },
+    );
   }
 
   const kindChip = (c: ChargeEntry) => {
@@ -367,6 +412,7 @@ export function BillingPage() {
                     <Th>What</Th>
                     <Th>Note</Th>
                     <Th style={{ textAlign: 'right' }}>Amount</Th>
+                    {editMode && <Th />}
                   </tr>
                 </thead>
                 <tbody>
@@ -394,6 +440,11 @@ export function BillingPage() {
                             formatMoney(c.amount)
                           )}
                         </Td>
+                        {editMode && (
+                          <Td style={{ textAlign: 'right' }}>
+                            <Btn size="sm" kind="ghost" title="Undo — the balance goes back" onClick={() => undoCharge(c)}>↶</Btn>
+                          </Td>
+                        )}
                       </tr>
                     );
                   })}

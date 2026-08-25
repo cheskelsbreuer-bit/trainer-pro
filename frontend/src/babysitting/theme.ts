@@ -252,6 +252,18 @@ export function tagsAfterPaymentDeleted(prev: string[], amount: number): string[
   return tagsAfterPayment(prev, -amount);
 }
 
+/** Repair tool: set the money totals outright (balance recomputed). */
+export function tagsWithMoney(
+  prev: string[] | null | undefined,
+  money: { totalOwed?: number; totalPaid?: number },
+): string[] {
+  const map = toMap(prev);
+  if (money.totalOwed !== undefined) map.set(TOTAL_OWED_TAG, String(Math.round(money.totalOwed * 100) / 100));
+  if (money.totalPaid !== undefined) map.set(TOTAL_PAID_TAG, String(Math.round(money.totalPaid * 100) / 100));
+  recomputeBalance(map);
+  return fromMap(map);
+}
+
 /** Write/replace simple identity tags (family, parent, days, rates, start). */
 export function tagsWithProfile(
   prev: string[] | null | undefined,

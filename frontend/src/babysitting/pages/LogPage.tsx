@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { B, shortDate } from '../theme';
 import { useBabysittingConfig, type LogEntry } from '../lib/config';
 import { Card, SectionTitle, EmptyState, Chip } from '../components/ui';
+import { RecycleBinCard } from '../components/RecycleBinCard';
 
 type ChipTone = 'neutral' | 'primary' | 'accent' | 'butter' | 'red' | 'green' | 'plum';
 type Filter = 'all' | LogEntry['category'];
@@ -48,6 +49,8 @@ export function LogPage() {
 
   if (!log.length) {
     return (
+      <div style={{ display: 'grid', gap: 18 }}>
+      <RecycleBinCard />
       <Card pad={0}>
         <EmptyState
           emoji="📜"
@@ -55,6 +58,7 @@ export function LogPage() {
           body="Every change you make — adding kids, billing, recording payments — leaves a little note here, so you can always look back."
         />
       </Card>
+      </div>
     );
   }
 
@@ -85,6 +89,7 @@ export function LogPage() {
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
+      <RecycleBinCard />
       <SectionTitle style={{ margin: '4px 2px 0' }}>What happened lately</SectionTitle>
 
       {/* Category filters */}

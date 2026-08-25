@@ -193,6 +193,31 @@ export function useUpsertKid() {
   });
 }
 
+/** Repair tool: write a kid's tags directly (totals fixes, merges). */
+export function useSetKidTags() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; tags: string[] }) => {
+      const { error } = await supabase.from('clients').update({ tags: input.tags }).eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+/** Repair tool: delete one payment row WITHOUT touching any kid's tags —
+ *  only for ghost payments whose kid no longer exists. */
+export function useDeleteGhostPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string }) => {
+      const { error } = await supabase.from('payments').delete().eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
 export function useSetKidStatus() {
   const qc = useQueryClient();
   return useMutation({
