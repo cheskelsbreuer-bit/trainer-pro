@@ -4,6 +4,9 @@
 
 import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
 import { B, readFamilySlug, familyLabel, shortDate, ageOf } from '../theme';
 import { useKids, usePayments } from '../lib/data';
@@ -21,6 +24,7 @@ import {
 } from '../components/ui';
 import { KidModal } from '../components/KidModal';
 import { InviteParentButton } from '../components/InviteParentButton';
+import { openFamilyStatement } from '../lib/statement';
 import { PaymentModal } from '../components/PaymentModal';
 import { ChargeModal } from '../components/ChargeModal';
 
@@ -39,6 +43,19 @@ export function FamiliesPage() {
   const { data: kids, isLoading } = useKids();
   const { data: payments } = usePayments();
   const cfg = useBabysittingConfig();
+  const { user } = useAuth();
+  const { data: bizName } = useQuery({
+    queryKey: ['babysitting-bizname', user?.id],
+    queryFn: async (): Promise<string> => {
+      const { data } = await supabase
+        .from('trainers')
+        .select('business_name, full_name')
+        .eq('id', user!.id)
+        .single();
+      return (data?.business_name || data?.full_name || 'Babysitting') as string;
+    },
+    enabled: !!user,
+  });
   const settings = cfg.data?.settings;
 
   const [search, setSearch] = useState('');
@@ -240,6 +257,23 @@ export function FamiliesPage() {
                       <InviteParentButton firstKid={f.members[0]} />
                     </>
                   )}
+                  <Btn
+                    size="sm"
+                    kind="ghost"
+                    title="Open a printable statement for this family"
+                    onClick={() => {
+                      const ids = new Set(f.members.map((m) => m.id));
+                      openFamilyStatement({
+                        familySlug: f.slug,
+                        members: f.members,
+                        payments: (payments ?? []).filter((p) => ids.has(p.client_id)),
+                        charges: (cfg.data?.charges ?? []).filter((c) => ids.has(c.clientId)),
+                        businessName: bizName ?? 'Babysitting',
+                      });
+                    }}
+                  >
+                    🖨 Statement
+                  </Btn>
                   {canRemind && f.phone && (
                     <a href={smsLink(f.phone, smsBody)} title="Text the balance reminder">
                       <Btn size="sm" kind="ghost">📱 Text</Btn>

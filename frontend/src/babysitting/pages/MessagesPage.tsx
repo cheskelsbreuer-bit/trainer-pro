@@ -112,6 +112,72 @@ export function MessagesPage() {
   const sentToday = cfg.data?.runState?.date === todayKey() ? cfg.data.runState.sent : [];
   const doneCount = runFamilies.filter((f) => sentToday.includes(f.slug)).length;
 
+  // All families (even paid-up) — announcements go to everyone.
+  const allFamilies = useMemo(() => {
+    const byFam = new Map<string, string>(); // slug -> first active kid id
+    for (const k of active) {
+      const slug = readFamilySlug(k) || `solo-${k.id}`;
+      if (!byFam.has(slug)) byFam.set(slug, k.id);
+    }
+    return Array.from(byFam.entries());
+  }, [active]);
+
+  const [announceText, setAnnounceText] = useState('');
+  const [announceBusy, setAnnounceBusy] = useState(false);
+  const [announceErr, setAnnounceErr] = useState('');
+
+  const announcements = useQuery({
+    queryKey: ['babysitting-announcements', user?.id],
+    queryFn: async (): Promise<Array<{ id: string; body: string; created_at: string }>> => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, body, created_at')
+        .eq('trainer_id', user!.id)
+        .eq('sender', 'trainer')
+        .order('created_at', { ascending: false })
+        .limit(60);
+      if (error) throw error;
+      const seen = new Set<string>();
+      const out: Array<{ id: string; body: string; created_at: string }> = [];
+      for (const m of (data ?? []) as Array<{ id: string; body: string; created_at: string }>) {
+        if (seen.has(m.body)) continue;
+        seen.add(m.body);
+        out.push(m);
+        if (out.length >= 6) break;
+      }
+      return out;
+    },
+    enabled: !!user,
+  });
+
+  async function postAnnouncement() {
+    const body = announceText.trim();
+    if (!body || !user) return;
+    if (!allFamilies.length) {
+      setAnnounceErr('Add kids first — there is nobody to post to yet.');
+      return;
+    }
+    setAnnounceBusy(true);
+    setAnnounceErr('');
+    try {
+      const rows = allFamilies.map(([, kidId]) => ({
+        trainer_id: user.id,
+        client_id: kidId,
+        sender: 'trainer',
+        body,
+      }));
+      const { error } = await supabase.from('messages').insert(rows);
+      if (error) throw error;
+      setAnnounceText('');
+      saveConfig((c) => c, `Posted to all parents: "${body.slice(0, 60)}"`);
+      announcements.refetch();
+    } catch (e) {
+      setAnnounceErr(e instanceof Error ? e.message : 'Could not post.');
+    } finally {
+      setAnnounceBusy(false);
+    }
+  }
+
   const history = useQuery({
     queryKey: ['babysitting-reminder-runs', user?.id],
     queryFn: async (): Promise<ReminderRunRow[]> => {
@@ -526,6 +592,40 @@ export function MessagesPage() {
               })}
             </div>
           </details>
+        )}
+      </Card>
+
+      {/* ── Announcements ────────────────────────────────────────── */}
+      <Card>
+        <SectionTitle>📣 Note to all parents</SectionTitle>
+        <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 12 }}>
+          Post once — every family sees it at the top of their parent portal. Good for "closed Tuesday" or "bring bathing suits."
+        </div>
+        {editMode && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14, flexWrap: 'wrap' }}>
+            <textarea
+              style={{ ...inputStyle, flex: '1 1 260px', minHeight: 54, resize: 'vertical' }}
+              value={announceText}
+              onChange={(e) => setAnnounceText(e.target.value)}
+              placeholder="e.g. We're closed this Tuesday. See everyone Wednesday!"
+            />
+            <Btn onClick={() => void postAnnouncement()} disabled={announceBusy || !announceText.trim()}>
+              {announceBusy ? 'Posting…' : '📣 Post to parents'}
+            </Btn>
+          </div>
+        )}
+        {announceErr && <Chip tone="red" style={{ marginBottom: 10 }}>{announceErr}</Chip>}
+        {announcements.data?.length ? (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {announcements.data.map((a) => (
+              <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'baseline', fontSize: '0.87rem' }}>
+                <span style={{ color: B.mute, fontSize: '0.76rem', minWidth: 90 }}>{shortDate(a.created_at)}</span>
+                <span>{a.body}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: B.mute, fontSize: '0.84rem' }}>Nothing posted yet.</div>
         )}
       </Card>
 

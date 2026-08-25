@@ -65,6 +65,30 @@ export function FamilyPortal({
     return withParent ? readParent(withParent) : '';
   }, [active]);
 
+  const announcements = useQuery({
+    queryKey: ['portal-announcements', active.map((k) => k.id).join(',')],
+    queryFn: async (): Promise<Array<{ id: string; body: string; created_at: string }>> => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, body, created_at')
+        .in('client_id', active.map((k) => k.id))
+        .eq('sender', 'trainer')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      const seen = new Set<string>();
+      const out: Array<{ id: string; body: string; created_at: string }> = [];
+      for (const m of (data ?? []) as Array<{ id: string; body: string; created_at: string }>) {
+        if (seen.has(m.body)) continue;
+        seen.add(m.body);
+        out.push(m);
+        if (out.length >= 3) break;
+      }
+      return out;
+    },
+    enabled: active.length > 0,
+  });
+
   const payments = useQuery({
     queryKey: ['portal-family-payments', active.map((k) => k.id).join(',')],
     queryFn: async (): Promise<Payment[]> => {
@@ -151,6 +175,21 @@ export function FamilyPortal({
         </header>
 
         <div style={{ display: 'grid', gap: 14 }}>
+          {/* Announcements from the sitter */}
+          {(announcements.data?.length ?? 0) > 0 && (
+            <Card style={{ background: B.butterSoft, border: 'none' }}>
+              <div style={{ fontFamily: B.fontDisplay, fontWeight: 800, marginBottom: 8 }}>📣 From {sitterName}</div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {(announcements.data ?? []).map((a) => (
+                  <div key={a.id} style={{ fontSize: '0.88rem' }}>
+                    {a.body}
+                    <span style={{ color: B.mute, fontSize: '0.72rem', marginLeft: 8 }}>{shortDate(a.created_at)}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* Balance hero */}
           <Card
             style={{

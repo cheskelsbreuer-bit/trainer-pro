@@ -5,8 +5,8 @@
 import { useMemo, useState } from 'react';
 import type { Client } from '../../lib/database.types';
 import { api } from '../../lib/api';
-import { readBalance, readFamilySlug, familyLabel, formatMoney } from '../theme';
-import { useRecordPayment, useKids } from '../lib/data';
+import { readBalance, readFamilySlug, familyLabel, readWeeklyRate, formatMoney } from '../theme';
+import { useRecordPayment, useKids, usePayments } from '../lib/data';
 import { useBabysittingConfig, appendLog } from '../lib/config';
 import { Modal, Field, inputStyle, Btn, Chip } from './ui';
 
@@ -20,6 +20,7 @@ export function PaymentModal({
   onClose: () => void;
 }) {
   const { data: kids } = useKids();
+  const { data: recentPayments } = usePayments();
   const record = useRecordPayment();
   const cfg = useBabysittingConfig();
 
@@ -45,6 +46,22 @@ export function PaymentModal({
     }
     if (!Number.isFinite(amt) || amt <= 0) {
       setErr('Enter an amount above zero.');
+      return;
+    }
+    // Typo guards (mom-app classics): the extra-zero mistake and the
+    // accidental double entry. Both just ask — never block.
+    const weekly = readWeeklyRate(selected) || 150;
+    if (amt >= Math.max(1000, weekly * 20)) {
+      if (!window.confirm(`${formatMoney(amt)} is a very large payment — is the amount correct?`)) return;
+    }
+    const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+    const dup = (recentPayments ?? []).find(
+      (p) =>
+        p.client_id === selected.id &&
+        Math.abs(Number(p.amount) - amt) < 0.005 &&
+        new Date(p.created_at ?? p.paid_at).getTime() > fiveMinAgo,
+    );
+    if (dup && !window.confirm(`You already recorded ${formatMoney(amt)} for ${selected.full_name} a few minutes ago. Record it again?`)) {
       return;
     }
     setErr('');
