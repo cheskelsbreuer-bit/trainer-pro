@@ -66,25 +66,19 @@ const queryClient = new QueryClient({
   },
 });
 
-// The shareable babysitting demo: /babysitting-demo turns the flag on and
-// lands on the app root, where the demo shell mounts with sample data.
+// The shareable babysitting demo: /babysitting-demo turns the flag on,
+// then hard-reloads to the root so App() re-evaluates and mounts the demo
+// tree — works on every host (www serves a different router, so a soft
+// <Navigate> would land on the marketing page there).
 function DemoEntry() {
   setDemoActive(true);
-  return <Navigate to="/" replace />;
+  window.location.replace('/');
+  return null;
 }
 
 function ProtectedShell() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-
-  // Demo mode wins over everything — no login, sample data, view-only.
-  if (isDemoActive()) {
-    return (
-      <DemoProvider>
-        <BabysittingApp trainer={DEMO_TRAINER} />
-      </DemoProvider>
-    );
-  }
 
   // Fetch trainer row to check onboarding status. The auth-user trigger creates
   // this row on signup, so it should always exist for an authed user.
@@ -388,6 +382,24 @@ export default function App() {
     );
   }
 
+  // The babysitting demo runs on EVERY host, www included — it needs no
+  // login and touches no data, so it takes over the whole tree while the
+  // per-tab flag is set. BabysittingApp brings its own <Routes>, so /kids,
+  // /billing etc. all resolve inside the demo.
+  if (isDemoActive()) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrowserRouter>
+            <DemoProvider>
+              <BabysittingApp trainer={DEMO_TRAINER} />
+            </DemoProvider>
+          </BrowserRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+  }
+
   // Apex / www domain serves the marketing site + public-facing pages.
   // Wrapped in BrowserRouter so trainer cards on /find-trainers can deep-link
   // into /p/:slug and /book/:slug — without this, those URLs fall through to
@@ -409,6 +421,9 @@ export default function App() {
                   trainerpro.coach/chesky falls through to LandingPage. */}
               <Route path="/chesky" element={<AdminShell />} />
               <Route path="/admin" element={<Navigate to="/chesky" replace />} />
+              {/* Shareable no-signup babysitting demo — must exist on the
+                  www/apex router too, or the link dead-ends on the homepage. */}
+              <Route path="/babysitting-demo" element={<DemoEntry />} />
               <Route path="*" element={<LandingPage />} />
             </Routes>
           </BrowserRouter>
