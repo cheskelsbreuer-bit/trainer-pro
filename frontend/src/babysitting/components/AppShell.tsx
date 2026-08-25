@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 import { B } from '../theme';
 import { useBabysittingConfig } from '../lib/config';
+import { useDemo, setDemoActive } from '../demo/flag';
 import { TourWizard } from './TourWizard';
 
 // ── Edit mode — a deliberate switch so day-to-day browsing can't
@@ -77,13 +78,19 @@ const QUIET_NAV: Array<{ to: string; label: string }> = [
 const LEVEL_RANK: Record<Level, number> = { simple: 0, standard: 1, pro: 2 };
 
 export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
-  const [editMode, setEditMode] = useEditMode();
+  const [rawEditMode, setEditMode] = useEditMode();
+  const demo = useDemo();
+  const editMode = demo ? false : rawEditMode;
   const navigate = useNavigate();
   const cfg = useBabysittingConfig();
   const name = trainer?.business_name || trainer?.full_name || 'Babysitting';
   const level: Level = cfg.data?.settings.appLevel ?? 'standard';
   const nav = NAV.filter((n) => LEVEL_RANK[n.minLevel] <= LEVEL_RANK[level]);
   const showQuiet = level === 'pro';
+
+  useEffect(() => {
+    document.title = demo ? `${name} · Babysitting demo` : `${name} · Babysitting`;
+  }, [name, demo]);
 
   function toggleEdit() {
     const s = cfg.data?.settings;
@@ -154,7 +161,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
           </div>
 
           {/* Primary nav */}
-          <nav style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+          <nav aria-label="Main" style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
             {nav.map((n) => (
               <NavLink
                 key={n.to}
@@ -197,6 +204,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
                 {n.label}
               </NavLink>
             ))}
+            {!demo && (
             <button
               onClick={toggleEdit}
               title={editMode ? 'Editing is ON — changes allowed' : 'Editing is OFF — browsing is safe'}
@@ -215,6 +223,8 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
             >
               {editMode ? '✏️ Editing' : '🔒 View only'}
             </button>
+            )}
+            {!demo && (
             <button
               onClick={signOut}
               title="Sign out"
@@ -231,9 +241,48 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
             >
               Sign out
             </button>
+            )}
           </div>
         </div>
       </header>
+
+      {demo && (
+        <div style={{ maxWidth: 1140, margin: '10px auto 0', padding: '0 16px' }}>
+          <div
+            style={{
+              background: B.butterSoft,
+              border: `1.5px dashed ${B.butter}`,
+              borderRadius: B.radiusLg,
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              color: B.ink,
+            }}
+          >
+            <span>👋 You're looking at a <b>demo</b> with sample kids — browse every tab freely. This is what YOUR app looks like.</span>
+            <a
+              href="https://www.trainerpro.coach"
+              onClick={() => setDemoActive(false)}
+              style={{
+                marginLeft: 'auto',
+                background: B.primary,
+                color: '#fff',
+                textDecoration: 'none',
+                borderRadius: B.pill,
+                padding: '7px 16px',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+              }}
+            >
+              Get your own →
+            </a>
+          </div>
+        </div>
+      )}
 
       <main style={{ maxWidth: 1140, margin: '0 auto', padding: '18px 16px 70px' }}>
         <Outlet context={{ editMode }} />

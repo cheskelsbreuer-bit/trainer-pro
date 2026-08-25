@@ -17,6 +17,8 @@ import {
   tagsAfterCharge,
   tagsAfterPaymentDeleted,
 } from '../theme';
+import { useDemo } from '../demo/flag';
+import { DEMO_KIDS, DEMO_PAYMENTS } from '../demo/demoData';
 
 /** Marker tag that stamps a clients row as a babysitting kid. */
 export const KID_MARKER = 'bs:1';
@@ -24,9 +26,11 @@ export const KID_MARKER = 'bs:1';
 // ── Kids ──────────────────────────────────────────────────────────────
 export function useKids() {
   const { user } = useAuth();
+  const demo = useDemo();
   return useQuery({
-    queryKey: ['babysitting-kids', user?.id],
+    queryKey: ['babysitting-kids', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<Client[]> => {
+      if (demo) return DEMO_KIDS;
       const { data, error } = await supabase
         .from('clients')
         .select('*')
@@ -36,16 +40,18 @@ export function useKids() {
       if (error) throw error;
       return (data ?? []) as Client[];
     },
-    enabled: !!user,
+    enabled: demo || !!user,
   });
 }
 
 // ── Payments ──────────────────────────────────────────────────────────
 export function usePayments() {
   const { user } = useAuth();
+  const demo = useDemo();
   return useQuery({
-    queryKey: ['babysitting-payments', user?.id],
+    queryKey: ['babysitting-payments', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<Payment[]> => {
+      if (demo) return DEMO_PAYMENTS;
       const { data, error } = await supabase
         .from('payments')
         .select('*')
@@ -54,7 +60,7 @@ export function usePayments() {
       if (error) throw error;
       return (data ?? []) as Payment[];
     },
-    enabled: !!user,
+    enabled: demo || !!user,
   });
 }
 
@@ -67,6 +73,7 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
 
 /** Record money received: insert a payments row, bump totalpaid. */
 export function useRecordPayment() {
+  const demo = useDemo();
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
@@ -78,6 +85,7 @@ export function useRecordPayment() {
       description?: string | null;
       currentTags: string[];
     }) => {
+      if (demo) return;
       if (!user) throw new Error('Not signed in');
       const { error: payErr } = await supabase.from('payments').insert({
         trainer_id: user.id,
@@ -102,6 +110,7 @@ export function useRecordPayment() {
 
 /** Delete a payment AND hand the money back to the balance. */
 export function useDeletePayment() {
+  const demo = useDemo();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
@@ -110,6 +119,7 @@ export function useDeletePayment() {
       amount: number;
       currentTags: string[];
     }) => {
+      if (demo) return;
       const { error } = await supabase.from('payments').delete().eq('id', input.id);
       if (error) throw error;
       const { error: cliErr } = await supabase
@@ -126,6 +136,7 @@ export function useDeletePayment() {
  *  Negative amount = credit. Callers also append a ChargeEntry + log to
  *  the config blob so the billing history stays reviewable. */
 export function useAddCharge() {
+  const demo = useDemo();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
@@ -133,6 +144,7 @@ export function useAddCharge() {
       amount: number;
       currentTags: string[];
     }) => {
+      if (demo) return;
       const { error } = await supabase
         .from('clients')
         .update({ tags: tagsAfterCharge(input.currentTags, input.amount) })
@@ -146,6 +158,7 @@ export function useAddCharge() {
 /** Create or update a kid. Profile fields map to real columns; the
  *  babysitting-specific ones ride the tags (already encoded by caller). */
 export function useUpsertKid() {
+  const demo = useDemo();
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
@@ -161,6 +174,7 @@ export function useUpsertKid() {
       tags: string[];
       status?: 'active' | 'paused' | 'archived';
     }) => {
+      if (demo) return 'demo';
       if (!user) throw new Error('Not signed in');
       const tags = input.tags.includes(KID_MARKER)
         ? input.tags
@@ -195,9 +209,11 @@ export function useUpsertKid() {
 
 /** Repair tool: write a kid's tags directly (totals fixes, merges). */
 export function useSetKidTags() {
+  const demo = useDemo();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; tags: string[] }) => {
+      if (demo) return;
       const { error } = await supabase.from('clients').update({ tags: input.tags }).eq('id', input.id);
       if (error) throw error;
     },
@@ -208,9 +224,11 @@ export function useSetKidTags() {
 /** Repair tool: delete one payment row WITHOUT touching any kid's tags —
  *  only for ghost payments whose kid no longer exists. */
 export function useDeleteGhostPayment() {
+  const demo = useDemo();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string }) => {
+      if (demo) return;
       const { error } = await supabase.from('payments').delete().eq('id', input.id);
       if (error) throw error;
     },
@@ -219,9 +237,11 @@ export function useDeleteGhostPayment() {
 }
 
 export function useSetKidStatus() {
+  const demo = useDemo();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; status: 'active' | 'paused' | 'archived' }) => {
+      if (demo) return;
       const { error } = await supabase
         .from('clients')
         .update({ status: input.status })

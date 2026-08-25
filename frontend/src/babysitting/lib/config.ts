@@ -7,6 +7,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useDemo } from '../demo/flag';
 
 export interface MessageSchedule {
   enabled: boolean;
@@ -201,11 +202,16 @@ interface TrainerProfileRow {
 
 export function useBabysittingConfig() {
   const { user } = useAuth();
+  const demo = useDemo();
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['babysitting-config', user?.id],
+    queryKey: ['babysitting-config', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<BabysittingConfig> => {
+      if (demo) {
+        const { DEMO_CONFIG } = await import('../demo/demoData');
+        return DEMO_CONFIG;
+      }
       const { data, error } = await supabase
         .from('trainers')
         .select('id, public_profile')
@@ -215,11 +221,12 @@ export function useBabysittingConfig() {
       const profile = (data as TrainerProfileRow).public_profile ?? {};
       return hydrate((profile as Record<string, unknown>).babysitting);
     },
-    enabled: !!user,
+    enabled: demo || !!user,
   });
 
   const save = useMutation({
     mutationFn: async (next: BabysittingConfig) => {
+      if (demo) return; // the demo never writes anywhere
       if (!user) throw new Error('Not signed in');
       // Re-fetch the latest profile so sibling keys (appearance, modules,
       // other verticals) are never clobbered by our write.

@@ -20,6 +20,8 @@ import { BookingPage } from './pages/BookingPage';
 import { IntakePage } from './pages/IntakePage';
 import { JoinStudioPage } from './pages/JoinStudioPage';
 import { FamilyPortalGate } from './babysitting/portal/FamilyPortalGate';
+import { isDemoActive, setDemoActive, DemoProvider } from './babysitting/demo/flag';
+import { DEMO_TRAINER } from './babysitting/demo/demoData';
 import { PortalJoinPage } from './pages/PortalJoinPage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
 import { LandingPage } from './pages/LandingPage';
@@ -64,9 +66,25 @@ const queryClient = new QueryClient({
   },
 });
 
+// The shareable babysitting demo: /babysitting-demo turns the flag on and
+// lands on the app root, where the demo shell mounts with sample data.
+function DemoEntry() {
+  setDemoActive(true);
+  return <Navigate to="/" replace />;
+}
+
 function ProtectedShell() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Demo mode wins over everything — no login, sample data, view-only.
+  if (isDemoActive()) {
+    return (
+      <DemoProvider>
+        <BabysittingApp trainer={DEMO_TRAINER} />
+      </DemoProvider>
+    );
+  }
 
   // Fetch trainer row to check onboarding status. The auth-user trigger creates
   // this row on signup, so it should always exist for an authed user.
@@ -426,6 +444,7 @@ export default function App() {
             <Route path="/intake/:token" element={<IntakePage />} />
             <Route path="/join-studio/:token" element={<JoinStudioPage />} />
             <Route path="/portal-join/:token" element={<PortalJoinPage />} />
+            <Route path="/babysitting-demo" element={<DemoEntry />} />
 
             {/* Auth-protected but uses its own layout */}
             <Route path="/portal" element={<PortalShell />} />
