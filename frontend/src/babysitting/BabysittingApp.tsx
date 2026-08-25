@@ -9,6 +9,7 @@ import { KidsPage } from './pages/KidsPage';
 import { KidDetailPage } from './pages/KidDetailPage';
 import { FamiliesPage } from './pages/FamiliesPage';
 import { BillingPage } from './pages/BillingPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { AwayPage } from './pages/AwayPage';
 import { FormerPage } from './pages/FormerPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -24,6 +25,7 @@ export function BabysittingApp({ trainer }: { trainer: Trainer | undefined }) {
         <Route path="kids/:id" element={<KidDetailPage />} />
         <Route path="families" element={<FamiliesPage />} />
         <Route path="billing" element={<BillingPage />} />
+        <Route path="messages" element={<MessagesPage />} />
         <Route path="away" element={<AwayPage />} />
         <Route path="former" element={<FormerPage />} />
         <Route path="reports" element={<ReportsPage />} />

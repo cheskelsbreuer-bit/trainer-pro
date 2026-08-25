@@ -1,0 +1,27 @@
+# Fires the babysitting balance reminders once a day. The backend decides
+# per account whether today is that sitter's chosen send day, and skips
+# accounts that already sent today — so a daily ping is safe.
+name: Weekly balance reminders
+on:
+  schedule:
+    - cron: '0 14 * * *'   # daily 14:00 UTC (~10am ET); backend matches each sitter's day
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Practice run (true = nothing actually sends)'
+        default: 'true'
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Wake the backend (free tier sleeps)
+        run: curl -fsS --max-time 90 https://api.trainerpro.coach/health >/dev/null
+      - name: Run balance reminders
+        run: |
+          curl -fsS --max-time 120 -X POST \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"dry_run": ${{ inputs.dry_run || false }}}' \
+            https://api.trainerpro.coach/reminders/weekly-balances

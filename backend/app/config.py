@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # Email (Resend) — used for session reminders + intake emails
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "Trainer Pro <onboarding@resend.dev>"
+    # Shared secret for scheduled jobs (GitHub Actions cron → /reminders/*).
+    # Empty = scheduled endpoints refuse to run (fail closed).
+    CRON_SECRET: str = ""
 
     @property
     def cors_origins(self) -> list[str]:

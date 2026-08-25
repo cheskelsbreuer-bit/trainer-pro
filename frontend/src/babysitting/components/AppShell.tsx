@@ -57,6 +57,7 @@ const NAV: Array<{ to: string; label: string; emoji: string; end?: boolean }> = 
   { to: '/kids', label: 'Kids', emoji: '🧸' },
   { to: '/families', label: 'Families', emoji: '👨‍👩‍👧' },
   { to: '/billing', label: 'Billing', emoji: '💛' },
+  { to: '/messages', label: 'Messages', emoji: '✉️' },
   { to: '/reports', label: 'Reports', emoji: '📈' },
   { to: '/settings', label: 'Settings', emoji: '⚙️' },
 ];

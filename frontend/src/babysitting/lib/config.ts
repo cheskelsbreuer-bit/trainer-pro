@@ -8,6 +8,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
+export interface MessageSchedule {
+  enabled: boolean;
+  day: number; // 0=Sunday … 6=Saturday (JS convention)
+  emailAuto: boolean; // send emails automatically on the scheduled day
+  smsAuto: boolean; // send texts automatically (needs Twilio on the server)
+}
+
+export interface GmailSending {
+  address: string;
+  appPassword: string; // Gmail "app password" — sends from her own address
+}
+
 export interface BabysittingSettings {
   currency: string; // '$'
   defaultWeeklyRate: number;
@@ -15,6 +27,15 @@ export interface BabysittingSettings {
   smsTemplate: string; // {parent} {kids} {currency}{balance}
   emailSubject: string;
   emailTemplate: string;
+  schedule: MessageSchedule;
+  mutedFamilies: string[]; // family slugs left out of reminder runs
+  gmail: GmailSending;
+}
+
+/** Which families were already handled in today's manual Thursday Run. */
+export interface RunState {
+  date: string; // YYYY-MM-DD
+  sent: string[]; // family slugs marked done
 }
 
 export interface LogEntry {
@@ -52,6 +73,7 @@ export interface BabysittingConfig {
   log: LogEntry[]; // newest first, capped
   charges: ChargeEntry[]; // newest first, capped
   away: AwayRecord[];
+  runState?: RunState;
 }
 
 export const DEFAULT_SETTINGS: BabysittingSettings = {
@@ -63,6 +85,9 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
   emailSubject: 'Your babysitting balance',
   emailTemplate:
     'Hi {parent},\n\nJust a friendly note that the current babysitting balance for {kids} is {currency}{balance}.\n\nThank you!',
+  schedule: { enabled: false, day: 4, emailAuto: true, smsAuto: false },
+  mutedFamilies: [],
+  gmail: { address: '', appPassword: '' },
 };
 
 const LOG_CAP = 300;
@@ -70,12 +95,17 @@ const CHARGE_CAP = 1000;
 
 function hydrate(raw: unknown): BabysittingConfig {
   const r = (raw ?? {}) as Partial<BabysittingConfig>;
+  const s = { ...DEFAULT_SETTINGS, ...(r.settings ?? {}) };
+  s.schedule = { ...DEFAULT_SETTINGS.schedule, ...(r.settings?.schedule ?? {}) };
+  s.gmail = { ...DEFAULT_SETTINGS.gmail, ...(r.settings?.gmail ?? {}) };
+  s.mutedFamilies = Array.isArray(r.settings?.mutedFamilies) ? r.settings!.mutedFamilies : [];
   return {
     version: typeof r.version === 'number' ? r.version : 1,
-    settings: { ...DEFAULT_SETTINGS, ...(r.settings ?? {}) },
+    settings: s,
     log: Array.isArray(r.log) ? r.log : [],
     charges: Array.isArray(r.charges) ? r.charges : [],
     away: Array.isArray(r.away) ? r.away : [],
+    runState: r.runState,
   };
 }
 

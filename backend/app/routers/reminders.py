@@ -124,17 +124,24 @@ def send_reminder(
     return SendReminderResponse(sent=True, channel=req.channel)
 
 
-@router.post("/run-daily")
-def run_daily(authorization: str = Header(...)) -> dict:
-    """Cron-friendly: send reminders for all sessions in the next 24h that haven't been reminded.
+def _require_cron_secret(provided: str | None) -> None:
+    """Shared-secret gate for scheduled endpoints. Fails closed when unset."""
+    import hmac
 
-    Requires a service-role JWT so it can act across all sessions for the trainer.
-    Wire to a Render cron job: schedule = '0 9 * * *' (9am daily).
+    if not settings.CRON_SECRET:
+        raise HTTPException(503, "Scheduled sends are not configured (CRON_SECRET unset).")
+    if not provided or not hmac.compare_digest(provided, settings.CRON_SECRET):
+        raise HTTPException(401, "Bad cron secret")
+
+
+@router.post("/run-daily")
+def run_daily(x_cron_secret: str | None = Header(default=None)) -> dict:
+    """Cron-friendly: count reminders for sessions in the next 24h (legacy stub).
+
+    Now gated behind the CRON_SECRET shared secret — the old check accepted
+    any Bearer token, which let anyone on the internet trigger it.
     """
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Missing token")
-    # In a real deploy, you'd verify a shared cron secret here.
-    # For now, this requires the service_role key (admin) to call.
+    _require_cron_secret(x_cron_secret)
 
     from ..db import supabase_admin
 
@@ -156,3 +163,345 @@ def run_daily(authorization: str = Header(...)) -> dict:
         count += 1
 
     return {"checked": len(upcoming.data or []), "would_send": count, "note": "Wire SMS provider to actually send."}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Weekly balance reminders — the Babysitting vertical's "Thursday Engine".
+#
+# One endpoint, two callers:
+#   · The sitter's own UI (trainer JWT): practice runs and "send now",
+#     always scoped to her own account.
+#   · The daily GitHub-Actions cron (X-Cron-Secret): runs for every
+#     babysitting account whose schedule says "today is my day".
+#
+# Safety, in order: practice mode default for the UI; hard per-run cap;
+# min-balance floor; once-per-day dedupe via activity_log; per-family
+# error isolation (one bad phone number never kills the run); every run
+# logged with counts.
+# ═══════════════════════════════════════════════════════════════════════
+
+_KID_MARKER = "bs:1"
+_MAX_SENDS_PER_RUN = 100
+_MIN_BALANCE = 1.0
+
+
+def _tag_value(tags: list | None, prefix: str) -> str | None:
+    for t in tags or []:
+        if isinstance(t, str) and t.startswith(prefix):
+            return t[len(prefix):]
+    return None
+
+
+def _tag_num(tags: list | None, prefix: str) -> float:
+    import math
+
+    raw = _tag_value(tags, prefix)
+    if raw is None:
+        return 0.0
+    try:
+        v = float(raw)
+        return v if math.isfinite(v) else 0.0
+    except ValueError:
+        return 0.0
+
+
+def _kid_balance(tags: list | None) -> float:
+    return round(_tag_num(tags, "totalowed:") - _tag_num(tags, "totalpaid:"), 2)
+
+
+def _family_label(slug: str) -> str:
+    return " ".join(p.capitalize() for p in slug.split("-") if p) + " family"
+
+
+def _fill_template(template: str, parent: str, kid_names: list[str], balance: float, currency: str) -> str:
+    if len(kid_names) <= 1:
+        kids = kid_names[0] if kid_names else "your kids"
+    else:
+        kids = ", ".join(kid_names[:-1]) + " and " + kid_names[-1]
+    amount = f"{balance:.0f}" if balance == int(balance) else f"{balance:.2f}"
+    return (
+        template.replace("{parent}", parent or "there")
+        .replace("{kids}", kids)
+        .replace("{currency}", currency or "$")
+        .replace("{balance}", amount)
+    )
+
+
+def _group_families(kids: list[dict], muted: set[str]) -> list[dict]:
+    """One entry per family: parent name, kid first names, contact, balance."""
+    by_fam: dict[str, list[dict]] = {}
+    for k in kids:
+        slug = _tag_value(k.get("tags"), "family:") or f"solo-{k['id']}"
+        by_fam.setdefault(slug, []).append(k)
+
+    out = []
+    for slug, members in by_fam.items():
+        if slug in muted:
+            continue
+        balance = round(sum(_kid_balance(m.get("tags")) for m in members), 2)
+        if balance < _MIN_BALANCE:
+            continue
+        parent = next((_tag_value(m.get("tags"), "parent:") for m in members if _tag_value(m.get("tags"), "parent:")), "")
+        phone = next((m.get("phone") for m in members if m.get("phone")), None)
+        email = next((m.get("email") for m in members if m.get("email")), None)
+        out.append(
+            {
+                "family": slug,
+                "label": members[0]["full_name"] if slug.startswith("solo-") else _family_label(slug),
+                "parent": parent,
+                "kid_names": [m["full_name"].split(" ")[0] for m in members],
+                "balance": balance,
+                "phone": phone,
+                "email": email,
+            }
+        )
+    out.sort(key=lambda f: -f["balance"])
+    return out
+
+
+def _send_email_for(trainer_name: str, bs_settings: dict, to_email: str, subject: str, body: str) -> str:
+    """Send one email. Prefers the sitter's own Gmail (free, her address);
+    falls back to Resend when the deploy has it configured. Returns the
+    channel used. Raises on failure."""
+    gmail = (bs_settings.get("gmail") or {}) if isinstance(bs_settings.get("gmail"), dict) else {}
+    g_addr = (gmail.get("address") or "").strip()
+    g_pass = (gmail.get("appPassword") or "").replace(" ", "").strip()
+
+    if g_addr and g_pass:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.utils import formataddr
+
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject
+        msg["From"] = formataddr((trainer_name, g_addr))
+        msg["To"] = to_email
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as smtp:
+            smtp.login(g_addr, g_pass)
+            smtp.sendmail(g_addr, [to_email], msg.as_string())
+        return "gmail"
+
+    if settings.RESEND_API_KEY:
+        import httpx
+
+        resp = httpx.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": settings.RESEND_FROM_EMAIL,
+                "to": [to_email],
+                "subject": subject,
+                "text": body,
+            },
+            timeout=15,
+        )
+        if resp.status_code >= 300:
+            raise RuntimeError(f"Resend {resp.status_code}: {resp.text[:200]}")
+        return "resend"
+
+    raise RuntimeError("No email path configured (add Gmail in Messages settings, or set RESEND_API_KEY).")
+
+
+def _send_sms(to_phone: str, body: str, tw_client) -> None:
+    clean = to_phone.strip()
+    digits = "".join(ch for ch in clean if ch.isdigit())
+    if clean.startswith("+"):
+        to = "+" + digits
+    elif len(digits) == 10:
+        to = "+1" + digits
+    else:
+        to = "+" + digits
+    tw_client.messages.create(body=body, from_=settings.TWILIO_FROM_NUMBER, to=to)
+
+
+class WeeklyBalancesRequest(BaseModel):
+    dry_run: bool = True
+    force: bool = False  # ignore the once-per-day dedupe
+    channels: list[Literal["sms", "email"]] | None = None  # override the saved schedule
+
+
+def _run_for_trainer(sb_admin, trainer: dict, req: WeeklyBalancesRequest, triggered_by: str) -> dict:
+    profile = trainer.get("public_profile") or {}
+    bs = profile.get("babysitting") or {}
+    bs_settings = bs.get("settings") or {}
+    schedule = bs_settings.get("schedule") or {}
+
+    currency = bs_settings.get("currency") or "$"
+    sms_template = bs_settings.get("smsTemplate") or (
+        "Hi {parent}! Friendly reminder from your babysitter: the balance for {kids} is {currency}{balance}. Thank you!"
+    )
+    email_subject = bs_settings.get("emailSubject") or "Your babysitting balance"
+    email_template = bs_settings.get("emailTemplate") or sms_template
+    muted = set(bs_settings.get("mutedFamilies") or [])
+    trainer_name = trainer.get("business_name") or trainer.get("full_name") or "Your babysitter"
+
+    if req.channels is not None:
+        channels = set(req.channels)
+    else:
+        channels = set()
+        if schedule.get("emailAuto"):
+            channels.add("email")
+        if schedule.get("smsAuto"):
+            channels.add("sms")
+    if not channels:
+        channels = {"email"}
+
+    # Once-per-day dedupe (skippable with force / always skipped in dry runs).
+    already = None
+    if not req.dry_run and not req.force:
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        prior = (
+            sb_admin.table("activity_log")
+            .select("id")
+            .eq("trainer_id", trainer["id"])
+            .eq("action", "weekly_balance_reminders")
+            .gte("created_at", today_start.isoformat())
+            .limit(1)
+            .execute()
+        )
+        already = bool(prior.data)
+    if already:
+        return {"trainer_id": trainer["id"], "skipped": "already sent today"}
+
+    kids_resp = (
+        sb_admin.table("clients")
+        .select("id, full_name, phone, email, status, tags")
+        .eq("trainer_id", trainer["id"])
+        .eq("status", "active")
+        .contains("tags", [_KID_MARKER])
+        .execute()
+    )
+    families = _group_families(kids_resp.data or [], muted)
+
+    capped = False
+    if len(families) > _MAX_SENDS_PER_RUN:
+        families = families[:_MAX_SENDS_PER_RUN]
+        capped = True
+
+    plan = []
+    for f in families:
+        sms_body = _fill_template(sms_template, f["parent"], f["kid_names"], f["balance"], currency)
+        email_body = _fill_template(email_template, f["parent"], f["kid_names"], f["balance"], currency)
+        plan.append({**f, "sms_body": sms_body, "email_body": email_body})
+
+    if req.dry_run:
+        return {
+            "trainer_id": trainer["id"],
+            "dry_run": True,
+            "families": plan,
+            "channels": sorted(channels),
+            "capped": capped,
+        }
+
+    tw_client = None
+    if "sms" in channels and settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and settings.TWILIO_FROM_NUMBER:
+        from twilio.rest import Client as TwilioClient
+
+        tw_client = TwilioClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+
+    sent_sms = sent_email = 0
+    errors: list[str] = []
+    for f in plan:
+        if "email" in channels and f["email"]:
+            try:
+                _send_email_for(trainer_name, bs_settings, f["email"], email_subject, f["email_body"])
+                sent_email += 1
+            except Exception as e:  # noqa: BLE001 — isolate per family
+                errors.append(f"{f['label']} email: {e}")
+        if "sms" in channels:
+            if tw_client is None:
+                if not errors or not errors[-1].startswith("_sms_unconfigured"):
+                    errors.append("_sms_unconfigured: texts requested but Twilio is not set up on the server")
+            elif f["phone"]:
+                try:
+                    _send_sms(f["phone"], f["sms_body"], tw_client)
+                    sent_sms += 1
+                except Exception as e:  # noqa: BLE001
+                    errors.append(f"{f['label']} sms: {e}")
+
+    result = {
+        "trainer_id": trainer["id"],
+        "dry_run": False,
+        "families_checked": len(plan),
+        "sent_sms": sent_sms,
+        "sent_email": sent_email,
+        "errors": errors[:20],
+        "capped": capped,
+    }
+
+    try:
+        sb_admin.table("activity_log").insert(
+            {
+                "trainer_id": trainer["id"],
+                "actor": "system",
+                "action": "weekly_balance_reminders",
+                "entity_type": "reminder_run",
+                "details": {**result, "triggered_by": triggered_by},
+            }
+        ).execute()
+    except Exception:  # noqa: BLE001 — logging must never fail the run
+        pass
+
+    return result
+
+
+@router.post("/weekly-balances")
+def weekly_balances(
+    req: WeeklyBalancesRequest,
+    x_cron_secret: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Send (or preview) balance reminders, grouped per family.
+
+    Two ways in:
+      · Trainer JWT — her own account only. dry_run=True previews.
+      · X-Cron-Secret — the daily cron. Runs every babysitting account
+        whose schedule is enabled AND whose chosen weekday is today (UTC).
+    """
+    from ..db import supabase_admin
+
+    sb_admin = supabase_admin()
+
+    if x_cron_secret is not None:
+        _require_cron_secret(x_cron_secret)
+        trainers = (
+            sb_admin.table("trainers")
+            .select("id, full_name, business_name, public_profile, template_slugs")
+            .contains("template_slugs", ["babysitting"])
+            .execute()
+        )
+        today = datetime.now(timezone.utc).weekday()  # Mon=0 … Sun=6
+        results = []
+        for t in trainers.data or []:
+            schedule = ((t.get("public_profile") or {}).get("babysitting") or {}).get("settings", {}).get("schedule") or {}
+            if not schedule.get("enabled"):
+                continue
+            # schedule.day uses JS convention: Sun=0 … Sat=6. Convert.
+            js_today = (today + 1) % 7
+            if int(schedule.get("day", 4)) != js_today:
+                continue
+            try:
+                results.append(_run_for_trainer(sb_admin, t, req, triggered_by="cron"))
+            except Exception as e:  # noqa: BLE001 — one bad tenant never kills the run
+                results.append({"trainer_id": t["id"], "error": str(e)[:200]})
+        return {"ran_for": len(results), "results": results}
+
+    # Trainer-initiated path — verify the JWT ourselves.
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Missing token")
+    from ..auth import get_current_user
+
+    user = get_current_user(authorization)
+    trainer_resp = (
+        sb_admin.table("trainers")
+        .select("id, full_name, business_name, public_profile, template_slugs")
+        .eq("id", user.user_id)
+        .single()
+        .execute()
+    )
+    if not trainer_resp.data:
+        raise HTTPException(404, "Trainer not found")
+    return _run_for_trainer(sb_admin, trainer_resp.data, req, triggered_by="trainer")
