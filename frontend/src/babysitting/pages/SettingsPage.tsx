@@ -16,7 +16,7 @@ import {
   type BabysittingSettings,
 } from '../lib/config';
 import { fillTemplate } from '../lib/messages';
-import { kidsCsv, paymentsCsv, downloadCsv } from '../lib/csv';
+import { kidsCsv, paymentsCsv, yearCsv, downloadCsv } from '../lib/csv';
 import { Card, SectionTitle, Btn, Field, inputStyle } from '../components/ui';
 import { CustomizeStudio } from '../../components/CustomizeStudio';
 import { HealthPanel } from '../components/HealthPanel';
@@ -306,6 +306,39 @@ export function SettingsPage() {
             onClick={() => downloadCsv('payments.csv', paymentsCsv(payments ?? [], kidName))}
           >
             ⬇ Payment history ({paymentCount} {paymentCount === 1 ? 'payment' : 'payments'})
+          </Btn>
+          <Btn
+            kind="soft"
+            disabled={!paymentCount && !(cfg.data?.charges.length)}
+            onClick={() =>
+              downloadCsv(
+                `tax-export-${new Date().getFullYear()}.csv`,
+                yearCsv(payments ?? [], cfg.data?.charges ?? [], kidName),
+              )
+            }
+          >
+            🧾 Tax-season export (everything, one file)
+          </Btn>
+          <Btn
+            kind="ghost"
+            onClick={() => {
+              const backup = {
+                app: 'babysitting',
+                exportedAt: new Date().toISOString(),
+                kids: kids ?? [],
+                payments: payments ?? [],
+                config: cfg.data ?? null,
+              };
+              const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `Babysitting_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            💾 Full backup (one file, everything)
           </Btn>
         </div>
       </Card>

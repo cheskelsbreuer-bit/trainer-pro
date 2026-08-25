@@ -24,6 +24,7 @@ import {
   Modal,
 } from '../components/ui';
 import { PaymentModal } from '../components/PaymentModal';
+import { AutoBillingCard } from '../components/AutoBillingCard';
 import { ChargeModal } from '../components/ChargeModal';
 
 type Tab = 'payments' | 'charges';
@@ -235,6 +236,7 @@ export function BillingPage() {
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
+      <AutoBillingCard />
       {/* Tabs + actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {tabBtn('payments', '💛 Payments')}

@@ -25,3 +25,10 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"dry_run": ${{ inputs.dry_run || false }}}' \
             https://api.trainerpro.coach/reminders/weekly-balances
+      - name: Run automatic weekly billing
+        run: |
+          curl -fsS --max-time 120 -X POST \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"dry_run": ${{ inputs.dry_run || false }}}' \
+            https://api.trainerpro.coach/billing/run-weekly

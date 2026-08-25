@@ -59,6 +59,24 @@ export function paymentsCsv(payments: Payment[], kidName: (id: string) => string
   return [header, ...rows].map((r) => r.map(cell).join(',')).join('\n');
 }
 
+/** Tax-season export: every charge and payment in one dated ledger. */
+export function yearCsv(
+  payments: Payment[],
+  charges: Array<{ ts: string; kidName: string; familySlug: string; amount: number; kind: string; note?: string }>,
+  kidName: (id: string) => string,
+): string {
+  const header = ['Date', 'Type', 'Kid', 'Family', 'Detail', 'Money in', 'Billed'];
+  const rows: Array<Array<string | number>> = [];
+  for (const p of payments) {
+    rows.push([p.paid_at?.slice(0, 10) ?? '', 'Payment', kidName(p.client_id), '', p.method ?? '', Number(p.amount), '']);
+  }
+  for (const ch of charges) {
+    rows.push([ch.ts.slice(0, 10), ch.amount < 0 ? 'Credit' : 'Charge', ch.kidName, ch.familySlug, `${ch.kind}${ch.note ? ' — ' + ch.note : ''}`, '', ch.amount]);
+  }
+  rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  return [header, ...rows].map((r) => r.map(cell).join(',')).join('\n');
+}
+
 export function downloadCsv(filename: string, csv: string): void {
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);

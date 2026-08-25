@@ -38,6 +38,7 @@ export interface BabysittingSettings {
   receipts: ReceiptSettings;
   appLevel: 'simple' | 'standard' | 'pro'; // how much of the app shows
   familyDiscount: { enabled: boolean; type: 'percent' | 'flat'; value: number }; // 2nd+ siblings
+  autoBilling: { enabled: boolean; day: number }; // weekly charges post themselves (day: 0=Sun…6=Sat)
   editPin: string; // '' = no PIN; otherwise 4 digits asked before editing
   readOnlyLock: boolean; // true = editing can't be turned on at all
   paymentMethods: string[]; // her own list of how people pay
@@ -142,6 +143,7 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
   },
   appLevel: 'standard',
   familyDiscount: { enabled: false, type: 'percent', value: 10 },
+  autoBilling: { enabled: false, day: 0 },
   editPin: '',
   readOnlyLock: false,
   paymentMethods: ['cash', 'check', 'zelle', 'venmo', 'other'],
@@ -163,6 +165,7 @@ function hydrate(raw: unknown): BabysittingConfig {
       : DEFAULT_SETTINGS.paymentMethods;
   if (!['simple', 'standard', 'pro'].includes(s.appLevel)) s.appLevel = 'standard';
   s.familyDiscount = { ...DEFAULT_SETTINGS.familyDiscount, ...(r.settings?.familyDiscount ?? {}) };
+  s.autoBilling = { ...DEFAULT_SETTINGS.autoBilling, ...(r.settings?.autoBilling ?? {}) };
   return {
     version: typeof r.version === 'number' ? r.version : 1,
     settings: s,
