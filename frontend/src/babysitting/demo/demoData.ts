@@ -7,6 +7,29 @@ import type { BabysittingConfig } from '../lib/config';
 
 const T_ID = 'demo-trainer';
 
+/** A birthday `inDays` from now, born `yearsAgo` years back — so the demo
+ *  always has a birthday coming up, whenever someone opens it. */
+function birthdayIn(inDays: number, yearsAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + inDays);
+  d.setFullYear(d.getFullYear() - yearsAgo);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Born this many months ago — keeps the sample ages sensible forever. */
+function bornMonthsAgo(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return d.toISOString().slice(0, 10);
+}
+
+/** A date `inDays` from now (negative = in the past). */
+function dateIn(inDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + inDays);
+  return d.toISOString().slice(0, 10);
+}
+
 function kid(
   id: string,
   name: string,
@@ -43,14 +66,14 @@ function kid(
       'hrate:12',
       `totalowed:${extra.owed ?? 0}`,
       `totalpaid:${extra.paid ?? 0}`,
-      'startdate:2026-06-01',
+      `startdate:${dateIn(-85)}`,
       ...(extra.status !== 'paused' && (extra.owed ?? 0) === 960 ? ['ktag:demo-kt1'] : []),
     ],
     rate_per_session: null,
     package_balance: 0,
     notes: extra.notes ?? null,
-    created_at: '2026-06-01T12:00:00Z',
-    updated_at: '2026-06-01T12:00:00Z',
+    created_at: `${dateIn(-85)}T12:00:00Z`,
+    updated_at: `${dateIn(-85)}T12:00:00Z`,
   } as Client;
 }
 
@@ -58,27 +81,27 @@ export const DEMO_KIDS: Client[] = [
   kid('demo-k1', 'Rivky Gold', 'gold', 'Malky', 'sun-mon-tue-wed-thu', {
     owed: 960,
     paid: 840,
-    dob: '2024-03-15',
+    dob: bornMonthsAgo(29),
     allergies: 'peanuts',
     notes: 'Naps 1–3pm. Loves the red cup.',
   }),
-  kid('demo-k2', 'Moishy Gold', 'gold', 'Malky', 'sun-mon-tue-wed-thu', { owed: 960, paid: 900, dob: '2025-11-02' }),
+  kid('demo-k2', 'Moishy Gold', 'gold', 'Malky', 'sun-mon-tue-wed-thu', { owed: 960, paid: 900, dob: bornMonthsAgo(9) }),
   kid('demo-k3', 'Shaindy Weiss', 'weiss', 'Chani', 'mon-wed-thu', {
     owed: 720,
     paid: 720,
-    dob: '2024-08-21',
+    dob: birthdayIn(5, 2), // turns 2 next week — shows the birthday card
     notes: 'Picked up by 4:15 sharp.',
   }),
   kid('demo-k4', 'Yanky Berger', 'berger', 'Ruchy', 'sun-tue-thu', {
     owed: 840,
     paid: 640,
-    dob: '2025-01-30',
+    dob: bornMonthsAgo(18),
     allergies: 'dairy, eggs',
   }),
-  kid('demo-k5', 'Perry Berger', 'berger', 'Ruchy', 'sun-tue-thu', { owed: 600, paid: 600, dob: '2026-02-14' }),
-  kid('demo-k6', 'Tzippy Stern', 'stern', 'Faigy', 'mon-tue-wed', { owed: 480, paid: 380, dob: '2024-12-05' }),
-  kid('demo-k7', 'Duvid Klein', 'klein', 'Gitty', 'wed-thu', { owed: 240, paid: 260, dob: '2025-06-18' }),
-  kid('demo-k8', 'Blimi Roth', 'roth', 'Esty', 'sun-mon', { owed: 300, paid: 300, dob: '2025-04-09', status: 'paused' }),
+  kid('demo-k5', 'Perry Berger', 'berger', 'Ruchy', 'sun-tue-thu', { owed: 600, paid: 600, dob: bornMonthsAgo(6) }),
+  kid('demo-k6', 'Tzippy Stern', 'stern', 'Faigy', 'mon-tue-wed', { owed: 480, paid: 380, dob: birthdayIn(18, 3) }),
+  kid('demo-k7', 'Duvid Klein', 'klein', 'Gitty', 'wed-thu', { owed: 240, paid: 260, dob: bornMonthsAgo(14) }),
+  kid('demo-k8', 'Blimi Roth', 'roth', 'Esty', 'sun-mon', { owed: 300, paid: 300, dob: bornMonthsAgo(16), status: 'paused' }),
 ];
 
 function pay(id: string, kidId: string, amount: number, daysAgo: number, method: string, note?: string): Payment {
@@ -221,7 +244,10 @@ export const DEMO_CONFIG: BabysittingConfig = {
     { id: 'demo-kt1', label: 'New', color: '#4f9d94' },
     { id: 'demo-kt2', label: 'Potty training', color: '#b98420' },
   ],
-  closures: [],
+  closures: [
+    { id: 'demo-cl1', date: dateIn(9), name: 'Yom Tov — closed' },
+    { id: 'demo-cl2', date: dateIn(10), name: 'Yom Tov — closed' },
+  ],
 };
 
 export const DEMO_TRAINER = {
