@@ -15,13 +15,16 @@ import {
   readDays,
   daysLabel,
   readBalance,
+  readKidTagIds,
   ageOf,
 } from '../theme';
-import { useKids } from '../lib/data';
+import { useKids, useSetKidStatus, useSetKidTags } from '../lib/data';
+import { useBabysittingConfig, appendLog } from '../lib/config';
 import {
   Card,
   EmptyState,
   Btn,
+  Chip,
   Avatar,
   AllergyBadge,
   BalancePill,
@@ -31,6 +34,7 @@ import {
   inputStyle,
 } from '../components/ui';
 import { KidModal } from '../components/KidModal';
+import { ChargeModal } from '../components/ChargeModal';
 import { PaymentModal } from '../components/PaymentModal';
 
 type SortKey = 'name' | 'balance';
@@ -83,6 +87,11 @@ export function KidsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [editKid, setEditKid] = useState<Client | null>(null);
   const [payKid, setPayKid] = useState<Client | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [billSelection, setBillSelection] = useState<Client[] | null>(null);
+  const cfg = useBabysittingConfig();
+  const setStatus = useSetKidStatus();
+  const setKidTags = useSetKidTags();
 
   const active = useMemo(() => (kids ?? []).filter((k) => k.status === 'active'), [kids]);
   const awayCount = useMemo(() => (kids ?? []).filter((k) => k.status === 'paused').length, [kids]);
@@ -130,6 +139,35 @@ export function KidsPage() {
     setSearch('');
     setFamily('');
     setDays([]);
+  }
+
+  const selectedKids = active.filter((k) => selected.has(k.id));
+
+  function toggleSelect(id: string) {
+    setSelected((p) => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+
+  async function bulkArchive() {
+    if (!selectedKids.length) return;
+    if (!window.confirm(`Move ${selectedKids.length} kid${selectedKids.length === 1 ? '' : 's'} to Former? Their history stays; you can bring them back any time.`)) return;
+    for (const k of selectedKids) {
+      await setStatus.mutateAsync({ id: k.id, status: 'archived' });
+    }
+    if (cfg.data) cfg.save.mutate(appendLog(cfg.data, 'kid', `Moved ${selectedKids.length} kids to Former`));
+    setSelected(new Set());
+  }
+
+  async function bulkTag(tagId: string) {
+    for (const k of selectedKids) {
+      if (readKidTagIds(k).includes(tagId)) continue;
+      await setKidTags.mutateAsync({ id: k.id, tags: [...(k.tags ?? []), `ktag:${tagId}`] });
+    }
+    setSelected(new Set());
   }
 
   if (isLoading) {
@@ -222,9 +260,26 @@ export function KidsPage() {
           />
         </Card>
       ) : (
+        <>
+        {editMode && selected.size > 0 && (
+          <Card pad={12}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Chip tone="primary">{selected.size} selected</Chip>
+              <Btn size="sm" onClick={() => setBillSelection(selectedKids)}>🧾 Bill them</Btn>
+              <Btn size="sm" kind="ghost" onClick={() => void bulkArchive()}>🗃 Move to Former</Btn>
+              {(cfg.data?.kidTags ?? []).map((tg) => (
+                <Btn key={tg.id} size="sm" kind="ghost" onClick={() => void bulkTag(tg.id)} title={`Tag all as ${tg.label}`}>
+                  🏷 {tg.label}
+                </Btn>
+              ))}
+              <Btn size="sm" kind="ghost" onClick={() => setSelected(new Set())}>Clear</Btn>
+            </div>
+          </Card>
+        )}
         <TableWrap>
           <thead>
             <tr>
+              {editMode && <Th style={{ width: 34 }} />}
               <Th>Kid</Th>
               <Th>Family</Th>
               <Th>Parent</Th>
@@ -241,6 +296,16 @@ export function KidsPage() {
               const age = ageOf(k.date_of_birth);
               return (
                 <tr key={k.id}>
+                  {editMode && (
+                    <Td>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(k.id)}
+                        onChange={() => toggleSelect(k.id)}
+                        aria-label={`Select ${k.full_name}`}
+                      />
+                    </Td>
+                  )}
                   <Td>
                     <Link to={`/kids/${k.id}`} style={{ textDecoration: 'none', color: B.ink, display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                       <Avatar name={k.full_name} size={34} />
@@ -286,6 +351,7 @@ export function KidsPage() {
             })}
           </tbody>
         </TableWrap>
+        </>
       )}
 
       {/* Where the rest of the roster lives */}
@@ -300,6 +366,16 @@ export function KidsPage() {
       {showAdd && <KidModal kid={null} onClose={() => setShowAdd(false)} />}
       {editKid && <KidModal kid={editKid} onClose={() => setEditKid(null)} />}
       {payKid && <PaymentModal kid={payKid} onClose={() => setPayKid(null)} />}
+      {billSelection && (
+        <ChargeModal
+          kids={billSelection}
+          title={`Bill ${billSelection.length} kid${billSelection.length === 1 ? '' : 's'}`}
+          onClose={() => {
+            setBillSelection(null);
+            setSelected(new Set());
+          }}
+        />
+      )}
     </div>
   );
 }

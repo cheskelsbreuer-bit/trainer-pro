@@ -39,16 +39,23 @@ export function ChargeModal({
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const fd = cfg.data?.settings.familyDiscount;
   const suggested = useMemo(() => {
     const h = parseFloat(hours) || 0;
     const map: Record<string, number> = {};
-    for (const k of kids) {
-      if (kind === 'week') map[k.id] = readWeeklyRate(k);
-      else if (kind === 'hours') map[k.id] = Math.round(h * readHourlyRate(k) * 100) / 100;
+    kids.forEach((k, i) => {
+      if (kind === 'week') {
+        let amt = readWeeklyRate(k);
+        // Sibling discount: every kid after the first in a family bill.
+        if (fd?.enabled && i > 0 && kids.length > 1) {
+          amt = fd.type === 'percent' ? amt * (1 - fd.value / 100) : Math.max(0, amt - fd.value);
+        }
+        map[k.id] = Math.round(amt * 100) / 100;
+      } else if (kind === 'hours') map[k.id] = Math.round(h * readHourlyRate(k) * 100) / 100;
       else map[k.id] = 0;
-    }
+    });
     return map;
-  }, [kids, kind, hours]);
+  }, [kids, kind, hours, fd]);
 
   function amountFor(k: Client): number {
     const o = overrides[k.id];
@@ -209,6 +216,11 @@ export function ChargeModal({
         />
       </Field>
 
+      {kind === 'week' && fd?.enabled && kids.length > 1 && (
+        <div style={{ margin: '-4px 0 12px' }}>
+          <Chip tone="accent">Sibling discount applied: {fd.type === 'percent' ? `${fd.value}% off` : `$${fd.value} off`} each kid after the first.</Chip>
+        </div>
+      )}
       {kind === 'custom' && (
         <div style={{ margin: '-4px 0 12px' }}>
           <Chip tone="butter">Tip: a negative amount gives the family a credit.</Chip>

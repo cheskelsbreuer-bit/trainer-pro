@@ -15,6 +15,7 @@ import {
   type ClosureDay,
 } from '../lib/config';
 import { Card, SectionTitle, Btn, Chip, Field, inputStyle } from './ui';
+import { TOUR_OPEN_EVENT } from './TourWizard';
 
 const TAG_COLORS = ['#d96f4e', '#4f9d94', '#b98420', '#7c5e8e', '#4e7e52', '#98455e', '#3a5e85'];
 
@@ -68,6 +69,17 @@ export function ComfortPanels() {
 
   return (
     <>
+      {/* Tour */}
+      <Card>
+        <SectionTitle>🎓 The one-minute tour</SectionTitle>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Btn size="sm" kind="soft" onClick={() => window.dispatchEvent(new CustomEvent(TOUR_OPEN_EVENT))}>
+            🎓 Show me around again
+          </Btn>
+          <span style={{ fontSize: '0.8rem', color: B.mute }}>Seven friendly cards — great for showing someone new.</span>
+        </div>
+      </Card>
+
       {/* App level */}
       <Card>
         <SectionTitle>📐 How much app do you want?</SectionTitle>
@@ -114,6 +126,56 @@ export function ComfortPanels() {
           </Btn>
           <span style={{ fontSize: '0.78rem', color: B.mute }}>
             Hand the iPad to anyone — money can't change without the PIN.
+          </span>
+        </div>
+      </Card>
+
+      {/* Sibling discount */}
+      <Card>
+        <SectionTitle>👧👦 Sibling discount</SectionTitle>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Btn
+            size="sm"
+            kind={s.familyDiscount.enabled ? 'accent' : 'ghost'}
+            disabled={!editMode}
+            onClick={() =>
+              save(
+                (x) => ({ ...x, settings: { ...x.settings, familyDiscount: { ...x.settings.familyDiscount, enabled: !x.settings.familyDiscount.enabled } } }),
+                s.familyDiscount.enabled ? 'Sibling discount off' : 'Sibling discount on',
+              )
+            }
+          >
+            {s.familyDiscount.enabled ? '✓ Discount is ON' : 'Turn on sibling discount'}
+          </Btn>
+          <select
+            style={{ ...inputStyle, width: 'auto' }}
+            disabled={!editMode}
+            value={s.familyDiscount.type}
+            onChange={(e) =>
+              save(
+                (x) => ({ ...x, settings: { ...x.settings, familyDiscount: { ...x.settings.familyDiscount, type: e.target.value as 'percent' | 'flat' } } }),
+                'Sibling discount type changed',
+              )
+            }
+          >
+            <option value="percent">% off</option>
+            <option value="flat">$ off</option>
+          </select>
+          <input
+            style={{ ...inputStyle, width: 90 }}
+            type="number"
+            min="0"
+            disabled={!editMode}
+            value={s.familyDiscount.value}
+            onChange={(e) =>
+              save(
+                (x) => ({ ...x, settings: { ...x.settings, familyDiscount: { ...x.settings.familyDiscount, value: parseFloat(e.target.value) || 0 } } }),
+                'Sibling discount amount changed',
+              )
+            }
+          />
+          <span style={{ fontSize: '0.78rem', color: B.mute }}>
+            Applied automatically to every kid after the first when you bill a family's week.
           </span>
         </div>
       </Card>

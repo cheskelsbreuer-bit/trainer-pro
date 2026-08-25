@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 import { B } from '../theme';
 import { useBabysittingConfig } from '../lib/config';
+import { TourWizard } from './TourWizard';
 
 // ── Edit mode — a deliberate switch so day-to-day browsing can't
 //    accidentally change money. Shared across pages via localStorage +
@@ -237,6 +238,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
       <main style={{ maxWidth: 1140, margin: '0 auto', padding: '18px 16px 70px' }}>
         <Outlet context={{ editMode }} />
       </main>
+      <TourWizard />
     </div>
   );
 }
