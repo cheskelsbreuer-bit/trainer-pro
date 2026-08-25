@@ -21,6 +21,7 @@ import {
   AllergyBadge,
   Avatar,
   inputStyle,
+  LinkBtn,
 } from '../components/ui';
 import { KidModal } from '../components/KidModal';
 import { InviteParentButton } from '../components/InviteParentButton';
@@ -275,14 +276,18 @@ export function FamiliesPage() {
                     🖨 Statement
                   </Btn>
                   {canRemind && f.phone && (
-                    <a href={smsLink(f.phone, smsBody)} title="Text the balance reminder">
-                      <Btn size="sm" kind="ghost">📱 Text</Btn>
-                    </a>
+                    <LinkBtn href={smsLink(f.phone, smsBody)} kind="ghost" title="Text the balance reminder">
+                      📱 Text
+                    </LinkBtn>
                   )}
                   {canRemind && f.email && settings && (
-                    <a href={mailtoLink(f.email, settings.emailSubject, emailBody)} title="Email the balance reminder">
-                      <Btn size="sm" kind="ghost">✉️ Email</Btn>
-                    </a>
+                    <LinkBtn
+                      href={mailtoLink(f.email, settings.emailSubject, emailBody)}
+                      kind="ghost"
+                      title="Email the balance reminder"
+                    >
+                      ✉️ Email
+                    </LinkBtn>
                   )}
                 </div>
               </Card>

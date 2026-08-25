@@ -196,6 +196,63 @@ export function Btn({
   );
 }
 
+/** A link that looks and behaves like a Btn.
+ *
+ *  Text/email actions are real navigations (sms:, mailto:), so they must
+ *  be anchors — and an anchor must never wrap a <button>: nested
+ *  interactive elements break keyboard tabbing and read as two separate
+ *  controls to a screen reader. This gives the anchor the button's look. */
+export function LinkBtn({
+  children,
+  href,
+  onClick,
+  kind = 'primary',
+  size = 'sm',
+  title,
+  style,
+}: {
+  children: ReactNode;
+  href: string;
+  onClick?: () => void;
+  kind?: 'primary' | 'accent' | 'soft' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  title?: string;
+  style?: CSSProperties;
+}) {
+  const kinds: Record<string, CSSProperties> = {
+    primary: { background: B.primary, color: '#fff' },
+    accent: { background: B.accent, color: '#fff' },
+    soft: { background: B.primarySoft, color: B.primaryDeep },
+    ghost: { background: 'transparent', color: B.inkSoft, border: `1.5px solid ${B.rule}` },
+    danger: { background: B.redSoft, color: B.red },
+  };
+  const sizes: Record<string, CSSProperties> = {
+    sm: { fontSize: '0.78rem', padding: '6px 13px' },
+    md: { fontSize: '0.86rem', padding: '9px 18px' },
+    lg: { fontSize: '0.95rem', padding: '12px 24px' },
+  };
+  return (
+    <a
+      href={href}
+      title={title}
+      onClick={onClick}
+      style={{
+        ...btnBase,
+        ...kinds[kind],
+        ...sizes[size],
+        textDecoration: 'none',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        ...style,
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 // ── Chips & badges ────────────────────────────────────────────────────
 
 export function Chip({
@@ -248,7 +305,7 @@ export function AllergyBadge({ allergies }: { allergies: string | null | undefin
   if (!allergies?.trim()) return null;
   return (
     <Chip tone="red" style={{ border: `1px dashed ${B.red}` }} >
-      ⚠ {allergies.length > 34 ? allergies.slice(0, 32) + '…' : allergies}
+      ⚠️ {allergies.length > 34 ? allergies.slice(0, 32) + '…' : allergies}
     </Chip>
   );
 }

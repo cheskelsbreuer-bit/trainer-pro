@@ -9,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
 import { B, readParent } from '../theme';
 import { smsLink, mailtoLink, familySummary } from '../lib/messages';
+import { useDemo } from '../demo/flag';
 import { Btn } from './ui';
 
 function makeToken(): string {
@@ -27,6 +28,7 @@ function inviteOrigin(): string {
 
 export function InviteParentButton({ kids }: { kids: Client[] }) {
   const { user } = useAuth();
+  const demo = useDemo();
   const [state, setState] = useState<'idle' | 'busy' | 'ready' | 'copied' | 'error'>('idle');
   const [link, setLink] = useState<string | null>(null);
 
@@ -35,10 +37,18 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
   const parent = fam.parentName || (firstKid ? readParent(firstKid) : '') || 'there';
 
   async function createInvite() {
-    if (!user || !firstKid) return;
+    if (!firstKid) return;
     setState('busy');
     try {
       const token = makeToken();
+      if (demo) {
+        // No database in the demo — but the link, the text, and the email
+        // are built exactly as they are for a real sitter.
+        setLink(`${CANONICAL_ORIGIN}/portal-join/${token}`);
+        setState('ready');
+        return;
+      }
+      if (!user) return;
       const { error } = await supabase.from('client_portal_invites').insert({
         trainer_id: user.id,
         client_id: firstKid.id,

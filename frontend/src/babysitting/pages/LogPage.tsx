@@ -15,7 +15,7 @@ const CATEGORIES: Array<{ key: LogEntry['category']; emoji: string; label: strin
   { key: 'kid', emoji: '🧸', label: 'Kids', tone: 'primary' },
   { key: 'payment', emoji: '💛', label: 'Payments', tone: 'green' },
   { key: 'charge', emoji: '🧾', label: 'Charges', tone: 'butter' },
-  { key: 'away', emoji: '⏸', label: 'Away', tone: 'plum' },
+  { key: 'away', emoji: '⏸️', label: 'Away', tone: 'plum' },
   { key: 'settings', emoji: '⚙️', label: 'Settings', tone: 'neutral' },
   { key: 'message', emoji: '✉️', label: 'Messages', tone: 'accent' },
 ];

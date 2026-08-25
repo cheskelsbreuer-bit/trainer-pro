@@ -80,7 +80,9 @@ const LEVEL_RANK: Record<Level, number> = { simple: 0, standard: 1, pro: 2 };
 export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const [rawEditMode, setEditMode] = useEditMode();
   const demo = useDemo();
-  const editMode = demo ? false : rawEditMode;
+  // The demo is a real working app with a memory-only database, so editing
+  // is ON from the first second — every button does the real thing.
+  const editMode = demo ? true : rawEditMode;
   const navigate = useNavigate();
   const cfg = useBabysittingConfig();
   const name = trainer?.business_name || trainer?.full_name || 'Babysitting';
@@ -263,23 +265,48 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
               color: B.ink,
             }}
           >
-            <span>👋 You're looking at a <b>demo</b> with sample kids — browse every tab freely. This is what YOUR app looks like.</span>
-            <a
-              href="https://www.trainerpro.coach"
-              onClick={() => setDemoActive(false)}
-              style={{
-                marginLeft: 'auto',
-                background: B.primary,
-                color: '#fff',
-                textDecoration: 'none',
-                borderRadius: B.pill,
-                padding: '7px 16px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-              }}
-            >
-              Get your own →
-            </a>
+            <span>
+              👋 <b>This is a live demo</b> — everything works. Record a payment, text a
+              parent, add a child; it all really happens. The sample family lives only in
+              this browser, so nothing you do here can break anything. Refresh to start over.
+            </span>
+            <span style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={async () => {
+                  const { resetDemo } = await import('../demo/demoStore');
+                  resetDemo();
+                  window.location.reload();
+                }}
+                style={{
+                  border: `1.5px solid ${B.butter}`,
+                  background: 'transparent',
+                  color: B.inkSoft,
+                  cursor: 'pointer',
+                  borderRadius: B.pill,
+                  padding: '7px 13px',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                }}
+              >
+                ↺ Start over
+              </button>
+              <a
+                href="https://www.trainerpro.coach"
+                onClick={() => setDemoActive(false)}
+                style={{
+                  background: B.primary,
+                  color: '#fff',
+                  textDecoration: 'none',
+                  borderRadius: B.pill,
+                  padding: '7px 16px',
+                  fontWeight: 800,
+                  fontSize: '0.8rem',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Get your own →
+              </a>
+            </span>
           </div>
         </div>
       )}

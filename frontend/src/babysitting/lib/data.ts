@@ -18,7 +18,15 @@ import {
   tagsAfterPaymentDeleted,
 } from '../theme';
 import { useDemo } from '../demo/flag';
-import { DEMO_KIDS, DEMO_PAYMENTS } from '../demo/demoData';
+import {
+  demoKids,
+  demoPayments,
+  demoAddPayment,
+  demoDeletePayment,
+  demoSetKidTags,
+  demoSetKidStatus,
+  demoUpsertKid,
+} from '../demo/demoStore';
 
 /** Marker tag that stamps a clients row as a babysitting kid. */
 export const KID_MARKER = 'bs:1';
@@ -30,7 +38,7 @@ export function useKids() {
   return useQuery({
     queryKey: ['babysitting-kids', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<Client[]> => {
-      if (demo) return DEMO_KIDS;
+      if (demo) return demoKids();
       const { data, error } = await supabase
         .from('clients')
         .select('*')
@@ -51,7 +59,7 @@ export function usePayments() {
   return useQuery({
     queryKey: ['babysitting-payments', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<Payment[]> => {
-      if (demo) return DEMO_PAYMENTS;
+      if (demo) return demoPayments();
       const { data, error } = await supabase
         .from('payments')
         .select('*')
@@ -85,7 +93,11 @@ export function useRecordPayment() {
       description?: string | null;
       currentTags: string[];
     }) => {
-      if (demo) return;
+      if (demo) {
+        demoAddPayment(input);
+        demoSetKidTags(input.client_id, tagsAfterPayment(input.currentTags, input.amount));
+        return;
+      }
       if (!user) throw new Error('Not signed in');
       const { error: payErr } = await supabase.from('payments').insert({
         trainer_id: user.id,
@@ -119,7 +131,11 @@ export function useDeletePayment() {
       amount: number;
       currentTags: string[];
     }) => {
-      if (demo) return;
+      if (demo) {
+        demoDeletePayment(input.id);
+        demoSetKidTags(input.client_id, tagsAfterPaymentDeleted(input.currentTags, input.amount));
+        return;
+      }
       const { error } = await supabase.from('payments').delete().eq('id', input.id);
       if (error) throw error;
       const { error: cliErr } = await supabase
@@ -144,7 +160,10 @@ export function useAddCharge() {
       amount: number;
       currentTags: string[];
     }) => {
-      if (demo) return;
+      if (demo) {
+        demoSetKidTags(input.client_id, tagsAfterCharge(input.currentTags, input.amount));
+        return;
+      }
       const { error } = await supabase
         .from('clients')
         .update({ tags: tagsAfterCharge(input.currentTags, input.amount) })
@@ -174,11 +193,11 @@ export function useUpsertKid() {
       tags: string[];
       status?: 'active' | 'paused' | 'archived';
     }) => {
-      if (demo) return 'demo';
-      if (!user) throw new Error('Not signed in');
       const tags = input.tags.includes(KID_MARKER)
         ? input.tags
         : [KID_MARKER, ...input.tags];
+      if (demo) return demoUpsertKid({ ...input, tags });
+      if (!user) throw new Error('Not signed in');
       const row = {
         full_name: input.full_name,
         phone: input.phone ?? null,
@@ -213,7 +232,10 @@ export function useSetKidTags() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; tags: string[] }) => {
-      if (demo) return;
+      if (demo) {
+        demoSetKidTags(input.id, input.tags);
+        return;
+      }
       const { error } = await supabase.from('clients').update({ tags: input.tags }).eq('id', input.id);
       if (error) throw error;
     },
@@ -228,7 +250,10 @@ export function useDeleteGhostPayment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string }) => {
-      if (demo) return;
+      if (demo) {
+        demoDeletePayment(input.id);
+        return;
+      }
       const { error } = await supabase.from('payments').delete().eq('id', input.id);
       if (error) throw error;
     },
@@ -241,7 +266,10 @@ export function useSetKidStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; status: 'active' | 'paused' | 'archived' }) => {
-      if (demo) return;
+      if (demo) {
+        demoSetKidStatus(input.id, input.status);
+        return;
+      }
       const { error } = await supabase
         .from('clients')
         .update({ status: input.status })

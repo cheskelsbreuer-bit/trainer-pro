@@ -8,6 +8,7 @@ import { api } from '../../lib/api';
 import { readBalance, readFamilySlug, familyLabel, readWeeklyRate, formatMoney } from '../theme';
 import { useRecordPayment, useKids, usePayments } from '../lib/data';
 import { useBabysittingConfig, appendLog } from '../lib/config';
+import { useDemo } from '../demo/flag';
 import { Modal, Field, inputStyle, Btn, Chip } from './ui';
 
 export function PaymentModal({
@@ -21,6 +22,7 @@ export function PaymentModal({
   const { data: recentPayments } = usePayments();
   const record = useRecordPayment();
   const cfg = useBabysittingConfig();
+  const demo = useDemo();
 
   const active = useMemo(
     () => (kids ?? []).filter((k) => k.status !== 'archived'),
@@ -84,7 +86,7 @@ export function PaymentModal({
         );
         // Thank-you receipt to the parent — fire and forget; a receipt
         // hiccup must never block or fail the recorded payment.
-        if (cfg.data.settings.receipts.enabled) {
+        if (cfg.data.settings.receipts.enabled && !demo) {
           void api('/reminders/payment-receipt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

@@ -6,8 +6,11 @@ import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
-import { B, ALL_DAYS, DAY_SHORT, formatMoney } from '../theme';
-import { useBabysittingConfig, appendLog } from '../lib/config';
+import { B, ALL_DAYS, DAY_SHORT, formatMoney, readWeeklyRate, readFamilySlug, tagsAfterCharge } from '../theme';
+import { useBabysittingConfig, appendLog, appendCharge } from '../lib/config';
+import { useKids } from '../lib/data';
+import { useDemo } from '../demo/flag';
+import { demoSetKidTags } from '../demo/demoStore';
 import { Card, SectionTitle, Btn, Chip } from './ui';
 
 interface BillingRunResult {
@@ -24,6 +27,8 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 export function AutoBillingCard() {
   const { editMode } = useOutletContext<{ editMode: boolean }>();
   const cfg = useBabysittingConfig();
+  const demo = useDemo();
+  const { data: kids } = useKids();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<BillingRunResult | null>(null);
@@ -42,6 +47,57 @@ export function AutoBillingCard() {
     setBusy(true);
     setErr('');
     setResult(null);
+    // The demo bills for real — against its in-memory books — using the
+    // same rules the server uses: active kids only, away kids skipped,
+    // sibling discount on the 2nd+ child in a family.
+    if (demo) {
+      await new Promise((r) => setTimeout(r, 650));
+      const awayIds = new Set((cfg.data?.away ?? []).filter((a) => !a.endedAt).map((a) => a.clientId));
+      const fd = cfg.data?.settings.familyDiscount;
+      const seenInFamily = new Map<string, number>();
+      const lines: Array<{ kid: string; amount: number; discounted: boolean; id: string; tags: string[]; slug: string }> = [];
+      for (const k of (kids ?? []).filter((k) => k.status === 'active' && !awayIds.has(k.id))) {
+        const rate = readWeeklyRate(k);
+        if (!rate) continue;
+        const slug = readFamilySlug(k) || `solo-${k.id}`;
+        const nth = seenInFamily.get(slug) ?? 0;
+        seenInFamily.set(slug, nth + 1);
+        const discounted = !!fd?.enabled && nth > 0;
+        const amount = discounted
+          ? fd!.type === 'percent'
+            ? Math.round(rate * (1 - fd!.value / 100) * 100) / 100
+            : Math.max(0, rate - fd!.value)
+          : rate;
+        lines.push({ kid: k.full_name, amount, discounted, id: k.id, tags: k.tags ?? [], slug });
+      }
+      const total = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100) / 100;
+      setResult({
+        dry_run: dryRun,
+        would_bill: lines.map((l) => ({ kid: l.kid, amount: l.amount, discounted: l.discounted })),
+        total,
+        billed_kids: lines.length,
+      });
+      if (!dryRun && cfg.data) {
+        let next = cfg.data;
+        for (const l of lines) {
+          demoSetKidTags(l.id, tagsAfterCharge(l.tags, l.amount));
+          next = appendCharge(next, {
+            clientId: l.id,
+            kidName: l.kid,
+            familySlug: l.slug,
+            amount: l.amount,
+            kind: 'week',
+            note: l.discounted ? 'auto (sibling discount)' : 'auto',
+          });
+        }
+        cfg.save.mutate(
+          appendLog(next, 'charge', `Auto-billed the week: ${formatMoney(total)} across ${lines.length} kids`, 'automatic weekly billing'),
+        );
+        qc.invalidateQueries({ queryKey: ['babysitting-kids'] });
+      }
+      setBusy(false);
+      return;
+    }
     try {
       const res = await api<BillingRunResult>('/billing/run-weekly', {
         method: 'POST',
@@ -150,7 +206,7 @@ export function AutoBillingCard() {
             <div style={{ fontWeight: 800 }}>
               ✅ Billed {formatMoney(result.total ?? 0)} across {result.billed_kids ?? 0} kids.
               {(result.errors ?? []).map((e, i) => (
-                <div key={i} style={{ color: B.red, fontWeight: 600, fontSize: '0.83rem' }}>⚠ {e}</div>
+                <div key={i} style={{ color: B.red, fontWeight: 600, fontSize: '0.83rem' }}>⚠️ {e}</div>
               ))}
             </div>
           )}

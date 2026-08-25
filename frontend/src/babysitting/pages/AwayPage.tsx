@@ -119,12 +119,12 @@ export function AwayPage() {
         right={
           editMode ? (
             <Btn size="sm" kind="soft" onClick={() => { setErr(''); setShowMarkAway(true); }}>
-              ⏸ Mark someone away
+              ⏸️ Mark someone away
             </Btn>
           ) : undefined
         }
       >
-        ⏸ Away right now
+        ⏸️ Away right now
       </SectionTitle>
 
       {paused.length ? (
@@ -165,7 +165,7 @@ export function AwayPage() {
                 {editMode && (
                   <div style={{ marginTop: 12 }}>
                     <Btn size="sm" kind="accent" onClick={() => markReturned(k)} disabled={setStatus.isPending}>
-                      ▶ Mark returned
+                      ▶️ Mark returned
                     </Btn>
                   </div>
                 )}
@@ -214,7 +214,7 @@ export function AwayPage() {
       </div>
 
       {showMarkAway && (
-        <Modal title="⏸ Mark someone away" onClose={() => setShowMarkAway(false)}>
+        <Modal title="⏸️ Mark someone away" onClose={() => setShowMarkAway(false)}>
           <Field label="Kid" hint="They'll stop counting as in care until they're back.">
             <select style={inputStyle} value={awayKidId} onChange={(e) => setAwayKidId(e.target.value)} autoFocus>
               <option value="">Pick a kid…</option>
@@ -241,7 +241,7 @@ export function AwayPage() {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <Btn kind="ghost" onClick={() => setShowMarkAway(false)}>Cancel</Btn>
             <Btn onClick={markAway} disabled={saving}>
-              {saving ? 'Saving…' : '⏸ Mark away'}
+              {saving ? 'Saving…' : '⏸️ Mark away'}
             </Btn>
           </div>
         </Modal>

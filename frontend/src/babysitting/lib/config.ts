@@ -209,8 +209,8 @@ export function useBabysittingConfig() {
     queryKey: ['babysitting-config', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<BabysittingConfig> => {
       if (demo) {
-        const { DEMO_CONFIG } = await import('../demo/demoData');
-        return DEMO_CONFIG;
+        const { demoConfig } = await import('../demo/demoStore');
+        return demoConfig();
       }
       const { data, error } = await supabase
         .from('trainers')
@@ -226,7 +226,13 @@ export function useBabysittingConfig() {
 
   const save = useMutation({
     mutationFn: async (next: BabysittingConfig) => {
-      if (demo) return; // the demo never writes anywhere
+      if (demo) {
+        // The demo saves to memory, so her settings changes stick while
+        // she plays — and reset on refresh. Nothing leaves the browser.
+        const { setDemoConfig } = await import('../demo/demoStore');
+        setDemoConfig(next);
+        return;
+      }
       if (!user) throw new Error('Not signed in');
       // Re-fetch the latest profile so sibling keys (appearance, modules,
       // other verticals) are never clobbered by our write.

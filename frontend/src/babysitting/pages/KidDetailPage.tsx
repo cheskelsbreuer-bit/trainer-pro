@@ -285,7 +285,7 @@ export function KidDetailPage() {
                   <Chip tone="primary">👨‍👩‍👧 {familyLabel(famSlug)}</Chip>
                 </Link>
               )}
-              {kid.status === 'paused' && <Chip tone="plum">⏸ Away right now</Chip>}
+              {kid.status === 'paused' && <Chip tone="plum">⏸️ Away right now</Chip>}
               {(cfg.data?.kidTags ?? [])
                 .filter((tg) => readKidTagIds(kid).includes(tg.id))
                 .map((tg) => (
@@ -367,7 +367,7 @@ export function KidDetailPage() {
                   marginBottom: 6,
                 }}
               >
-                ⚠ Allergies
+                ⚠️ Allergies
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: B.ink, lineHeight: 1.45 }}>
                 {kid.medical_notes}
@@ -424,12 +424,12 @@ export function KidDetailPage() {
             </Btn>
             {kid.status === 'active' && (
               <Btn size="sm" kind="ghost" onClick={markAway} disabled={busy}>
-                ⏸ Mark away
+                ⏸️ Mark away
               </Btn>
             )}
             {kid.status === 'paused' && (
               <Btn size="sm" kind="accent" onClick={markReturned} disabled={busy}>
-                ▶ Mark returned
+                ▶️ Mark returned
               </Btn>
             )}
             {kid.status !== 'archived' && (

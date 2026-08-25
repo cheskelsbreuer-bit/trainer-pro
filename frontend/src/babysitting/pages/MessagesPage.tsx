@@ -21,7 +21,8 @@ import {
   type BabysittingConfig,
 } from '../lib/config';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
-import { Card, SectionTitle, Btn, Chip, EmptyState, Field, inputStyle } from '../components/ui';
+import { useDemo } from '../demo/flag';
+import { Card, SectionTitle, Btn, LinkBtn, Chip, EmptyState, Field, inputStyle } from '../components/ui';
 
 interface RunFamily {
   slug: string;
@@ -61,6 +62,7 @@ function todayKey(): string {
 export function MessagesPage() {
   const { editMode } = useOutletContext<{ editMode: boolean }>();
   const { user } = useAuth();
+  const demo = useDemo();
   const { data: kids } = useKids();
   const cfg = useBabysittingConfig();
   const settings = cfg.data?.settings ?? DEFAULT_SETTINGS;
@@ -126,9 +128,15 @@ export function MessagesPage() {
   const [announceBusy, setAnnounceBusy] = useState(false);
   const [announceErr, setAnnounceErr] = useState('');
 
+  // Announcements the demo has posted this session (memory only).
+  const [demoAnnouncements, setDemoAnnouncements] = useState<
+    Array<{ id: string; body: string; created_at: string }>
+  >([]);
+
   const announcements = useQuery({
-    queryKey: ['babysitting-announcements', user?.id],
+    queryKey: ['babysitting-announcements', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<Array<{ id: string; body: string; created_at: string }>> => {
+      if (demo) return demoAnnouncements;
       const { data, error } = await supabase
         .from('messages')
         .select('id, body, created_at')
@@ -147,12 +155,26 @@ export function MessagesPage() {
       }
       return out;
     },
-    enabled: !!user,
+    enabled: demo || !!user,
   });
+
+  // The demo's posts live in component state; the real app's come from
+  // the messages table.
+  const postedAnnouncements = demo ? demoAnnouncements : announcements.data ?? [];
 
   async function postAnnouncement() {
     const body = announceText.trim();
-    if (!body || !user) return;
+    if (!body) return;
+    if (demo) {
+      setDemoAnnouncements((prev) => [
+        { id: `demo-ann-${Date.now()}`, body, created_at: new Date().toISOString() },
+        ...prev,
+      ]);
+      setAnnounceText('');
+      saveConfig((c) => c, `Posted to all parents: "${body.slice(0, 60)}"`);
+      return;
+    }
+    if (!user) return;
     if (!allFamilies.length) {
       setAnnounceErr('Add kids first — there is nobody to post to yet.');
       return;
@@ -179,8 +201,9 @@ export function MessagesPage() {
   }
 
   const history = useQuery({
-    queryKey: ['babysitting-reminder-runs', user?.id],
+    queryKey: ['babysitting-reminder-runs', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<ReminderRunRow[]> => {
+      if (demo) return [];
       const { data, error } = await supabase
         .from('activity_log')
         .select('id, created_at, details')
@@ -191,7 +214,7 @@ export function MessagesPage() {
       if (error) throw error;
       return (data ?? []) as ReminderRunRow[];
     },
-    enabled: !!user,
+    enabled: demo || !!user,
   });
 
   function saveConfig(mutate: (c: BabysittingConfig) => BabysittingConfig, logMsg?: string) {
@@ -231,6 +254,30 @@ export function MessagesPage() {
     setBusy(true);
     setRunErr('');
     setRunResult(null);
+    // In the demo there is no server and no real inbox, so the run is
+    // computed right here from the same families and templates the real
+    // one uses — she sees exactly what would go out.
+    if (demo) {
+      await new Promise((r) => setTimeout(r, 650));
+      const withEmail = runFamilies.filter((f) => f.email);
+      setRunResult({
+        dry_run: dryRun,
+        families: runFamilies.map((f) => ({
+          label: f.label,
+          balance: f.balance,
+          phone: f.phone,
+          email: f.email,
+          sms_body: fillTemplate(settings.smsTemplate, f, settings),
+        })),
+        sent_email: dryRun ? 0 : withEmail.length,
+        sent_sms: 0,
+      });
+      if (!dryRun) {
+        saveConfig((c) => c, `Automatic run: ${withEmail.length} emails, 0 texts`);
+      }
+      setBusy(false);
+      return;
+    }
     try {
       const res = await api<DryRunResult>('/reminders/weekly-balances', {
         method: 'POST',
@@ -324,18 +371,23 @@ export function MessagesPage() {
                     <Chip tone="red">{formatMoney(f.balance)} owed</Chip>
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {f.phone && (
-                        <a href={smsLink(f.phone, smsBody)} style={{ textDecoration: 'none' }} onClick={() => markSent(f.slug, true)}>
-                          <Btn size="sm">📱 Text</Btn>
-                        </a>
+                        <LinkBtn
+                          href={smsLink(f.phone, smsBody)}
+                          onClick={() => markSent(f.slug, true)}
+                          title={`Text ${f.parentName || 'the parent'}`}
+                        >
+                          📱 Text
+                        </LinkBtn>
                       )}
                       {f.email && (
-                        <a
+                        <LinkBtn
                           href={mailtoLink(f.email, settings.emailSubject, emailBody)}
-                          style={{ textDecoration: 'none' }}
+                          kind="accent"
                           onClick={() => markSent(f.slug, true)}
+                          title={`Email ${f.parentName || 'the parent'}`}
                         >
-                          <Btn size="sm" kind="accent">✉️ Email</Btn>
-                        </a>
+                          ✉️ Email
+                        </LinkBtn>
                       )}
                       <Btn
                         size="sm"
@@ -552,7 +604,7 @@ export function MessagesPage() {
                 {(runResult.errors ?? []).length > 0 && (
                   <div style={{ fontWeight: 600, color: B.red, fontSize: '0.83rem', marginTop: 6 }}>
                     {(runResult.errors ?? []).map((e, i) => (
-                      <div key={i}>⚠ {e}</div>
+                      <div key={i}>⚠️ {e}</div>
                     ))}
                   </div>
                 )}
@@ -615,9 +667,9 @@ export function MessagesPage() {
           </div>
         )}
         {announceErr && <Chip tone="red" style={{ marginBottom: 10 }}>{announceErr}</Chip>}
-        {announcements.data?.length ? (
+        {postedAnnouncements.length ? (
           <div style={{ display: 'grid', gap: 8 }}>
-            {announcements.data.map((a) => (
+            {postedAnnouncements.map((a) => (
               <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'baseline', fontSize: '0.87rem' }}>
                 <span style={{ color: B.mute, fontSize: '0.76rem', minWidth: 90 }}>{shortDate(a.created_at)}</span>
                 <span>{a.body}</span>

@@ -34,6 +34,7 @@ import {
   TableWrap,
   Th,
   Td,
+  LinkBtn,
 } from '../components/ui';
 import { PaymentModal } from '../components/PaymentModal';
 import { KidModal } from '../components/KidModal';
@@ -212,7 +213,7 @@ export function DashboardPage() {
                       )}
                     </div>
                     {k.medical_notes?.trim() && (
-                      <div style={{ fontSize: '0.68rem', color: B.red, fontWeight: 800 }}>⚠ {k.medical_notes}</div>
+                      <div style={{ fontSize: '0.68rem', color: B.red, fontWeight: 800 }}>⚠️ {k.medical_notes}</div>
                     )}
                   </div>
                 </div>
@@ -282,14 +283,18 @@ export function DashboardPage() {
                     <Td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: 6 }}>
                         {f.phone && settings && (
-                          <a href={smsLink(f.phone, smsBody)} title="Text the balance">
-                            <Btn size="sm" kind="soft">📱 Text</Btn>
-                          </a>
+                          <LinkBtn href={smsLink(f.phone, smsBody)} kind="soft" title={`Text ${f.parentName || 'the parent'} their balance`}>
+                            📱 Text
+                          </LinkBtn>
                         )}
                         {f.email && settings && (
-                          <a href={mailtoLink(f.email, settings.emailSubject, emailBody)} title="Email the balance">
-                            <Btn size="sm" kind="ghost">✉️ Email</Btn>
-                          </a>
+                          <LinkBtn
+                            href={mailtoLink(f.email, settings.emailSubject, emailBody)}
+                            kind="ghost"
+                            title={`Email ${f.parentName || 'the parent'} their balance`}
+                          >
+                            ✉️ Email
+                          </LinkBtn>
                         )}
                         {editMode && (
                           <Btn
@@ -362,7 +367,7 @@ export function DashboardPage() {
       {away.length > 0 && (
         <Card>
           <SectionTitle right={<Link to="/away" style={{ fontSize: '0.76rem', fontWeight: 800, color: B.primaryDeep, textDecoration: 'none' }}>Manage →</Link>}>
-            ⏸ Away right now
+            ⏸️ Away right now
           </SectionTitle>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {away.map((k) => (
