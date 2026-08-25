@@ -36,6 +36,27 @@ export interface BabysittingSettings {
   mutedFamilies: string[]; // family slugs left out of reminder runs
   gmail: GmailSending;
   receipts: ReceiptSettings;
+  appLevel: 'simple' | 'standard' | 'pro'; // how much of the app shows
+  editPin: string; // '' = no PIN; otherwise 4 digits asked before editing
+  readOnlyLock: boolean; // true = editing can't be turned on at all
+  paymentMethods: string[]; // her own list of how people pay
+}
+
+export interface CustomFieldDef {
+  id: string;
+  label: string; // e.g. "Doctor", "Pickup password", "Nap schedule"
+}
+
+export interface KidTagDef {
+  id: string;
+  label: string; // e.g. "New", "Potty training"
+  color: string; // hex
+}
+
+export interface ClosureDay {
+  id: string;
+  date: string; // YYYY-MM-DD
+  name: string; // e.g. "Pesach", "Vacation"
 }
 
 /** Which families were already handled in today's manual Thursday Run. */
@@ -95,6 +116,9 @@ export interface BabysittingConfig {
   charges: ChargeEntry[]; // newest first, capped
   away: AwayRecord[];
   bin: BinEntry[]; // newest first, capped 50
+  customFields: CustomFieldDef[];
+  kidTags: KidTagDef[];
+  closures: ClosureDay[];
   runState?: RunState;
 }
 
@@ -115,6 +139,10 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
     template:
       'Hi {parent}! Received {currency}{amount} — thank you! The balance for {kids} is now {currency}{balance}.',
   },
+  appLevel: 'standard',
+  editPin: '',
+  readOnlyLock: false,
+  paymentMethods: ['cash', 'check', 'zelle', 'venmo', 'other'],
 };
 
 const LOG_CAP = 300;
@@ -127,6 +155,11 @@ function hydrate(raw: unknown): BabysittingConfig {
   s.gmail = { ...DEFAULT_SETTINGS.gmail, ...(r.settings?.gmail ?? {}) };
   s.receipts = { ...DEFAULT_SETTINGS.receipts, ...(r.settings?.receipts ?? {}) };
   s.mutedFamilies = Array.isArray(r.settings?.mutedFamilies) ? r.settings!.mutedFamilies : [];
+  s.paymentMethods =
+    Array.isArray(r.settings?.paymentMethods) && r.settings!.paymentMethods.length
+      ? r.settings!.paymentMethods
+      : DEFAULT_SETTINGS.paymentMethods;
+  if (!['simple', 'standard', 'pro'].includes(s.appLevel)) s.appLevel = 'standard';
   return {
     version: typeof r.version === 'number' ? r.version : 1,
     settings: s,
@@ -134,6 +167,9 @@ function hydrate(raw: unknown): BabysittingConfig {
     charges: Array.isArray(r.charges) ? r.charges : [],
     away: Array.isArray(r.away) ? r.away : [],
     bin: Array.isArray(r.bin) ? r.bin : [],
+    customFields: Array.isArray(r.customFields) ? r.customFields : [],
+    kidTags: Array.isArray(r.kidTags) ? r.kidTags : [],
+    closures: Array.isArray(r.closures) ? r.closures : [],
     runState: r.runState,
   };
 }

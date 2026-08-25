@@ -10,8 +10,6 @@ import { useRecordPayment, useKids, usePayments } from '../lib/data';
 import { useBabysittingConfig, appendLog } from '../lib/config';
 import { Modal, Field, inputStyle, Btn, Chip } from './ui';
 
-const METHODS = ['cash', 'check', 'zelle', 'venmo', 'other'] as const;
-
 export function PaymentModal({
   kid,
   onClose,
@@ -31,6 +29,7 @@ export function PaymentModal({
   const [kidId, setKidId] = useState(kid?.id ?? '');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const methods = cfg.data?.settings.paymentMethods ?? ['cash', 'check', 'zelle', 'venmo', 'other'];
   const [method, setMethod] = useState<string>('cash');
   const [note, setNote] = useState('');
   const [err, setErr] = useState('');
@@ -141,7 +140,7 @@ export function PaymentModal({
       </div>
       <Field label="How they paid">
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {METHODS.map((m) => (
+          {methods.map((m) => (
             <button
               key={m}
               type="button"

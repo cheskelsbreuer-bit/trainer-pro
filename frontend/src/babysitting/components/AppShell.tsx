@@ -10,6 +10,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 import { B } from '../theme';
+import { useBabysittingConfig } from '../lib/config';
 
 // ── Edit mode — a deliberate switch so day-to-day browsing can't
 //    accidentally change money. Shared across pages via localStorage +
@@ -52,14 +53,18 @@ export function useEditMode(): [boolean, (v: boolean) => void] {
   return [on, set];
 }
 
-const NAV: Array<{ to: string; label: string; emoji: string; end?: boolean }> = [
-  { to: '/', label: 'Home', emoji: '🏡', end: true },
-  { to: '/kids', label: 'Kids', emoji: '🧸' },
-  { to: '/families', label: 'Families', emoji: '👨‍👩‍👧' },
-  { to: '/billing', label: 'Billing', emoji: '💛' },
-  { to: '/messages', label: 'Messages', emoji: '✉️' },
-  { to: '/reports', label: 'Reports', emoji: '📈' },
-  { to: '/settings', label: 'Settings', emoji: '⚙️' },
+type Level = 'simple' | 'standard' | 'pro';
+
+// minLevel: 'simple' shows everywhere; 'standard' hides in Simple mode;
+// 'pro' shows only in Pro. Simple mode = Home, Kids, Messages, Settings.
+const NAV: Array<{ to: string; label: string; emoji: string; end?: boolean; minLevel: Level }> = [
+  { to: '/', label: 'Home', emoji: '🏡', end: true, minLevel: 'simple' },
+  { to: '/kids', label: 'Kids', emoji: '🧸', minLevel: 'simple' },
+  { to: '/families', label: 'Families', emoji: '👨‍👩‍👧', minLevel: 'standard' },
+  { to: '/billing', label: 'Billing', emoji: '💛', minLevel: 'standard' },
+  { to: '/messages', label: 'Messages', emoji: '✉️', minLevel: 'simple' },
+  { to: '/reports', label: 'Reports', emoji: '📈', minLevel: 'pro' },
+  { to: '/settings', label: 'Settings', emoji: '⚙️', minLevel: 'simple' },
 ];
 
 const QUIET_NAV: Array<{ to: string; label: string }> = [
@@ -68,10 +73,34 @@ const QUIET_NAV: Array<{ to: string; label: string }> = [
   { to: '/log', label: 'Log' },
 ];
 
+const LEVEL_RANK: Record<Level, number> = { simple: 0, standard: 1, pro: 2 };
+
 export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const [editMode, setEditMode] = useEditMode();
   const navigate = useNavigate();
+  const cfg = useBabysittingConfig();
   const name = trainer?.business_name || trainer?.full_name || 'Babysitting';
+  const level: Level = cfg.data?.settings.appLevel ?? 'standard';
+  const nav = NAV.filter((n) => LEVEL_RANK[n.minLevel] <= LEVEL_RANK[level]);
+  const showQuiet = level === 'pro';
+
+  function toggleEdit() {
+    const s = cfg.data?.settings;
+    if (!editMode) {
+      if (s?.readOnlyLock) {
+        window.alert('Editing is locked. Turn off the read-only lock in Settings first.');
+        return;
+      }
+      if (s?.editPin) {
+        const entered = window.prompt('Enter the 4-digit editing PIN:') ?? '';
+        if (entered !== s.editPin) {
+          if (entered) window.alert('Wrong PIN.');
+          return;
+        }
+      }
+    }
+    setEditMode(!editMode);
+  }
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -125,7 +154,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
 
           {/* Primary nav */}
           <nav style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-            {NAV.map((n) => (
+            {nav.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
@@ -150,7 +179,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
 
           {/* Quiet links + edit switch + sign out */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {QUIET_NAV.map((n) => (
+            {showQuiet && QUIET_NAV.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
@@ -168,7 +197,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
               </NavLink>
             ))}
             <button
-              onClick={() => setEditMode(!editMode)}
+              onClick={toggleEdit}
               title={editMode ? 'Editing is ON — changes allowed' : 'Editing is OFF — browsing is safe'}
               style={{
                 border: 'none',

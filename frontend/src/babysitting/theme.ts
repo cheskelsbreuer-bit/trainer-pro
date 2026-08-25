@@ -252,6 +252,41 @@ export function tagsAfterPaymentDeleted(prev: string[], amount: number): string[
   return tagsAfterPayment(prev, -amount);
 }
 
+// ── Custom fields + kid tags (cf:<fieldId>:<value> / ktag:<tagId>) ────
+const CF_PREFIX = 'cf:';
+const KTAG_PREFIX = 'ktag:';
+
+/** Read all custom-field values on a kid: { fieldId: value }. */
+export function readCustomValues(c: Client): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const t of c.tags ?? []) {
+    if (!t.startsWith(CF_PREFIX)) continue;
+    const rest = t.slice(CF_PREFIX.length);
+    const idx = rest.indexOf(':');
+    if (idx > 0) out[rest.slice(0, idx)] = rest.slice(idx + 1);
+  }
+  return out;
+}
+
+/** Read the tag ids applied to a kid. */
+export function readKidTagIds(c: Client): string[] {
+  return (c.tags ?? []).filter((t) => t.startsWith(KTAG_PREFIX)).map((t) => t.slice(KTAG_PREFIX.length));
+}
+
+/** Rewrite the cf:/ktag: entries, preserving everything else. */
+export function tagsWithCustom(
+  prev: string[] | null | undefined,
+  cfValues: Record<string, string>,
+  tagIds: string[],
+): string[] {
+  const kept = (prev ?? []).filter((t) => !t.startsWith(CF_PREFIX) && !t.startsWith(KTAG_PREFIX));
+  const cf = Object.entries(cfValues)
+    .filter(([, v]) => v.trim() !== '')
+    .map(([id, v]) => `${CF_PREFIX}${id}:${v.trim()}`);
+  const kt = tagIds.map((id) => `${KTAG_PREFIX}${id}`);
+  return [...kept, ...cf, ...kt];
+}
+
 /** Repair tool: set the money totals outright (balance recomputed). */
 export function tagsWithMoney(
   prev: string[] | null | undefined,

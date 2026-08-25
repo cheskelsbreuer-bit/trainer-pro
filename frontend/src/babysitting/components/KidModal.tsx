@@ -17,6 +17,9 @@ import {
   readHourlyRate,
   readStartDate,
   tagsWithProfile,
+  readCustomValues,
+  readKidTagIds,
+  tagsWithCustom,
 } from '../theme';
 import { useUpsertKid, useKids } from '../lib/data';
 import { useBabysittingConfig, appendLog } from '../lib/config';
@@ -43,6 +46,8 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
   const [allergies, setAllergies] = useState(kid?.medical_notes ?? '');
   const [notes, setNotes] = useState(kid?.notes ?? '');
   const [emergency, setEmergency] = useState(kid?.emergency_contact ?? '');
+  const [cfValues, setCfValues] = useState<Record<string, string>>(kid ? readCustomValues(kid) : {});
+  const [tagIds, setTagIds] = useState<string[]>(kid ? readKidTagIds(kid) : []);
   const [err, setErr] = useState('');
 
   const familyOptions = useMemo(() => {
@@ -65,7 +70,7 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
     }
     setErr('');
     const orderedDays = ALL_DAYS.filter((d) => days.includes(d));
-    const tags = tagsWithProfile(kid?.tags ?? [], {
+    const baseTags = tagsWithProfile(kid?.tags ?? [], {
       familySlug: familyName.trim() ? familySlugOf(familyName) : null,
       parent: parent.trim() || null,
       daysSlug: orderedDays.length ? orderedDays.join('-') : null,
@@ -73,6 +78,7 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
       hourlyRate: hourlyRate.trim() ? parseFloat(hourlyRate) || 0 : null,
       startDate: kid ? readStartDate(kid) : new Date().toISOString().slice(0, 10),
     });
+    const tags = tagsWithCustom(baseTags, cfValues, tagIds);
     try {
       await upsert.mutateAsync({
         id: kid?.id,
@@ -163,6 +169,43 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
         <Field label="Hourly rate ($)" hint="For billing by the hour.">
           <input style={inputStyle} type="number" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="0" />
         </Field>
+        {(cfg.data?.customFields ?? []).map((f) => (
+          <Field key={f.id} label={f.label}>
+            <input
+              style={inputStyle}
+              value={cfValues[f.id] ?? ''}
+              onChange={(e) => setCfValues((p) => ({ ...p, [f.id]: e.target.value }))}
+            />
+          </Field>
+        ))}
+        {(cfg.data?.kidTags ?? []).length > 0 && (
+          <Field label="Tags" style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {(cfg.data?.kidTags ?? []).map((tg) => {
+                const on = tagIds.includes(tg.id);
+                return (
+                  <button
+                    key={tg.id}
+                    type="button"
+                    onClick={() => setTagIds((p) => (on ? p.filter((x) => x !== tg.id) : [...p, tg.id]))}
+                    style={{
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderRadius: B.pill,
+                      padding: '6px 13px',
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      background: on ? tg.color : '#f2ede4',
+                      color: on ? '#fff' : B.inkSoft,
+                    }}
+                  >
+                    {tg.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+        )}
         <Field label="Allergies" style={{ gridColumn: '1 / -1' }} hint="Shows as a red badge everywhere this kid appears.">
           <input style={inputStyle} value={allergies ?? ''} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. peanuts, dairy" />
         </Field>

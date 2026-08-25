@@ -16,6 +16,8 @@ import {
   readTotalPaid,
   readBalance,
   scheduledToday,
+  readCustomValues,
+  readKidTagIds,
   formatMoney,
   shortDate,
   ageOf,
@@ -284,6 +286,13 @@ export function KidDetailPage() {
                 </Link>
               )}
               {kid.status === 'paused' && <Chip tone="plum">⏸ Away right now</Chip>}
+              {(cfg.data?.kidTags ?? [])
+                .filter((tg) => readKidTagIds(kid).includes(tg.id))
+                .map((tg) => (
+                  <span key={tg.id} style={{ background: `${tg.color}22`, color: tg.color, borderRadius: 999, fontSize: '0.72rem', fontWeight: 800, padding: '3px 10px' }}>
+                    {tg.label}
+                  </span>
+                ))}
               {kid.status === 'archived' && <Chip tone="neutral">🗃 Former kid</Chip>}
               {kid.status === 'active' && scheduledToday(kid) && (
                 <Chip tone="butter">☀️ Here today</Chip>
@@ -329,6 +338,10 @@ export function KidDetailPage() {
                 )}
               </Info>
               <Info label="Started">{started ? shortDate(started) : '—'}</Info>
+              {(cfg.data?.customFields ?? []).map((f) => {
+                const v = readCustomValues(kid)[f.id];
+                return v ? <Info key={f.id} label={f.label}>{v}</Info> : null;
+              })}
             </div>
           </div>
         </div>

@@ -20,6 +20,7 @@ import { kidsCsv, paymentsCsv, downloadCsv } from '../lib/csv';
 import { Card, SectionTitle, Btn, Field, inputStyle } from '../components/ui';
 import { CustomizeStudio } from '../../components/CustomizeStudio';
 import { HealthPanel } from '../components/HealthPanel';
+import { ComfortPanels } from '../components/ComfortPanels';
 import { StripeStatusCard } from '../../components/StripeStatusCard';
 
 // The pretend family every template preview renders against.
@@ -278,6 +279,9 @@ export function SettingsPage() {
         </p>
         <StripeStatusCard />
       </Card>
+
+      {/* ── Her comforts ─────────────────────────────────────────────── */}
+      <ComfortPanels />
 
       {/* ── Health check ─────────────────────────────────────────────── */}
       <HealthPanel />

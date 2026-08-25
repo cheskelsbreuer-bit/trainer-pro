@@ -77,6 +77,8 @@ export function DashboardPage() {
   const away = useMemo(() => (kids ?? []).filter((k) => k.status === 'paused'), [kids]);
   const todayKids = useMemo(() => active.filter((k) => scheduledToday(k)), [active]);
   const todayName = DAY_LABELS[ALL_DAYS[new Date().getDay()]];
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const closureToday = (cfg.data?.closures ?? []).find((c) => c.date === todayIso);
 
   const totalOwed = useMemo(
     () => Math.round(active.reduce((s, k) => s + Math.max(0, readBalance(k)), 0) * 100) / 100,
@@ -180,7 +182,11 @@ export function DashboardPage() {
         >
           Who's here today
         </SectionTitle>
-        {todayKids.length ? (
+        {closureToday ? (
+          <div style={{ background: B.plumSoft, color: B.plum, borderRadius: B.radiusSm, padding: '12px 16px', fontWeight: 800, fontSize: '0.92rem' }}>
+            📅 Closed today — {closureToday.name}. Enjoy the day off!
+          </div>
+        ) : todayKids.length ? (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {todayKids.map((k) => (
               <Link key={k.id} to={`/kids/${k.id}`} style={{ textDecoration: 'none' }}>
