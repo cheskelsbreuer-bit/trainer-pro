@@ -424,6 +424,13 @@ export default function App() {
               {/* Shareable no-signup babysitting demo — must exist on the
                   www/apex router too, or the link dead-ends on the homepage. */}
               <Route path="/babysitting-demo" element={<DemoEntry />} />
+              {/* Parent/client portal links are sent to outsiders, so they
+                  must work on the public host too — otherwise an invite
+                  link dead-ends on the marketing homepage. */}
+              <Route path="/portal-join/:token" element={<PortalJoinPage />} />
+              <Route path="/portal" element={<PortalShell />} />
+              <Route path="/intake/:token" element={<IntakePage />} />
+              <Route path="/join-studio/:token" element={<JoinStudioPage />} />
               <Route path="*" element={<LandingPage />} />
             </Routes>
           </BrowserRouter>

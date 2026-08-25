@@ -254,7 +254,7 @@ export function FamiliesPage() {
                     <>
                       <Btn size="sm" onClick={() => setBillFam(f)}>🧾 Bill family</Btn>
                       <Btn size="sm" kind="soft" onClick={() => setPayKid(f.members[0])}>💛 Payment</Btn>
-                      <InviteParentButton firstKid={f.members[0]} />
+                      <InviteParentButton kids={f.members} />
                     </>
                   )}
                   <Btn
