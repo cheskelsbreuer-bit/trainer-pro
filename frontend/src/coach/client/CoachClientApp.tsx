@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import type { Client, Session, WorkoutPlan } from '../../lib/database.types';
 import { FLOOR as F, TYPE, RADII, HIT, initialsOf, shortDate, timeOf } from '../theme';
 import { useClientLogs, lastByExercise, useSaveLog, summarizeActual, type CoachBlock, type ActualBlock } from '../lib/workouts';
+import { useClientEntries, bundleEntries, useSubmitCheckin, useTrainerReplies } from '../lib/checkins';
 import { LoggerCore } from '../components/LoggerCore';
 
 const num: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' };
@@ -72,6 +73,111 @@ function sessionDayLabel(iso: string): string {
   if (same(d, today)) return 'Today';
   if (same(d, tomorrow)) return 'Tomorrow';
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+// ── Weekly check-in — the 60-second Sunday form ──────────────────────
+function CheckinCard({ client, coachName }: { client: Client; coachName: string }) {
+  const { data: entries } = useClientEntries(client.id);
+  const { data: replies } = useTrainerReplies(client.id);
+  const submit = useSubmitCheckin();
+
+  const last = useMemo(() => bundleEntries(entries ?? [])[0] ?? null, [entries]);
+  const due = !last || Date.now() - new Date(last.measured_at).getTime() > 6 * 86400000;
+  const reply = useMemo(() => {
+    const r = (replies ?? [])[0];
+    if (!r) return null;
+    return Date.now() - new Date(r.created_at).getTime() < 21 * 86400000 ? r : null;
+  }, [replies]);
+
+  const [open, setOpen] = useState(false);
+  const [weight, setWeight] = useState('');
+  const [energy, setEnergy] = useState<number | null>(null);
+  const [note, setNote] = useState('');
+  const canSend = weight.trim() !== '' || energy != null || note.trim() !== '';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <Card style={{ display: 'flex', flexDirection: 'column', gap: 10, borderColor: due ? '#6b5222' : F.edge }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div>
+            <div style={{ fontFamily: TYPE.display, fontWeight: 600, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: due ? F.warnSoftInk : F.mute }}>
+              Weekly check-in
+            </div>
+            <div style={{ fontSize: 13.5, color: F.inkSoft, marginTop: 2 }}>
+              {due ? 'Takes a minute — your coach reads every one.' : `Checked in ${shortDate(last!.measured_at)} ✓`}
+            </div>
+          </div>
+          {!open && (
+            <button
+              onClick={() => setOpen(true)}
+              style={{ marginLeft: 'auto', flexShrink: 0, height: 40, padding: '0 16px', borderRadius: RADII.pill, border: 'none', cursor: 'pointer', background: due ? F.accent : F.edgeSoft, color: due ? F.accentInk : F.inkSoft, fontWeight: 800, fontSize: 13, fontFamily: TYPE.body }}
+            >
+              {due ? 'Check in' : 'Again'}
+            </button>
+          )}
+        </div>
+
+        {open && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 11, color: F.mute, fontWeight: 600 }}>weight (optional)</span>
+              <input
+                value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="decimal" placeholder="166"
+                style={{ height: 44, background: F.cardDeep, border: `1px solid ${F.edge}`, borderRadius: 12, color: F.ink, padding: '0 13px', fontSize: 15, fontFamily: TYPE.body, outline: 'none', ...num }}
+              />
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <span style={{ fontSize: 11, color: F.mute, fontWeight: 600 }}>energy this week</span>
+              <div style={{ display: 'flex', gap: 7 }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setEnergy(energy === n ? null : n)}
+                    style={{ flex: 1, height: 42, borderRadius: 12, border: energy === n ? 'none' : `1.5px solid ${F.edge}`, cursor: 'pointer', background: energy === n ? F.accent : 'transparent', color: energy === n ? F.accentInk : F.inkSoft, fontWeight: 800, fontSize: 15, fontFamily: TYPE.body, ...num }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <textarea
+              value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+              placeholder="Your week in a line or two — wins, struggles, anything"
+              style={{ background: F.cardDeep, border: `1px solid ${F.edge}`, borderRadius: 12, color: F.ink, padding: '10px 13px', fontSize: 14, fontFamily: TYPE.body, outline: 'none', resize: 'vertical', lineHeight: 1.5 }}
+            />
+            {submit.isError && <div style={{ fontSize: 13, color: F.bad }}>Couldn't send — try again.</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setOpen(false)} style={{ flex: 1, height: 44, borderRadius: 12, border: `1.5px solid ${F.edge}`, background: 'transparent', color: F.inkSoft, fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: TYPE.body }}>Later</button>
+              <button
+                disabled={!canSend || submit.isPending}
+                onClick={() => {
+                  void submit.mutateAsync({
+                    trainer_id: client.trainer_id,
+                    client_id: client.id,
+                    weight: weight.trim() === '' ? null : Number(weight) || null,
+                    energy,
+                    note,
+                  }).then(() => { setOpen(false); setWeight(''); setEnergy(null); setNote(''); });
+                }}
+                style={{ flex: 1.6, height: 44, borderRadius: 12, border: 'none', background: F.accent, color: F.accentInk, fontWeight: 800, fontSize: 13.5, cursor: 'pointer', fontFamily: TYPE.body, opacity: !canSend || submit.isPending ? 0.5 : 1 }}
+              >
+                {submit.isPending ? 'Sending…' : 'Send to coach'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {reply && (
+        <Card style={{ background: F.cardDeep, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontFamily: TYPE.display, fontWeight: 600, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: F.accentSoftInk }}>
+            From {coachName} · {shortDate(reply.created_at)}
+          </div>
+          <div style={{ fontSize: 14, lineHeight: 1.55 }}>{reply.body}</div>
+        </Card>
+      )}
+    </div>
+  );
 }
 
 export function CoachClientApp({ client, trainer }: { client: Client; trainer: CoachClientTrainer | null }) {
@@ -211,6 +317,8 @@ export function CoachClientApp({ client, trainer }: { client: Client; trainer: C
             <div style={{ fontSize: 12.5, color: F.mute, lineHeight: 1.55 }}>
               Training on your own today? Tap Start — your coach sees every set you log.
             </div>
+
+            <CheckinCard client={client} coachName={coachName} />
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

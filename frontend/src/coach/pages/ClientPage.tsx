@@ -13,6 +13,7 @@ import { FLOOR as F, TYPE, RADII, HIT, formatMoney, initialsOf, shortDate } from
 import { useCoachClients, useTrainerProfile } from '../lib/roster';
 import { useClientLogs, summarizeActual, type ActualBlock } from '../lib/workouts';
 import { useOwedSessions, useClientPayments, useUpdateClient, nudgeHref } from '../lib/money';
+import { useClientEntries, useProgressPhotos, useUploadPhoto } from '../lib/checkins';
 import { SectionLabel, SellPackForm, OwedRow } from '../components/moneyKit';
 import { useCoachBase } from '../lib/base';
 
@@ -57,6 +58,64 @@ function useMovers(clientId: string | undefined) {
     }
     return { movers: movers.sort((a, b) => b.delta - a.delta).slice(0, 3), logs: logs ?? [] };
   }, [logs]);
+}
+
+// ── Progress photos — coach snaps them, side-by-side sells the work ───
+function PhotosCard({ clientId }: { clientId: string }) {
+  const { data: photos } = useProgressPhotos(clientId);
+  const upload = useUploadPhoto();
+  const list = photos ?? [];
+  const latest = list[0];
+  const first = list.length > 1 ? list[list.length - 1] : null;
+
+  const frame: React.CSSProperties = {
+    flex: 1, minWidth: 0, borderRadius: 13, overflow: 'hidden', background: F.cardDeep,
+    border: `1px solid ${F.edge}`, aspectRatio: '3 / 4', position: 'relative',
+  };
+  const tag: React.CSSProperties = {
+    position: 'absolute', left: 8, bottom: 8, background: 'rgba(27,23,19,0.82)', color: F.ink,
+    borderRadius: 8, padding: '3px 8px', fontFamily: TYPE.display, fontWeight: 700, fontSize: 10.5,
+    letterSpacing: '0.08em', textTransform: 'uppercase',
+  };
+
+  return (
+    <Card style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <SectionLabel>Progress photos</SectionLabel>
+        <label style={{ marginLeft: 'auto', cursor: 'pointer', border: `1.5px solid ${F.edge}`, color: F.inkSoft, borderRadius: RADII.pill, padding: '7px 13px', fontWeight: 700, fontSize: 12.5, fontFamily: TYPE.body }}>
+          {upload.isPending ? 'Uploading…' : '+ Add photo'}
+          <input
+            type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+            disabled={upload.isPending}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void upload.mutateAsync({ client_id: clientId, file: f });
+              e.target.value = '';
+            }}
+          />
+        </label>
+      </div>
+      {upload.isError && <div style={{ fontSize: 13, color: F.bad }}>Upload didn't go through — try again.</div>}
+      {list.length === 0 ? (
+        <div style={{ fontSize: 13, color: F.mute, lineHeight: 1.5 }}>
+          Snap one at the next session — in a few weeks the side-by-side does the selling for you.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 9 }}>
+          {first && (
+            <div style={frame}>
+              <img src={first.photo_url!} alt="First progress photo" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <span style={tag}>First · {shortDate(first.measured_at)}</span>
+            </div>
+          )}
+          <div style={frame}>
+            <img src={latest.photo_url!} alt="Latest progress photo" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <span style={tag}>{first ? 'Now' : 'First'} · {shortDate(latest.measured_at)}</span>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
 }
 
 // ── Editable about card (goals + the medical flag) ────────────────────
@@ -133,6 +192,16 @@ export function ClientPage() {
   const { data: trainer } = useTrainerProfile();
 
   const { movers, logs } = useMovers(clientId);
+  const { data: checkinEntries } = useClientEntries(clientId);
+  // Weight trend from check-in weigh-ins: latest vs first on record.
+  const weightTrend = useMemo(() => {
+    const ws = (checkinEntries ?? []).filter((e) => e.metric_type === 'weight' && e.metric_value != null);
+    if (ws.length < 2) return null;
+    const to = Number(ws[0].metric_value);
+    const from = Number(ws[ws.length - 1].metric_value);
+    if (from === to) return null;
+    return { from, to, delta: Math.round((to - from) * 10) / 10, since: ws[ws.length - 1].measured_at };
+  }, [checkinEntries]);
   const { data: owedAll } = useOwedSessions();
   const owed = useMemo(() => (owedAll ?? []).filter((s) => s.client_id === clientId), [owedAll, clientId]);
   const owedTotal = owed.reduce((s, o) => s + Number(o.price ?? 0), 0);
@@ -237,9 +306,18 @@ export function ClientPage() {
       )}
 
       {/* Progress — undeniable */}
-      {movers.length > 0 && (
+      {(movers.length > 0 || weightTrend) && (
         <Card style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           <SectionLabel>Progress</SectionLabel>
+          {weightTrend && (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: 14.5, flex: 1, minWidth: 0 }}>Weight</span>
+              <span style={{ ...num, fontSize: 13, color: F.mute }}>{weightTrend.from} → {weightTrend.to} lb</span>
+              <span style={{ ...num, fontWeight: 800, fontSize: 15, color: F.good }}>
+                {weightTrend.delta > 0 ? '+' : ''}{weightTrend.delta} lb
+              </span>
+            </div>
+          )}
           {movers.map((m) => (
             <div key={m.name} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span style={{ fontWeight: 700, fontSize: 14.5, flex: 1, minWidth: 0 }}>{m.name}</span>
@@ -247,11 +325,15 @@ export function ClientPage() {
               <span style={{ ...num, fontWeight: 800, fontSize: 15, color: F.good }}>+{Math.round(m.delta * 10) / 10} lb</span>
             </div>
           ))}
-          <div style={{ fontSize: 11.5, color: F.mute }}>
-            since {shortDate(movers.map((m) => m.since).sort()[0])} — straight from the logbook
-          </div>
+          {movers.length > 0 && (
+            <div style={{ fontSize: 11.5, color: F.mute }}>
+              since {shortDate(movers.map((m) => m.since).sort()[0])} — straight from the logbook
+            </div>
+          )}
         </Card>
       )}
+
+      <PhotosCard clientId={client.id} />
 
       <AboutCard client={client} />
 

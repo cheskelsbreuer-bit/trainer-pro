@@ -18,6 +18,7 @@ import { ProgramsPage } from './pages/ProgramsPage';
 import { LivePage } from './pages/LivePage';
 import { MoneyPage } from './pages/MoneyPage';
 import { ClientPage } from './pages/ClientPage';
+import { CheckinsPage } from './pages/CheckinsPage';
 import './coach.css';
 
 // ── Small kit ─────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ const IC = {
   clients: 'M9 12 a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7 Z M3.5 20 a5.5 5.5 0 0 1 11 0 M17 12.6 a2.6 2.6 0 1 0-2-4.6 M15.5 20 a4.6 4.6 0 0 1 5-4.3',
   programs: 'M3 9.5 h3 v5 h-3 Z M18 9.5 h3 v5 h-3 Z M6 12 h12 M7.5 7.5 h2 v9 h-2 Z M14.5 7.5 h2 v9 h-2 Z',
   money: 'M12 3 a9 9 0 1 0 0 18 9 9 0 0 0 0-18 Z M12 6.5 v11 M14.8 9.2 a2.6 2.6 0 0 0-2.3-1.2 c-1.5 0-2.7 .8-2.7 2 s1 1.7 2.7 2 c1.9 .3 2.9 1 2.9 2.2 s-1.3 2-2.9 2 a3 3 0 0 1-2.6-1.3',
+  checkins: 'M7 4.5 h10 a2 2 0 0 1 2 2 v13 a2 2 0 0 1-2 2 H7 a2 2 0 0 1-2-2 v-13 a2 2 0 0 1 2-2 Z M9.5 3 h5 v3.5 h-5 Z M8.5 13.5 l2.4 2.4 4.8-4.8',
 };
 
 // ── Shell ─────────────────────────────────────────────────────────────
@@ -82,6 +84,7 @@ const NAV = [
   { to: '', end: true, label: 'Today', icon: IC.today },
   { to: '/clients', end: false, label: 'Clients', icon: IC.clients },
   { to: '/programs', end: false, label: 'Programs', icon: IC.programs },
+  { to: '/check-ins', end: false, label: 'Check-ins', icon: IC.checkins },
   { to: '/money', end: false, label: 'Money', icon: IC.money },
 ];
 
@@ -358,6 +361,7 @@ export function CoachApp() {
         <Route path="clients" element={<ClientsPage />} />
         <Route path="clients/:clientId" element={<ClientPage />} />
         <Route path="programs" element={<ProgramsPage />} />
+        <Route path="check-ins" element={<CheckinsPage />} />
         <Route path="live/:clientId" element={<LivePage />} />
         <Route path="money" element={<MoneyPage />} />
         <Route path="*" element={<Navigate to="." replace />} />
