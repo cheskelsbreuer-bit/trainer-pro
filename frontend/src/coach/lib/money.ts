@@ -13,7 +13,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import type { Client, Session, PaymentMethod } from '../../lib/database.types';
+import type { Client, Session, Payment, PaymentMethod } from '../../lib/database.types';
 import { isCoachClient } from './roster';
 
 export type OwedSession = Session & { clients: Client | null };
@@ -104,6 +104,37 @@ export function useMarkSessionPaid() {
       if (e2) throw e2;
     },
     onSuccess: () => invalidateMoney(qc),
+  });
+}
+
+/** Full payment history for one client — the profile's ledger. */
+export function useClientPayments(clientId: string | null | undefined) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['coach-client-payments', clientId],
+    queryFn: async (): Promise<Payment[]> => {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('client_id', clientId!)
+        .order('paid_at', { ascending: false })
+        .limit(24);
+      if (error) throw error;
+      return (data ?? []) as Payment[];
+    },
+    enabled: !!user && !!clientId,
+  });
+}
+
+/** Edit the client's card — goals, the medical flag, contact. */
+export function useUpdateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; patch: Partial<Client> }) => {
+      const { error } = await supabase.from('clients').update(input.patch).eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['coach-clients'] }),
   });
 }
 

@@ -10,7 +10,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import type { Client, Session, Payment } from '../../lib/database.types';
+import type { Client, Session, Payment, Trainer } from '../../lib/database.types';
 
 export const COACH_MARKER = 'coach:1';
 
@@ -36,6 +36,21 @@ export function useCoachClients() {
       if (error) throw error;
       // Fence in code, not just SQL: one place, one rule.
       return ((data ?? []) as Client[]).filter(isCoachClient);
+    },
+    enabled: !!user,
+  });
+}
+
+/** The signed-in coach's own trainer row (same query key as the shell,
+ *  so it's fetched once and shared). */
+export function useTrainerProfile() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['trainer', user?.id],
+    queryFn: async (): Promise<Trainer> => {
+      const { data, error } = await supabase.from('trainers').select('*').eq('id', user!.id).single();
+      if (error) throw error;
+      return data as Trainer;
     },
     enabled: !!user,
   });

@@ -17,6 +17,7 @@ import { useCoachBase } from './lib/base';
 import { ProgramsPage } from './pages/ProgramsPage';
 import { LivePage } from './pages/LivePage';
 import { MoneyPage } from './pages/MoneyPage';
+import { ClientPage } from './pages/ClientPage';
 import './coach.css';
 
 // ── Small kit ─────────────────────────────────────────────────────────
@@ -236,6 +237,8 @@ function TodayPage() {
 
 // ── Clients ───────────────────────────────────────────────────────────
 function ClientsPage() {
+  const navigate = useNavigate();
+  const base = useCoachBase();
   const { data: clients, isLoading } = useCoachClients();
   const add = useAddCoachClient();
   const [q, setQ] = useState('');
@@ -320,7 +323,11 @@ function ClientsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {shown.map((c) => (
-            <div key={c.id} style={{ background: F.card, border: `1px solid ${F.edge}`, borderRadius: RADII.md, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, minHeight: HIT }}>
+            <button
+              key={c.id}
+              onClick={() => navigate(`${base}/clients/${c.id}`)}
+              style={{ textAlign: 'left', cursor: 'pointer', width: '100%', color: F.ink, fontFamily: TYPE.body, background: F.card, border: `1px solid ${F.edge}`, borderRadius: RADII.md, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, minHeight: HIT }}
+            >
               <Avatar name={c.full_name} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{c.full_name}</div>
@@ -328,7 +335,13 @@ function ClientsPage() {
                   {c.status === 'paused' ? 'paused' : c.phone || c.email || `added ${shortDate(c.created_at)}`}
                 </div>
               </div>
-            </div>
+              {(c.package_balance ?? 0) > 0 && (
+                <span style={{ ...num, flexShrink: 0, borderRadius: RADII.pill, padding: '5px 10px', fontWeight: 800, fontSize: 11.5, background: (c.package_balance ?? 0) <= 2 ? F.warnSoft : F.goodSoft, color: (c.package_balance ?? 0) <= 2 ? F.warnSoftInk : F.goodSoftInk }}>
+                  {c.package_balance} left
+                </span>
+              )}
+              <span style={{ color: F.mute, fontSize: 15 }}>›</span>
+            </button>
           ))}
         </div>
       )}
@@ -343,6 +356,7 @@ export function CoachApp() {
       <Route element={<Shell />}>
         <Route index element={<TodayPage />} />
         <Route path="clients" element={<ClientsPage />} />
+        <Route path="clients/:clientId" element={<ClientPage />} />
         <Route path="programs" element={<ProgramsPage />} />
         <Route path="live/:clientId" element={<LivePage />} />
         <Route path="money" element={<MoneyPage />} />
