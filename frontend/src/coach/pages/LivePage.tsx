@@ -9,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth';
 import type { WorkoutPlan } from '../../lib/database.types';
 import { FLOOR as F, TYPE, RADII, HIT, initialsOf } from '../theme';
 import { useCoachClients } from '../lib/roster';
+import { useCoachBase } from '../lib/base';
 import { usePlans, useAssignPlan, useClientLogs, lastByExercise, useSaveLog, useCompleteSession, type CoachBlock } from '../lib/workouts';
 import { LoggerCore } from '../components/LoggerCore';
 
@@ -17,6 +18,7 @@ export function LivePage() {
   const [params] = useSearchParams();
   const sessionId = params.get('session');
   const navigate = useNavigate();
+  const base = useCoachBase();
   const { user } = useAuth();
 
   const { data: clients } = useCoachClients();
@@ -46,8 +48,8 @@ export function LivePage() {
       exercises_actual: actuals,
       notes: note || null,
     });
-    if (sessionId) await completeSession.mutateAsync(sessionId).catch(() => undefined);
-    navigate('/coach-preview', { replace: true });
+    if (sessionId) await completeSession.mutateAsync({ sessionId, client }).catch(() => undefined);
+    navigate(base, { replace: true });
   }
 
   // Wait for history before the logger mounts — set weights seed from

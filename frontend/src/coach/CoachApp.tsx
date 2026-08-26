@@ -6,15 +6,17 @@
 // money — plus honest "being built" stubs where a screen isn't ready.
 
 import { useMemo, useState } from 'react';
-import { NavLink, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { NavLink, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
 import { FLOOR as F, TYPE, RADII, HIT, formatMoney, initialsOf, timeOf, shortDate } from './theme';
 import { useCoachClients, useTodaySessions, useMonthPayments, useAddCoachClient } from './lib/roster';
+import { useCoachBase } from './lib/base';
 import { ProgramsPage } from './pages/ProgramsPage';
 import { LivePage } from './pages/LivePage';
+import { MoneyPage } from './pages/MoneyPage';
 import './coach.css';
 
 // ── Small kit ─────────────────────────────────────────────────────────
@@ -76,13 +78,19 @@ const IC = {
 
 // ── Shell ─────────────────────────────────────────────────────────────
 const NAV = [
-  { to: '.', end: true, label: 'Today', icon: IC.today },
-  { to: 'clients', end: false, label: 'Clients', icon: IC.clients },
-  { to: 'programs', end: false, label: 'Programs', icon: IC.programs },
-  { to: 'money', end: false, label: 'Money', icon: IC.money },
+  { to: '', end: true, label: 'Today', icon: IC.today },
+  { to: '/clients', end: false, label: 'Clients', icon: IC.clients },
+  { to: '/programs', end: false, label: 'Programs', icon: IC.programs },
+  { to: '/money', end: false, label: 'Money', icon: IC.money },
 ];
 
-function Shell({ children }: { children: React.ReactNode }) {
+// Shell is a LAYOUT ROUTE (not a wrapper around <Routes>): nav links
+// must resolve against the app's base, and inside a splat mount a
+// relative link resolves against the CURRENT subpage — so tabs would
+// dead-end once you left Today. As a layout route the links anchor to
+// the base wherever the app is mounted.
+function Shell() {
+  const base = useCoachBase();
   const { user } = useAuth();
   const { data: trainer } = useQuery({
     queryKey: ['trainer', user?.id],
@@ -108,7 +116,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {NAV.map((n) => (
-          <NavLink key={n.label} to={n.to} end={n.end} className={({ isActive }) => `coach-sidelink${isActive ? ' active' : ''}`}>
+          <NavLink key={n.label} to={`${base}${n.to}`} end={n.end} className={({ isActive }) => `coach-sidelink${isActive ? ' active' : ''}`}>
             <Icon d={n.icon} size={19} />
             {n.label}
           </NavLink>
@@ -118,11 +126,11 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="coach-main">{children}</main>
+      <main className="coach-main"><Outlet /></main>
 
       <nav className="coach-tabbar">
         {NAV.map((n) => (
-          <NavLink key={n.label} to={n.to} end={n.end} className={({ isActive }) => `coach-tab${isActive ? ' active' : ''}`}>
+          <NavLink key={n.label} to={`${base}${n.to}`} end={n.end} className={({ isActive }) => `coach-tab${isActive ? ' active' : ''}`}>
             <Icon d={n.icon} size={21} />
             {n.label}
           </NavLink>
@@ -135,6 +143,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 // ── Today ─────────────────────────────────────────────────────────────
 function TodayPage() {
   const navigate = useNavigate();
+  const base = useCoachBase();
   const { data: sessions, isLoading } = useTodaySessions();
   const { data: clients } = useCoachClients();
   const { data: payments } = useMonthPayments();
@@ -193,6 +202,11 @@ function TodayPage() {
                     {s.notes ? (
                       <div style={{ fontSize: 12, color: F.mute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.notes}</div>
                     ) : null}
+                    {(s.clients?.package_balance ?? 0) > 0 && (s.clients?.package_balance ?? 0) <= 2 && (
+                      <div style={{ ...num, fontSize: 11.5, color: F.warnSoftInk, fontWeight: 700 }}>
+                        {s.clients!.package_balance} left on pack — time to renew
+                      </div>
+                    )}
                   </div>
                   {s.status === 'completed' ? (
                     <span style={{ marginLeft: 'auto' }}>
@@ -200,7 +214,7 @@ function TodayPage() {
                     </span>
                   ) : s.clients?.id ? (
                     <button
-                      onClick={() => navigate(`live/${s.clients!.id}?session=${s.id}`)}
+                      onClick={() => navigate(`${base}/live/${s.clients!.id}?session=${s.id}`)}
                       style={{
                         marginLeft: 'auto', flexShrink: 0, height: 38, padding: '0 16px', borderRadius: RADII.pill,
                         border: 'none', cursor: 'pointer', background: F.accent, color: F.accentInk,
@@ -322,62 +336,18 @@ function ClientsPage() {
   );
 }
 
-// ── Money ─────────────────────────────────────────────────────────────
-function MoneyPage() {
-  const { data: payments, isLoading } = useMonthPayments();
-  const total = useMemo(
-    () => Math.round(((payments ?? []).reduce((s, p) => s + Number(p.amount), 0)) * 100) / 100,
-    [payments],
-  );
-  const month = new Date().toLocaleDateString('en-US', { month: 'long' });
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div>
-        <SectionLabel>{month}</SectionLabel>
-        <BigTitle>Money</BigTitle>
-      </div>
-      <Card>
-        <div style={{ ...num, fontWeight: 800, fontSize: 28, color: F.good }}>{formatMoney(total)}</div>
-        <div style={{ fontSize: 12, color: F.mute, fontWeight: 600 }}>collected this month</div>
-      </Card>
-      {isLoading ? (
-        <Card><div style={{ color: F.mute, fontSize: 14 }}>Loading…</div></Card>
-      ) : (payments ?? []).length === 0 ? (
-        <Card style={{ textAlign: 'center', padding: '30px 20px' }}>
-          <div style={{ fontSize: 13.5, color: F.mute }}>No payments recorded this month yet.</div>
-        </Card>
-      ) : (
-        <Card style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <SectionLabel>Recent</SectionLabel>
-          {(payments ?? []).slice(0, 12).map((p) => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
-              <span style={{ fontWeight: 600 }}>{p.clients?.full_name ?? '—'}</span>
-              <span style={{ fontSize: 12, color: F.mute }}>{shortDate(p.paid_at)}</span>
-              <span style={{ ...num, marginLeft: 'auto', fontWeight: 700, color: F.good }}>{formatMoney(Number(p.amount))}</span>
-            </div>
-          ))}
-        </Card>
-      )}
-      <div style={{ fontSize: 12.5, color: F.mute, lineHeight: 1.5 }}>
-        Session packs, auto-reminders, and renewals — the sketch's full Money screen — land here next.
-      </div>
-    </div>
-  );
-}
-
 // ── App ───────────────────────────────────────────────────────────────
 export function CoachApp() {
   return (
-    <Shell>
-      <Routes>
+    <Routes>
+      <Route element={<Shell />}>
         <Route index element={<TodayPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="programs" element={<ProgramsPage />} />
         <Route path="live/:clientId" element={<LivePage />} />
         <Route path="money" element={<MoneyPage />} />
         <Route path="*" element={<Navigate to="." replace />} />
-      </Routes>
-    </Shell>
+      </Route>
+    </Routes>
   );
 }

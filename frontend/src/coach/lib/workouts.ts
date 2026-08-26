@@ -205,17 +205,31 @@ export function useSaveLog() {
   });
 }
 
-/** Mark the calendar session done once the workout is saved. */
+/** Mark the calendar session done once the workout is saved — and if
+ *  the client has a pack, burn one session off it (the session is then
+ *  paid by the pack, so it never shows up as owed). */
 export function useCompleteSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (sessionId: string) => {
+    mutationFn: async (input: { sessionId: string; client?: { id: string; package_balance: number } | null }) => {
+      const usePack = (input.client?.package_balance ?? 0) > 0;
       const { error } = await supabase
         .from('sessions')
-        .update({ status: 'completed' })
-        .eq('id', sessionId);
+        .update(usePack ? { status: 'completed', paid: true } : { status: 'completed' })
+        .eq('id', input.sessionId);
       if (error) throw error;
+      if (usePack && input.client) {
+        const { error: e2 } = await supabase
+          .from('clients')
+          .update({ package_balance: input.client.package_balance - 1 })
+          .eq('id', input.client.id);
+        if (e2) throw e2;
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['coach-today-sessions'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['coach-today-sessions'] });
+      void qc.invalidateQueries({ queryKey: ['coach-clients'] });
+      void qc.invalidateQueries({ queryKey: ['coach-owed'] });
+    },
   });
 }
