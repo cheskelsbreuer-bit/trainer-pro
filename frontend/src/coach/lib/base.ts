@@ -1,13 +1,13 @@
-// Where is the coach app mounted? ('/coach-preview' today; wherever the
-// templates flip it tomorrow.) Under a splat route, RELATIVE links
-// resolve against the current subpage — from /coach-preview/money a
-// link to "clients" would nest into /coach-preview/money/clients — so
-// every nav link and navigate() builds an ABSOLUTE path off this base.
-import { useLocation, useParams } from 'react-router-dom';
+// Where is the coach app mounted? '' when it IS the app (mounted at
+// the site root), '/coach-preview' in the preview shell. Provided by
+// CoachApp via context — guessing from the URL breaks under both splat
+// mounts (relative links resolve against the current subpage) and root
+// mounts (there's no splat to strip). Build links as `${base}/clients`;
+// for the home link use `base || '/'`.
+import { createContext, useContext } from 'react';
+
+export const CoachBaseContext = createContext('');
 
 export function useCoachBase(): string {
-  const { pathname } = useLocation();
-  const splat = useParams()['*'] ?? '';
-  const base = splat ? pathname.slice(0, pathname.length - splat.length) : pathname;
-  return base.replace(/\/+$/, '') || '/';
+  return useContext(CoachBaseContext);
 }

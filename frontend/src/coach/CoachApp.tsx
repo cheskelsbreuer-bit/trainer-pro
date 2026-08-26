@@ -13,7 +13,7 @@ import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
 import { FLOOR as F, TYPE, RADII, HIT, formatMoney, initialsOf, timeOf, shortDate } from './theme';
 import { useCoachClients, useTodaySessions, useMonthPayments, useAddCoachClient } from './lib/roster';
-import { useCoachBase } from './lib/base';
+import { useCoachBase, CoachBaseContext } from './lib/base';
 import { ProgramsPage } from './pages/ProgramsPage';
 import { LivePage } from './pages/LivePage';
 import { MoneyPage } from './pages/MoneyPage';
@@ -77,6 +77,7 @@ const IC = {
   programs: 'M3 9.5 h3 v5 h-3 Z M18 9.5 h3 v5 h-3 Z M6 12 h12 M7.5 7.5 h2 v9 h-2 Z M14.5 7.5 h2 v9 h-2 Z',
   money: 'M12 3 a9 9 0 1 0 0 18 9 9 0 0 0 0-18 Z M12 6.5 v11 M14.8 9.2 a2.6 2.6 0 0 0-2.3-1.2 c-1.5 0-2.7 .8-2.7 2 s1 1.7 2.7 2 c1.9 .3 2.9 1 2.9 2.2 s-1.3 2-2.9 2 a3 3 0 0 1-2.6-1.3',
   checkins: 'M7 4.5 h10 a2 2 0 0 1 2 2 v13 a2 2 0 0 1-2 2 H7 a2 2 0 0 1-2-2 v-13 a2 2 0 0 1 2-2 Z M9.5 3 h5 v3.5 h-5 Z M8.5 13.5 l2.4 2.4 4.8-4.8',
+  gear: 'M12 9 a3 3 0 1 0 0 6 3 3 0 0 0 0-6 Z M12 2.5 v3 M12 18.5 v3 M2.5 12 h3 M18.5 12 h3 M5.3 5.3 l2.1 2.1 M16.6 16.6 l2.1 2.1 M18.7 5.3 l-2.1 2.1 M7.4 16.6 l-2.1 2.1',
 };
 
 // ── Shell ─────────────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ const NAV = [
 // relative link resolves against the CURRENT subpage — so tabs would
 // dead-end once you left Today. As a layout route the links anchor to
 // the base wherever the app is mounted.
-function Shell() {
+function Shell({ preview }: { preview: boolean }) {
   const base = useCoachBase();
   const { user } = useAuth();
   const { data: trainer } = useQuery({
@@ -116,17 +117,34 @@ function Shell() {
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 14.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-            <div style={{ fontFamily: TYPE.display, fontWeight: 600, fontSize: 10.5, letterSpacing: '0.1em', color: F.mute }}>COACH · PREVIEW</div>
+            <div style={{ fontFamily: TYPE.display, fontWeight: 600, fontSize: 10.5, letterSpacing: '0.1em', color: F.mute }}>{preview ? 'COACH · PREVIEW' : 'COACH'}</div>
           </div>
         </div>
         {NAV.map((n) => (
-          <NavLink key={n.label} to={`${base}${n.to}`} end={n.end} className={({ isActive }) => `coach-sidelink${isActive ? ' active' : ''}`}>
+          <NavLink key={n.label} to={n.to ? `${base}${n.to}` : base || '/'} end={n.end} className={({ isActive }) => `coach-sidelink${isActive ? ' active' : ''}`}>
             <Icon d={n.icon} size={19} />
             {n.label}
           </NavLink>
         ))}
-        <div style={{ marginTop: 'auto', fontSize: 12, color: F.mute, padding: '0 8px', lineHeight: 1.5 }}>
-          The new 1-on-1 app, growing screen by screen. Your classic app keeps working meanwhile.
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {!preview && (
+            <>
+              <div style={{ fontFamily: TYPE.display, fontWeight: 600, fontSize: 10.5, letterSpacing: '0.1em', color: F.mute, padding: '0 13px 4px' }}>MORE TOOLS</div>
+              <NavLink to="/sessions" className="coach-sidelink">
+                <Icon d={IC.today} size={19} />
+                Booking
+              </NavLink>
+              <NavLink to="/settings" className="coach-sidelink">
+                <Icon d={IC.gear} size={19} />
+                Settings
+              </NavLink>
+            </>
+          )}
+          {preview && (
+            <div style={{ fontSize: 12, color: F.mute, padding: '0 8px', lineHeight: 1.5 }}>
+              The new 1-on-1 app, growing screen by screen. Your classic app keeps working meanwhile.
+            </div>
+          )}
         </div>
       </aside>
 
@@ -134,7 +152,7 @@ function Shell() {
 
       <nav className="coach-tabbar">
         {NAV.map((n) => (
-          <NavLink key={n.label} to={`${base}${n.to}`} end={n.end} className={({ isActive }) => `coach-tab${isActive ? ' active' : ''}`}>
+          <NavLink key={n.label} to={n.to ? `${base}${n.to}` : base || '/'} end={n.end} className={({ isActive }) => `coach-tab${isActive ? ' active' : ''}`}>
             <Icon d={n.icon} size={21} />
             {n.label}
           </NavLink>
@@ -188,7 +206,10 @@ function TodayPage() {
         <Card style={{ textAlign: 'center', padding: '34px 20px' }}>
           <div style={{ fontFamily: TYPE.display, fontWeight: 700, fontSize: 19, textTransform: 'uppercase' }}>No sessions today</div>
           <div style={{ fontSize: 13.5, color: F.mute, marginTop: 6 }}>
-            Book sessions in your classic app for now — they show up here automatically.
+            <button onClick={() => navigate('/sessions')} style={{ border: 'none', background: 'transparent', color: F.accent, fontWeight: 700, cursor: 'pointer', fontFamily: TYPE.body, fontSize: 13.5, padding: 0 }}>
+              Book sessions here
+            </button>{' '}
+            — they show up on Today automatically.
           </div>
         </Card>
       ) : (
@@ -353,19 +374,21 @@ function ClientsPage() {
 }
 
 // ── App ───────────────────────────────────────────────────────────────
-export function CoachApp() {
+export function CoachApp({ base = '', preview = false }: { base?: string; preview?: boolean }) {
   return (
-    <Routes>
-      <Route element={<Shell />}>
-        <Route index element={<TodayPage />} />
-        <Route path="clients" element={<ClientsPage />} />
-        <Route path="clients/:clientId" element={<ClientPage />} />
-        <Route path="programs" element={<ProgramsPage />} />
-        <Route path="check-ins" element={<CheckinsPage />} />
-        <Route path="live/:clientId" element={<LivePage />} />
-        <Route path="money" element={<MoneyPage />} />
-        <Route path="*" element={<Navigate to="." replace />} />
-      </Route>
-    </Routes>
+    <CoachBaseContext.Provider value={base}>
+      <Routes>
+        <Route element={<Shell preview={preview} />}>
+          <Route index element={<TodayPage />} />
+          <Route path="clients" element={<ClientsPage />} />
+          <Route path="clients/:clientId" element={<ClientPage />} />
+          <Route path="programs" element={<ProgramsPage />} />
+          <Route path="check-ins" element={<CheckinsPage />} />
+          <Route path="live/:clientId" element={<LivePage />} />
+          <Route path="money" element={<MoneyPage />} />
+          <Route path="*" element={<Navigate to={base || '/'} replace />} />
+        </Route>
+      </Routes>
+    </CoachBaseContext.Provider>
   );
 }

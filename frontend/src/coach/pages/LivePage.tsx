@@ -49,7 +49,7 @@ export function LivePage() {
       notes: note || null,
     });
     if (sessionId) await completeSession.mutateAsync({ sessionId, client }).catch(() => undefined);
-    navigate(base, { replace: true });
+    navigate(base || '/', { replace: true });
   }
 
   // Wait for history before the logger mounts — set weights seed from

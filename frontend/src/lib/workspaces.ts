@@ -17,12 +17,18 @@ import { pickTemplateUx, templateBadge, type DashboardVariant } from './template
 // default <Layout/>, so we dedupe by this key, not by the raw variant.
 export type AppKey =
   | 'default'
+  | 'coach'
   | 'martial'
   | 'boxing'
   | 'nutrition'
   | 'exercise'
   | 'babysitting'
   | 'studio_classes';
+
+/** Templates served by the ground-up 1-on-1 Coach app. Slug-scoped on
+ *  purpose: the ux FALLBACK variant also matches unknown or empty
+ *  template lists, and those should keep the classic Layout. */
+export const COACH_TEMPLATE_SLUGS = ['solo_trainer', 'athletic_performance', 'online_coach'];
 
 export function appKeyForVariant(variant: DashboardVariant): AppKey {
   switch (variant) {
@@ -33,6 +39,13 @@ export function appKeyForVariant(variant: DashboardVariant): AppKey {
     default:
       return 'default';
   }
+}
+
+/** Slug → mounted app. Coach is keyed by slug (see above); everything
+ *  else falls through to the variant mapping. */
+export function appKeyForSlug(slug: string): AppKey {
+  if (COACH_TEMPLATE_SLUGS.includes(slug)) return 'coach';
+  return appKeyForVariant(pickTemplateUx([slug]).dashboardVariant);
 }
 
 export interface Workspace {
@@ -54,8 +67,7 @@ export function workspacesFor(template_slugs: string[] | null | undefined): Work
   const out: Workspace[] = [];
   const seen = new Set<AppKey>();
   for (const slug of slugs) {
-    const variant = pickTemplateUx([slug]).dashboardVariant;
-    const key = appKeyForVariant(variant);
+    const key = appKeyForSlug(slug);
     if (seen.has(key)) continue;
     seen.add(key);
     const badge = templateBadge(slug);

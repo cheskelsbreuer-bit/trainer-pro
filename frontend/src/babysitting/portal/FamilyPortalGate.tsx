@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
+import { COACH_TEMPLATE_SLUGS } from '../../lib/workspaces';
 import { ClientPortal } from '../../pages/ClientPortal';
 import { CoachClientApp } from '../../coach/client/CoachClientApp';
 import { FamilyPortal, type PortalTrainer } from './FamilyPortal';
@@ -46,11 +47,9 @@ export function FamilyPortalGate() {
   }
 
   // 1-on-1 Coach clients get the new client app (shared logger, warm
-  // design). Explicit slug list — the ux fallback also matches trainers
-  // with no templates at all, and those should keep the classic portal.
-  const COACH_SLUGS = ['solo_trainer', 'athletic_performance', 'online_coach'];
+  // design). Slug-scoped for the same reason the trainer side is.
   const coachRow = kids.find((k) =>
-    (k.trainers?.template_slugs ?? []).some((s) => COACH_SLUGS.includes(s)),
+    (k.trainers?.template_slugs ?? []).some((s) => COACH_TEMPLATE_SLUGS.includes(s)),
   );
   if (coachRow) {
     return <CoachClientApp client={coachRow} trainer={coachRow.trainers} />;

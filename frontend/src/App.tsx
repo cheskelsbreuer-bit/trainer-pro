@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { supabase } from './lib/supabase';
@@ -31,7 +31,6 @@ import { TermsPage } from './pages/TermsPage';
 import { FindTrainersPage } from './pages/FindTrainersPage';
 import { AdminPage } from './pages/AdminPage';
 import { adminRpc } from './lib/adminRpc';
-import { pickTemplateUx } from './lib/templateUx';
 import { BabysittingApp } from './babysitting/BabysittingApp';
 import { CoachApp } from './coach/CoachApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
@@ -40,7 +39,6 @@ import { UnifiedApp, UnifiedShell } from './components/UnifiedApp';
 import { UnifiedHome } from './components/UnifiedHome';
 import {
   workspacesFor,
-  appKeyForVariant,
   readActiveWorkspace,
   writeActiveWorkspace,
   type AppKey,
@@ -76,6 +74,7 @@ function DemoEntry() {
 function ProtectedShell() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Fetch trainer row to check onboarding status. The auth-user trigger creates
   // this row on signup, so it should always exist for an authed user.
@@ -101,7 +100,7 @@ function ProtectedShell() {
   // Which app's shell is currently mounted. Defaults to the primary
   // template's app, but the coach can flip via the switcher and we
   // remember their last choice per-browser.
-  const primaryKey = appKeyForVariant(pickTemplateUx(trainer?.template_slugs).dashboardVariant);
+  const primaryKey: AppKey = workspaces[0]?.key ?? 'default';
   // Read the remembered workspace synchronously: if it seeds one render
   // late, the primary app mounts first and its router eats any deep link
   // (e.g. /settings gets bounced to / before the real workspace loads).
@@ -173,10 +172,20 @@ function ProtectedShell() {
     activeKey && workspaces.some((w) => w.key === activeKey) ? activeKey : primaryKey;
 
   // The reset (see archive/pre-groundup-verticals): the old vertical
-  // shells are gone. Babysitting is the model; every other template
-  // rides the base Layout until its ground-up app ships.
+  // shells are gone. Babysitting and the 1-on-1 Coach app are the
+  // ground-up apps; every other template rides the base Layout.
+  //
+  // The Coach app doesn't cover booking or settings yet, so classic-only
+  // paths keep rendering the Layout (whose pages come via the outer
+  // router's Outlet) — coach users reach them from the sidebar's "More
+  // tools" links, and Today's "book sessions" link.
+  const CLASSIC_ONLY = ['/sessions', '/payments', '/workouts', '/progress', '/settings'];
+  const onClassicPath = CLASSIC_ONLY.some(
+    (p) => location.pathname === p || location.pathname.startsWith(p + '/'),
+  );
   function renderApp(key: AppKey) {
     if (key === 'babysitting') return <BabysittingApp trainer={trainer} />;
+    if (key === 'coach' && !onClassicPath) return <CoachApp />;
     return <Layout />;
   }
 
@@ -213,7 +222,7 @@ function CoachPreviewShell() {
     );
   }
   if (!user) return <Login />;
-  return <CoachApp />;
+  return <CoachApp base="/coach-preview" preview />;
 }
 
 // /portal uses the same auth gate but doesn't render the trainer Layout —
