@@ -23,10 +23,13 @@ import { StudioOverviewCard } from '../components/StudioOverviewCard';
 import { RevenueTrendWidget } from '../components/RevenueTrendWidget';
 import { AdminReplyBanner } from '../components/AdminReplyBanner';
 import { pickTemplateUx } from '../lib/templateUx';
+import { useEnabledModules } from '../lib/modules';
 
 export function PrivateDashboard({ trainer }: { trainer: Trainer | undefined }) {
   const { user } = useAuth();
   const ux = pickTemplateUx(trainer?.template_slugs);
+  // Dashboard widgets obey the coach's feature switches too.
+  const { isOn } = useEnabledModules(trainer?.template_slugs ?? undefined);
 
   const { data: clientCount } = useQuery({
     queryKey: ['clients-count', user?.id],
@@ -113,7 +116,7 @@ export function PrivateDashboard({ trainer }: { trainer: Trainer | undefined }) 
       <AdminReplyBanner />
       {trainer && <StudioOverviewCard trainer={trainer} />}
 
-      <BirthdayBanner />
+      {isOn('birthdays') && <BirthdayBanner />}
       <NoShowStreakWidget />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -144,7 +147,7 @@ export function PrivateDashboard({ trainer }: { trainer: Trainer | undefined }) 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <RevenueTrendWidget />
+        {isOn('reports') && <RevenueTrendWidget />}
         <LastNotesWidget />
       </div>
 

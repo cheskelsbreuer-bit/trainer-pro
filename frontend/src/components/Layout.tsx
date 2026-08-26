@@ -3,27 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { useBrandTheme } from '../hooks/useBrandTheme';
 import { supabase } from '../lib/supabase';
-import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  DollarSign,
-  Dumbbell,
-  TrendingUp,
-  Settings,
-  LogOut,
-} from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import type { Trainer } from '../lib/database.types';
-
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/clients', label: 'Clients', icon: Users },
-  { to: '/sessions', label: 'Sessions', icon: Calendar },
-  { to: '/payments', label: 'Payments', icon: DollarSign },
-  { to: '/workouts', label: 'Workouts', icon: Dumbbell },
-  { to: '/progress', label: 'Progress', icon: TrendingUp },
-  { to: '/settings', label: 'Settings', icon: Settings },
-];
+import { coreNavFor } from '../lib/appNav';
+import { useEnabledModules } from '../lib/modules';
+import { useLayout } from '../lib/layout';
+import { pickTemplateUx } from '../lib/templateUx';
 
 export function Layout() {
   const { user, signOut } = useAuth();
@@ -42,6 +27,13 @@ export function Layout() {
     },
     enabled: !!user,
   });
+
+  // The menu is BUILT from the coach's choices: which features are on
+  // (Settings → Customize → Features) and their saved order (→ Layout).
+  const { isOn } = useEnabledModules(trainer?.template_slugs ?? undefined);
+  const { layout } = useLayout();
+  const clientNoun = capitalize(pickTemplateUx(trainer?.template_slugs ?? []).clientNounPlural);
+  const navItems = coreNavFor(isOn, layout.navOrder, clientNoun);
 
   const displayName =
     trainer?.business_name?.trim() ||
@@ -132,6 +124,10 @@ export function Layout() {
       </main>
     </div>
   );
+}
+
+function capitalize(s: string): string {
+  return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
 function getInitials(name: string): string {

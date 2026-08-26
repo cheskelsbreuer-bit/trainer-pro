@@ -9,6 +9,7 @@ import { OnboardingWizard } from './components/OnboardingWizard';
 import { AdminLogin } from './components/AdminLogin';
 import type { Trainer } from './lib/database.types';
 import { Dashboard } from './pages/Dashboard';
+import { ModuleGate } from './components/ModuleGate';
 import { Clients } from './pages/Clients';
 import { ClientDetail } from './pages/ClientDetail';
 import { Sessions } from './pages/Sessions';
@@ -477,15 +478,17 @@ export default function App() {
             <Route path="/chesky" element={<AdminShell />} />
             <Route path="/admin" element={<Navigate to="/chesky" replace />} />
 
-            {/* Trainer app — protected */}
+            {/* Trainer app — protected. Feature tabs sit behind ModuleGate,
+                so a switched-off feature shows a one-click turn-on screen
+                instead of pretending the toggle doesn't exist. */}
             <Route element={<ProtectedShell />}>
               <Route index element={<Dashboard />} />
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
-              <Route path="sessions" element={<Sessions />} />
-              <Route path="payments" element={<Payments />} />
-              <Route path="workouts" element={<Workouts />} />
-              <Route path="progress" element={<Progress />} />
+              <Route path="sessions" element={<ModuleGate route="/sessions"><Sessions /></ModuleGate>} />
+              <Route path="payments" element={<ModuleGate route="/payments"><Payments /></ModuleGate>} />
+              <Route path="workouts" element={<ModuleGate route="/workouts"><Workouts /></ModuleGate>} />
+              <Route path="progress" element={<ModuleGate route="/progress"><Progress /></ModuleGate>} />
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

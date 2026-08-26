@@ -377,11 +377,23 @@ export const STARTER_BUNDLES: Record<string, string[]> = {
     'family-memberships', 'day-groups', 'pause-records',
     'reports', 'activity-log', 'birthdays', 'sms-reminders', 'email-reminders',
   ],
-  gym_membership: [...ALWAYS_CORE, 'class-schedule', 'attendance', 'packages', 'public-profile'],
-  yoga_studio: [...ALWAYS_CORE, 'class-schedule', 'class-types', 'instructors', 'bookings', 'packages', 'public-profile'],
-  solo_trainer: [...ALWAYS_CORE, 'session-logging', 'workout-builder', 'packages', 'public-profile'],
-  athletic_performance: [...ALWAYS_CORE, 'session-logging', 'workout-builder', 'public-profile'],
-  online_coach: [...ALWAYS_CORE, 'check-ins', 'session-logging', 'workout-builder', 'intake-forms', 'public-profile'],
+  gym_membership: [...ALWAYS_CORE, 'class-schedule', 'attendance', 'packages', 'public-profile', 'birthdays', 'reports'],
+  yoga_studio: [...ALWAYS_CORE, 'class-schedule', 'class-types', 'instructors', 'bookings', 'packages', 'public-profile', 'birthdays', 'reports'],
+  solo_trainer: [
+    ...ALWAYS_CORE,
+    'session-logging', 'workout-builder', 'packages', 'public-profile',
+    'progress-graphs', 'body-measurements', 'progress-photos', 'birthdays', 'reports',
+  ],
+  athletic_performance: [
+    ...ALWAYS_CORE,
+    'session-logging', 'workout-builder', 'public-profile',
+    'progress-graphs', 'body-measurements', 'pr-tracking', 'birthdays', 'reports',
+  ],
+  online_coach: [
+    ...ALWAYS_CORE,
+    'check-ins', 'session-logging', 'workout-builder', 'intake-forms', 'public-profile',
+    'progress-graphs', 'progress-photos', 'birthdays', 'reports',
+  ],
 };
 
 export function starterBundle(templateSlug: string | undefined): string[] {

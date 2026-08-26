@@ -33,6 +33,7 @@ import { StripeStatusCard } from '../components/StripeStatusCard';
 import { PublicProfileSettingsCard } from '../components/PublicProfileSettingsCard';
 import { TestimonialsManagerCard } from '../components/TestimonialsManagerCard';
 import { CustomizeStudio } from '../components/CustomizeStudio';
+import { CORE_NAV } from '../lib/appNav';
 import type { Trainer } from '../lib/database.types';
 
 type Section = 'business' | 'public' | 'booking' | 'customize' | 'support' | null;
@@ -183,15 +184,7 @@ export function Settings() {
         <CustomizeStudio
           templateSlugs={trainer.template_slugs?.length ? trainer.template_slugs : ['solo_trainer']}
           accent={trainer.primary_color || '#2563eb'}
-          navItems={[
-            { to: '/', label: 'Dashboard' },
-            { to: '/clients', label: 'Clients' },
-            { to: '/sessions', label: 'Sessions' },
-            { to: '/payments', label: 'Payments' },
-            { to: '/workouts', label: 'Workouts' },
-            { to: '/progress', label: 'Progress' },
-            { to: '/settings', label: 'Settings' },
-          ]}
+          navItems={CORE_NAV.map((n) => ({ to: n.to, label: n.label }))}
         />
       )}
 

@@ -15,22 +15,14 @@
 //   UnifiedApp    — the real app: shell + its own routes
 
 import { NavLink, Outlet, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Users,
-  CalendarClock,
-  Wallet,
-  Dumbbell,
-  TrendingUp,
-  Settings as SettingsIcon,
-  LogOut,
-} from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
 import { pickTemplateUx } from '../lib/templateUx';
 import { workspacesFor } from '../lib/workspaces';
 import { useEnabledModules } from '../lib/modules';
-import { useLayout, applyNavOrder } from '../lib/layout';
+import { useLayout } from '../lib/layout';
+import { coreNavFor } from '../lib/appNav';
 import { UnifiedHome } from './UnifiedHome';
 import { Clients } from '../pages/Clients';
 import { ClientDetail } from '../pages/ClientDetail';
@@ -39,14 +31,6 @@ import { Payments } from '../pages/Payments';
 import { Workouts } from '../pages/Workouts';
 import { Progress } from '../pages/Progress';
 import { Settings } from '../pages/Settings';
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number }>;
-  end?: boolean;
-  module?: string;
-}
 
 export function UnifiedShell({
   trainer,
@@ -65,19 +49,8 @@ export function UnifiedShell({
 
   const people = capitalize(ux.clientNounPlural);
 
-  const NAV: NavItem[] = [
-    { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-    { to: '/clients', label: people, icon: Users },
-    { to: '/sessions', label: 'Sessions', icon: CalendarClock, module: 'online-booking' },
-    { to: '/payments', label: 'Payments', icon: Wallet },
-    { to: '/workouts', label: 'Workouts', icon: Dumbbell, module: 'workout-builder' },
-    { to: '/progress', label: 'Progress', icon: TrendingUp },
-    { to: '/settings', label: 'Settings', icon: SettingsIcon },
-  ];
-  const visible = applyNavOrder(
-    NAV.filter((n) => !n.module || isOn(n.module)),
-    layout.navOrder,
-  );
+  // Same menu brain as the default shell — features on/off + saved order.
+  const visible = coreNavFor(isOn, layout.navOrder, people);
 
   const businessName =
     trainer?.business_name?.trim() || trainer?.full_name?.trim() || 'Your business';
