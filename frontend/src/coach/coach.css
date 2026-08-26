@@ -3,8 +3,8 @@
 
 .coach-root {
   min-height: 100vh;
-  background: #141518;
-  color: #f2f1ec;
+  background: #1b1713;
+  color: #f6f1e7;
   font-family: 'Archivo', system-ui, -apple-system, sans-serif;
   display: flex;
 }
@@ -29,9 +29,9 @@
   bottom: 0;
   z-index: 50;
   display: flex;
-  background: rgba(20, 21, 24, 0.96);
+  background: rgba(27, 23, 19, 0.96);
   backdrop-filter: blur(10px);
-  border-top: 1px solid #2a2e35;
+  border-top: 1px solid #3a322a;
   padding: 8px 10px calc(14px + env(safe-area-inset-bottom));
 }
 
@@ -44,14 +44,14 @@
   justify-content: center;
   gap: 3px;
   text-decoration: none;
-  color: #9ba1ab;
+  color: #a89d8c;
   font-size: 10.5px;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .coach-tab.active {
-  color: #ff5f2e;
+  color: #f07a52;
   font-weight: 700;
 }
 
@@ -62,7 +62,7 @@
     flex-direction: column;
     width: 232px;
     flex-shrink: 0;
-    border-right: 1px solid #2a2e35;
+    border-right: 1px solid #3a322a;
     padding: 22px 14px;
     gap: 4px;
     position: sticky;
@@ -75,11 +75,11 @@
     align-items: center;
     gap: 11px;
     padding: 11px 13px;
-    border-radius: 12px;
+    border-radius: 14px;
     text-decoration: none;
-    color: #9ba1ab;
+    color: #a89d8c;
     font-size: 14px;
     font-weight: 600;
   }
-  .coach-sidelink.active { background: #1d2025; color: #f2f1ec; font-weight: 700; }
+  .coach-sidelink.active { background: #26211a; color: #f6f1e7; font-weight: 700; }
 }

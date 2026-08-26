@@ -1,5 +1,6 @@
 // Decides which portal a signed-in non-trainer sees. If the account is
 // linked to kids of a babysitting business → the warm FamilyPortal.
+// If their trainer runs the 1-on-1 Coach app → the Coach client app.
 // Anything else falls through to the original generic ClientPortal, so
 // no other vertical's behavior changes.
 
@@ -8,6 +9,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
 import { ClientPortal } from '../../pages/ClientPortal';
+import { CoachClientApp } from '../../coach/client/CoachClientApp';
 import { FamilyPortal, type PortalTrainer } from './FamilyPortal';
 
 type PortalRow = Client & { trainers: PortalTrainer | null };
@@ -42,5 +44,17 @@ export function FamilyPortalGate() {
   if (kids.length > 0 && isBabysitting) {
     return <FamilyPortal kids={kids} trainer={trainer} refetchKids={() => void rows.refetch()} />;
   }
+
+  // 1-on-1 Coach clients get the new client app (shared logger, warm
+  // design). Explicit slug list — the ux fallback also matches trainers
+  // with no templates at all, and those should keep the classic portal.
+  const COACH_SLUGS = ['solo_trainer', 'athletic_performance', 'online_coach'];
+  const coachRow = kids.find((k) =>
+    (k.trainers?.template_slugs ?? []).some((s) => COACH_SLUGS.includes(s)),
+  );
+  if (coachRow) {
+    return <CoachClientApp client={coachRow} trainer={coachRow.trainers} />;
+  }
+
   return <ClientPortal />;
 }

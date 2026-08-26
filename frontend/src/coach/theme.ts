@@ -9,30 +9,33 @@
 // This file is the single source of truth for the app's look. Pages
 // read tokens; they never invent colors.
 
+// Comfy pass (owner feedback): the floor stays dark for 5am gyms, but
+// warm — coffee-brown blacks, cream text, softened coral accent, rounder
+// shapes. Cozy leather gym bag, not server room.
 export const FLOOR = {
-  bg: '#141518',
-  card: '#1d2025',
-  cardDeep: '#17191d',
-  edge: '#2a2e35',
-  edgeSoft: '#22262c',
-  ink: '#f2f1ec',
-  inkSoft: '#cfd3da',
-  mute: '#9ba1ab',
-  accent: '#ff5f2e',
-  accentInk: '#2b130a',
-  accentSoft: '#33221c',
-  accentSoftInk: '#ffb08f',
-  good: '#46c98b',
-  goodInk: '#10241a',
-  goodSoft: '#1c2b22',
-  goodSoftInk: '#7fd6ab',
-  warnSoft: '#2b2417',
-  warnSoftInk: '#e8c47a',
-  bad: '#ff9d9d',
-  badSoft: '#3a1d1d',
-  badEdge: '#4a2626',
-  info: '#8fb8e8',
-  infoSoft: '#1d2735',
+  bg: '#1b1713',
+  card: '#26211a',
+  cardDeep: '#201b16',
+  edge: '#3a322a',
+  edgeSoft: '#2c2620',
+  ink: '#f6f1e7',
+  inkSoft: '#ddd5c7',
+  mute: '#a89d8c',
+  accent: '#f07a52',
+  accentInk: '#301407',
+  accentSoft: '#3a281e',
+  accentSoftInk: '#ffbb9a',
+  good: '#66c795',
+  goodInk: '#0f271b',
+  goodSoft: '#243027',
+  goodSoftInk: '#96dcb8',
+  warnSoft: '#332a1a',
+  warnSoftInk: '#e9c887',
+  bad: '#f2a3a3',
+  badSoft: '#3d2622',
+  badEdge: '#553229',
+  info: '#a3c0e6',
+  infoSoft: '#262d38',
 } as const;
 
 export const DESK = {
@@ -64,7 +67,7 @@ export const TYPE = {
   body: "'Archivo', system-ui, -apple-system, sans-serif",
 } as const;
 
-export const RADII = { sm: 11, md: 14, lg: 16, xl: 18, pill: 999 } as const;
+export const RADII = { sm: 13, md: 16, lg: 19, xl: 22, pill: 999 } as const;
 
 /** Minimum one-hand hit target on the floor screens (research: logging
  *  happens in 30-90s rest windows, phone in one hand). */

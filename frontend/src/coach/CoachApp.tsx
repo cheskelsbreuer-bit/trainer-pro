@@ -6,13 +6,15 @@
 // money — plus honest "being built" stubs where a screen isn't ready.
 
 import { useMemo, useState } from 'react';
-import { NavLink, Routes, Route, Navigate } from 'react-router-dom';
+import { NavLink, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Trainer } from '../lib/database.types';
 import { FLOOR as F, TYPE, RADII, HIT, formatMoney, initialsOf, timeOf, shortDate } from './theme';
 import { useCoachClients, useTodaySessions, useMonthPayments, useAddCoachClient } from './lib/roster';
+import { ProgramsPage } from './pages/ProgramsPage';
+import { LivePage } from './pages/LivePage';
 import './coach.css';
 
 // ── Small kit ─────────────────────────────────────────────────────────
@@ -132,6 +134,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 // ── Today ─────────────────────────────────────────────────────────────
 function TodayPage() {
+  const navigate = useNavigate();
   const { data: sessions, isLoading } = useTodaySessions();
   const { data: clients } = useCoachClients();
   const { data: payments } = useMonthPayments();
@@ -191,11 +194,22 @@ function TodayPage() {
                       <div style={{ fontSize: 12, color: F.mute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.notes}</div>
                     ) : null}
                   </div>
-                  {s.status === 'completed' && (
+                  {s.status === 'completed' ? (
                     <span style={{ marginLeft: 'auto' }}>
                       <Icon d="M4.5 12.5 L10 18 L19.5 6.5" size={17} color={F.good} />
                     </span>
-                  )}
+                  ) : s.clients?.id ? (
+                    <button
+                      onClick={() => navigate(`live/${s.clients!.id}?session=${s.id}`)}
+                      style={{
+                        marginLeft: 'auto', flexShrink: 0, height: 38, padding: '0 16px', borderRadius: RADII.pill,
+                        border: 'none', cursor: 'pointer', background: F.accent, color: F.accentInk,
+                        fontWeight: 800, fontSize: 13, fontFamily: TYPE.body,
+                      }}
+                    >
+                      Start
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );
@@ -308,19 +322,6 @@ function ClientsPage() {
   );
 }
 
-// ── Honest stubs (the switchboard pattern: never fake it) ─────────────
-function ComingPage({ title, body }: { title: string; body: string }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <BigTitle>{title}</BigTitle>
-      <Card style={{ borderStyle: 'dashed', textAlign: 'center', padding: '38px 22px' }}>
-        <div style={{ fontFamily: TYPE.display, fontWeight: 700, fontSize: 18, textTransform: 'uppercase', color: F.accentSoftInk }}>Being built now</div>
-        <div style={{ fontSize: 13.5, color: F.mute, marginTop: 8, lineHeight: 1.55 }}>{body}</div>
-      </Card>
-    </div>
-  );
-}
-
 // ── Money ─────────────────────────────────────────────────────────────
 function MoneyPage() {
   const { data: payments, isLoading } = useMonthPayments();
@@ -372,15 +373,8 @@ export function CoachApp() {
       <Routes>
         <Route index element={<TodayPage />} />
         <Route path="clients" element={<ClientsPage />} />
-        <Route
-          path="programs"
-          element={
-            <ComingPage
-              title="Programs"
-              body="The copy-a-week-and-bump-the-loads builder from the approved sketch. Until it lands, your Workouts page in the classic app keeps working."
-            />
-          }
-        />
+        <Route path="programs" element={<ProgramsPage />} />
+        <Route path="live/:clientId" element={<LivePage />} />
         <Route path="money" element={<MoneyPage />} />
         <Route path="*" element={<Navigate to="." replace />} />
       </Routes>
