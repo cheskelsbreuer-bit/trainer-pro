@@ -9,7 +9,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-import { api, ApiError, apiBaseUrl } from '../lib/api';
+import { api, apiBaseUrl } from '../lib/api';
 import { formatMoney } from '../lib/format';
 
 interface RevenuePoint {
@@ -57,17 +57,12 @@ export function RevenueTrendWidget() {
   }
 
   if (error) {
-    const e = error as ApiError;
     return (
       <div className="bg-white border border-slate-200 rounded-xl p-5">
         <Header />
-        <div className="text-xs text-amber-700 py-4 flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg p-3">
+        <div className="text-xs text-slate-500 py-4 flex items-start gap-2 bg-slate-50 border border-slate-100 rounded-lg p-3">
           <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
-          <span>
-            Backend isn't reachable ({e.status === 0 ? 'connection failed' : `HTTP ${e.status}`}).
-            Run <code className="bg-amber-100 px-1 rounded">uvicorn app.main:app --reload</code> in the
-            backend folder to see this chart.
-          </span>
+          <span>The trend chart couldn't load just now — it'll be back on the next refresh.</span>
         </div>
       </div>
     );

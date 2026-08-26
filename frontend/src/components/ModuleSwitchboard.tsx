@@ -13,6 +13,7 @@ import {
   useEnabledModules,
   modulesForTemplates,
   suggestionsFor,
+  isModuleBuilt,
   type AppModule,
   type ModuleCategory,
 } from '../lib/modules';
@@ -63,21 +64,26 @@ export function ModuleSwitchboard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const offered = useMemo(() => modulesForTemplates(templateSlugs), [slugKey]);
 
+  // Working features are toggleable; unbuilt ones live in their own
+  // honest "On the way" list at the bottom.
+  const ready = useMemo(() => offered.filter((m) => isModuleBuilt(m.id)), [offered]);
+  const onTheWay = useMemo(() => offered.filter((m) => !isModuleBuilt(m.id)), [offered]);
+
   const byCategory = useMemo(() => {
     const map = new Map<ModuleCategory, AppModule[]>();
-    for (const m of offered) {
+    for (const m of ready) {
       if (!map.has(m.category)) map.set(m.category, []);
       map.get(m.category)!.push(m);
     }
     return map;
-  }, [offered]);
+  }, [ready]);
 
-  const enabledCount = offered.filter((m) => isOn(m.id)).length;
+  const enabledCount = ready.filter((m) => isOn(m.id)).length;
 
   // Smart "do this → get more" suggestions: contextual, driven by what's
   // already on (affinity) plus static nudges. Recomputes as they toggle.
   const suggestions = useMemo(
-    () => suggestionsFor(enabled, templateSlugs),
+    () => suggestionsFor(enabled, templateSlugs).filter((s) => isModuleBuilt(s.module.id)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [enabled, slugKey],
   );
@@ -291,6 +297,56 @@ export function ModuleSwitchboard({
         Turn something off and its tab disappears from your app. Turn it back on anytime — your
         data is never deleted, just hidden.
       </p>
+
+      {/* On the way — honest about what isn't built yet */}
+      {onTheWay.length > 0 && (
+        <div style={{ marginTop: 26 }}>
+          <p
+            style={{
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: '#94A3B8',
+              margin: '0 0 4px',
+            }}
+          >
+            🚧 On the way
+          </p>
+          <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '0 0 10px' }}>
+            Planned for your kind of business — being built now. They'll light up here the day
+            they're ready.
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 6,
+            }}
+          >
+            {onTheWay.map((m) => (
+              <span
+                key={m.id}
+                title={m.description}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: '#F8FAFC',
+                  border: '1px dashed #CBD5E1',
+                  borderRadius: 999,
+                  padding: '5px 12px',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  color: '#64748B',
+                }}
+              >
+                {m.icon} {m.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

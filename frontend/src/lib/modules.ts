@@ -50,6 +50,43 @@ export interface AppModule {
   unlocks?: string[];
 }
 
+// ── What's REAL today ────────────────────────────────────────────────
+// The honest line between "flip it and it works" and "on the roadmap".
+// The switchboard shows unbuilt modules in their own "On the way"
+// section with the toggle disabled — no coach ever switches on a
+// feature that doesn't exist. Grown as verticals get built; this list
+// IS the build scoreboard.
+export const BUILT_MODULES = new Set<string>([
+  // core + money
+  'dashboard', 'roster', 'settings', 'payments', 'stripe', 'packages', 'class-billing',
+  // nutrition app (13k lines)
+  'habit-coaching', 'check-ins', 'recipes', 'intake-forms', 'resources', 'ask-coach',
+  'macros', 'meal-plan-builder', 'body-measurements', 'progress-graphs',
+  // dojo app
+  'belt-ranks', 'family-memberships', 'tournament-tracker', 'attendance',
+  // boxing app
+  'fighter-records', 'rounds-training', 'tier-system', 'fight-card',
+  // studio app
+  'class-schedule', 'class-types', 'instructors', 'bookings',
+  // exercise-group app
+  'day-groups', 'pause-records', 'notes-library',
+  // 1-on-1 core pages
+  'session-logging', 'workout-builder', 'program-templates', 'progress-photos',
+  // comms
+  'sms-reminders', 'email-reminders', 'messaging', 'client-portal',
+  // growth
+  'public-profile', 'online-booking', 'directory', 'calendar-sync', 'reports',
+  'activity-log', 'birthdays', 'holidays', 'tags', 'custom-fields',
+  // babysitting-grown extras
+  'family-discount-auto',
+  // AI
+  'ai-workout-gen',
+]);
+
+export function isModuleBuilt(id: string): boolean {
+  return BUILT_MODULES.has(id);
+}
+
 // ── The catalog ──────────────────────────────────────────────────────
 // Grouped loosely by category. `templates` controls which coaches even
 // SEE a module in their switchboard — a boxing module never shows up

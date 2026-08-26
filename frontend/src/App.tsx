@@ -106,7 +106,10 @@ function ProtectedShell() {
   // template's app, but the coach can flip via the switcher and we
   // remember their last choice per-browser.
   const primaryKey = appKeyForVariant(pickTemplateUx(trainer?.template_slugs).dashboardVariant);
-  const [activeKey, setActiveKey] = useState<AppKey | null>(null);
+  // Read the remembered workspace synchronously: if it seeds one render
+  // late, the primary app mounts first and its router eats any deep link
+  // (e.g. /settings gets bounced to / before the real workspace loads).
+  const [activeKey, setActiveKey] = useState<AppKey | null>(() => readActiveWorkspace(user?.id));
 
   // Seed / re-validate the active workspace once the trainer loads.
   useEffect(() => {
@@ -159,6 +162,17 @@ function ProtectedShell() {
   // vocabulary). Other variants keep the standard Layout. A coach who
   // picked several disciplines (and chose "separate") owns several apps
   // and flips between them with the floating switcher.
+  //
+  // Multi-app coaches: hold one frame until the remembered workspace is
+  // seeded — mounting the primary app early lets its router eat deep
+  // links (/settings bounced to / before the real workspace loads).
+  if (multiDiscipline && activeKey === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-500">Loading…</div>
+      </div>
+    );
+  }
   const effectiveKey: AppKey =
     activeKey && workspaces.some((w) => w.key === activeKey) ? activeKey : primaryKey;
 
