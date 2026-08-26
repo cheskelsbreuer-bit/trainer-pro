@@ -33,6 +33,7 @@ import { AdminPage } from './pages/AdminPage';
 import { adminRpc } from './lib/adminRpc';
 import { pickTemplateUx } from './lib/templateUx';
 import { BabysittingApp } from './babysitting/BabysittingApp';
+import { CoachApp } from './coach/CoachApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
 import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
 import { UnifiedApp, UnifiedShell } from './components/UnifiedApp';
@@ -199,6 +200,20 @@ function ProtectedShell() {
       )}
     </>
   );
+}
+
+// The Coach preview: same auth gate, its own self-contained shell.
+function CoachPreviewShell() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-500">Loading…</div>
+      </div>
+    );
+  }
+  if (!user) return <Login />;
+  return <CoachApp />;
 }
 
 // /portal uses the same auth gate but doesn't render the trainer Layout —
@@ -478,6 +493,9 @@ export default function App() {
 
             {/* Auth-protected but uses its own layout */}
             <Route path="/portal" element={<PortalShell />} />
+            {/* The flagship Coach app, growing behind a preview door until
+                it replaces the classic shell for 1-on-1 templates. */}
+            <Route path="/coach-preview/*" element={<CoachPreviewShell />} />
 
             {/* Admin — hidden, no nav link, gated by backend email allowlist */}
             {/* Renamed from /admin → /chesky to bypass Livigent-style URL
