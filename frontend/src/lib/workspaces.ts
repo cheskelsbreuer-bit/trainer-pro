@@ -26,19 +26,10 @@ export type AppKey =
 
 export function appKeyForVariant(variant: DashboardVariant): AppKey {
   switch (variant) {
-    case 'martial':
-      return 'martial';
-    case 'boxing':
-      return 'boxing';
-    case 'nutrition':
-      return 'nutrition';
-    case 'exercise':
-      return 'exercise';
     case 'babysitting':
       return 'babysitting';
-    case 'studio_classes':
-      return 'studio_classes';
-    // 'private' + 'studio' both ride the default trainer Layout.
+    // Post-reset: every other variant rides the base Layout until its
+    // ground-up app ships (old shells: archive/pre-groundup-verticals).
     default:
       return 'default';
   }
