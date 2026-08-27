@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
-import { COACH_TEMPLATE_SLUGS } from '../../lib/workspaces';
+import { isCoachAccount } from '../../lib/workspaces';
 import { ClientPortal } from '../../pages/ClientPortal';
 import { CoachClientApp } from '../../coach/client/CoachClientApp';
 import { FamilyPortal, type PortalTrainer } from './FamilyPortal';
@@ -47,10 +47,8 @@ export function FamilyPortalGate() {
   }
 
   // 1-on-1 Coach clients get the new client app (shared logger, warm
-  // design). Slug-scoped for the same reason the trainer side is.
-  const coachRow = kids.find((k) =>
-    (k.trainers?.template_slugs ?? []).some((s) => COACH_TEMPLATE_SLUGS.includes(s)),
-  );
+  // design). Same mapping as the trainer side, so both flip together.
+  const coachRow = kids.find((k) => isCoachAccount(k.trainers?.template_slugs));
   if (coachRow) {
     return <CoachClientApp client={coachRow} trainer={coachRow.trainers} />;
   }

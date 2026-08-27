@@ -25,9 +25,7 @@ export type AppKey =
   | 'babysitting'
   | 'studio_classes';
 
-/** Templates served by the ground-up 1-on-1 Coach app. Slug-scoped on
- *  purpose: the ux FALLBACK variant also matches unknown or empty
- *  template lists, and those should keep the classic Layout. */
+/** Templates served by the ground-up 1-on-1 Coach app. */
 export const COACH_TEMPLATE_SLUGS = ['solo_trainer', 'athletic_performance', 'online_coach'];
 
 export function appKeyForVariant(variant: DashboardVariant): AppKey {
@@ -41,11 +39,21 @@ export function appKeyForVariant(variant: DashboardVariant): AppKey {
   }
 }
 
-/** Slug → mounted app. Coach is keyed by slug (see above); everything
- *  else falls through to the variant mapping. */
+/** Slug → mounted app. The Coach app is the flagship: it serves the
+ *  three 1-on-1 templates AND any slug whose ux falls back to the
+ *  'private' (1-on-1) variant — an unknown template is far more likely
+ *  a solo coach than a gym. Studio/group and babysitting keep their
+ *  own mapping. */
 export function appKeyForSlug(slug: string): AppKey {
-  if (COACH_TEMPLATE_SLUGS.includes(slug)) return 'coach';
-  return appKeyForVariant(pickTemplateUx([slug]).dashboardVariant);
+  const variant = pickTemplateUx([slug]).dashboardVariant;
+  if (COACH_TEMPLATE_SLUGS.includes(slug) || variant === 'private') return 'coach';
+  return appKeyForVariant(variant);
+}
+
+/** Does this trainer's template list put them in the Coach app? Used
+ *  by the client portal gate so both sides flip together. */
+export function isCoachAccount(template_slugs: string[] | null | undefined): boolean {
+  return (template_slugs ?? []).some((s) => appKeyForSlug(s) === 'coach');
 }
 
 export interface Workspace {
@@ -82,7 +90,9 @@ export function workspacesFor(template_slugs: string[] | null | undefined): Work
 }
 
 // ── Remembering which workspace the coach last had open ───────────────
-const STORAGE_PREFIX = 'tp-workspace:';
+// v2: bumped when the Coach app went live so stale "classic" choices
+// from before the flip reset once to the new primary.
+const STORAGE_PREFIX = 'tp-workspace-v2:';
 
 export function readActiveWorkspace(userId: string | undefined): AppKey | null {
   if (typeof window === 'undefined' || !userId) return null;

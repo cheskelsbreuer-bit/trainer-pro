@@ -100,7 +100,11 @@ function ProtectedShell() {
   // Which app's shell is currently mounted. Defaults to the primary
   // template's app, but the coach can flip via the switcher and we
   // remember their last choice per-browser.
-  const primaryKey: AppKey = workspaces[0]?.key ?? 'default';
+  // The Coach app is the flagship: when the account owns it at all, it
+  // is the app you land in (the switcher reaches the others). Accounts
+  // with no templates get it too — this is a 1-on-1 platform first.
+  const primaryKey: AppKey =
+    workspaces.find((w) => w.key === 'coach')?.key ?? workspaces[0]?.key ?? 'coach';
   // Read the remembered workspace synchronously: if it seeds one render
   // late, the primary app mounts first and its router eats any deep link
   // (e.g. /settings gets bounced to / before the real workspace loads).
