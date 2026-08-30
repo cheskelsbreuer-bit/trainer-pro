@@ -19,6 +19,12 @@ export function PortalJoinPage() {
   const [accepted, setAccepted] = useState(false);
   const [signupForm, setSignupForm] = useState({ email: '', password: '' });
   const [signupError, setSignupError] = useState<string | null>(null);
+  // A parent who already has a login (a second child, a re-invite, or a
+  // returning account) needs a way in that is not "create an account".
+  const [mode, setMode] = useState<'signup' | 'signin'>('signup');
+  // Some projects require email confirmation, so signUp returns a user
+  // but NO session. Linking would then fail with NOT_AUTHENTICATED.
+  const [needsConfirm, setNeedsConfirm] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['portal-invite', token],
@@ -34,7 +40,7 @@ export function PortalJoinPage() {
   const accept = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('accept_client_portal_invite', { p_token: token });
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(friendly(error.message));
     },
     onSuccess: () => {
       setAccepted(true);
@@ -43,16 +49,44 @@ export function PortalJoinPage() {
   });
 
   const signup = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<{ hasSession: boolean }> => {
       setSignupError(null);
-      const { error } = await supabase.auth.signUp({
-        email: signupForm.email,
+      const email = (signupForm.email || data?.client.email || '').trim();
+      const { data: res, error } = await supabase.auth.signUp({
+        email,
         password: signupForm.password,
         options: { data: { full_name: data?.client.full_name } },
       });
-      if (error) throw new Error(error.message);
+      if (error) {
+        // Already has an account — send them to sign-in rather than a wall.
+        if (/already|registered|exists/i.test(error.message)) {
+          setMode('signin');
+          throw new Error('You already have a login for that email — enter your password below.');
+        }
+        throw new Error(error.message);
+      }
+      // No session means the project requires email confirmation.
+      return { hasSession: !!res.session };
     },
-    onSuccess: () => setTimeout(() => accept.mutate(), 700),
+    onSuccess: ({ hasSession }) => {
+      if (hasSession) accept.mutate();
+      else setNeedsConfirm(true);
+    },
+    onError: (e: Error) => setSignupError(e.message),
+  });
+
+  const signin = useMutation({
+    mutationFn: async () => {
+      setSignupError(null);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: (signupForm.email || data?.client.email || '').trim(),
+        password: signupForm.password,
+      });
+      if (error) throw new Error(
+        /invalid/i.test(error.message) ? 'That email and password do not match.' : error.message,
+      );
+    },
+    onSuccess: () => accept.mutate(),
     onError: (e: Error) => setSignupError(e.message),
   });
 
@@ -122,7 +156,25 @@ export function PortalJoinPage() {
       </header>
 
       <main className="max-w-md mx-auto px-6 py-8">
-        {user ? (
+        {needsConfirm ? (
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+            <h2 className="font-semibold text-slate-900">Check your email 📬</h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              We sent a confirmation link to{' '}
+              <span className="font-medium">{signupForm.email || data.client.email}</span>. Open it,
+              then come back to <em>this</em> link and you'll go straight into your portal.
+            </p>
+            <p className="text-xs text-slate-500">
+              Nothing arrived? Check spam, or ask {heading} to send the invite again.
+            </p>
+            <button
+              onClick={() => { setNeedsConfirm(false); setMode('signin'); }}
+              className="w-full border border-slate-300 text-slate-700 font-medium py-2.5 rounded-lg"
+            >
+              I already confirmed — sign me in
+            </button>
+          </div>
+        ) : user ? (
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
             <p className="text-sm text-slate-700">
               Signed in as <span className="font-medium">{user.email}</span>. Click below to link this
@@ -144,9 +196,29 @@ export function PortalJoinPage() {
           </div>
         ) : (
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
-            <h2 className="font-semibold text-slate-900">Create a password</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setMode('signup'); setSignupError(null); }}
+                className={`flex-1 text-sm font-medium py-2 rounded-lg border ${mode === 'signup' ? 'text-white border-transparent' : 'text-slate-600 border-slate-300'}`}
+                style={mode === 'signup' ? { backgroundColor: color } : undefined}
+              >
+                I'm new
+              </button>
+              <button
+                onClick={() => { setMode('signin'); setSignupError(null); }}
+                className={`flex-1 text-sm font-medium py-2 rounded-lg border ${mode === 'signin' ? 'text-white border-transparent' : 'text-slate-600 border-slate-300'}`}
+                style={mode === 'signin' ? { backgroundColor: color } : undefined}
+              >
+                I have a login
+              </button>
+            </div>
+            <h2 className="font-semibold text-slate-900">
+              {mode === 'signup' ? 'Create a password' : 'Sign in'}
+            </h2>
             <p className="text-xs text-slate-500">
-              We'll email you confirmations and reminders here. You'll only enter this once.
+              {mode === 'signup'
+                ? "We'll email you confirmations and reminders here. You'll only enter this once."
+                : 'Use the email and password you already set up.'}
             </p>
             <input
               type="email"
@@ -162,22 +234,42 @@ export function PortalJoinPage() {
               onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {signupError && (
-              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{signupError}</p>
+            {(signupError || accept.error) && (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">
+                {signupError || (accept.error as Error).message}
+              </p>
             )}
             <button
-              onClick={() => signup.mutate()}
-              disabled={signup.isPending || accept.isPending || !signupForm.email || !signupForm.password}
+              onClick={() => (mode === 'signup' ? signup.mutate() : signin.mutate())}
+              disabled={
+                signup.isPending ||
+                signin.isPending ||
+                accept.isPending ||
+                !(signupForm.email || data.client.email) ||
+                !signupForm.password
+              }
               className="w-full text-white font-medium py-2.5 rounded-lg disabled:opacity-50"
               style={{ backgroundColor: color }}
             >
-              {signup.isPending || accept.isPending ? 'Creating…' : 'Create my portal account'}
+              {signup.isPending || signin.isPending || accept.isPending
+                ? 'One moment…'
+                : mode === 'signup'
+                  ? 'Create my portal account'
+                  : 'Sign in and open my portal'}
             </button>
           </div>
         )}
       </main>
     </div>
   );
+}
+
+/** The RPC speaks in codes; parents should not have to. */
+function friendly(msg: string): string {
+  if (/NOT_AUTHENTICATED/.test(msg)) return 'Please confirm your email first, then open this link again.';
+  if (/INVITE_EXPIRED/.test(msg)) return 'This link has expired — ask for a fresh one.';
+  if (/INVITE_INVALID/.test(msg)) return 'This link is no longer valid — ask for a fresh one.';
+  return msg;
 }
 
 function Centered({ children }: { children: React.ReactNode }) {

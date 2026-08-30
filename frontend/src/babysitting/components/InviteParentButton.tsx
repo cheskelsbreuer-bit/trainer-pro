@@ -4,13 +4,14 @@
 // links every sibling to their account on first portal visit.
 
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
 import { B, readParent } from '../theme';
 import { smsLink, mailtoLink, familySummary } from '../lib/messages';
 import { useDemo } from '../demo/flag';
-import { Btn } from './ui';
+import { Btn, Chip } from './ui';
 
 function makeToken(): string {
   const bytes = new Uint8Array(18);
@@ -31,6 +32,22 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
   const demo = useDemo();
   const [state, setState] = useState<'idle' | 'busy' | 'ready' | 'copied' | 'error'>('idle');
   const [link, setLink] = useState<string | null>(null);
+
+  const invite = useQuery({
+    queryKey: ['bs-invite', kids.map((k) => k.id).join(',')],
+    queryFn: async (): Promise<{ status: string; created_at: string; expires_at: string | null } | null> => {
+      if (demo || !kids.length) return null;
+      const { data, error } = await supabase
+        .from('client_portal_invites')
+        .select('status, created_at, expires_at')
+        .in('client_id', kids.map((k) => k.id))
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+    enabled: !demo && kids.length > 0,
+  });
 
   const fam = familySummary(kids);
   const firstKid = kids[0];
@@ -57,6 +74,7 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
       if (error) throw error;
       setLink(`${inviteOrigin()}/portal-join/${token}`);
       setState('ready');
+      void invite.refetch();
     } catch {
       setState('error');
       setTimeout(() => setState('idle'), 2600);
@@ -121,15 +139,39 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
     );
   }
 
+  // An invite that was sent but never opened is invisible otherwise —
+  // the sitter would just see "not set up yet" forever and not know why.
+  const inv = invite.data;
+  const daysAgo = inv ? Math.floor((Date.now() - new Date(inv.created_at).getTime()) / 86400000) : null;
+  const expired =
+    inv?.status === 'expired' ||
+    (inv?.status === 'pending' && !!inv.expires_at && new Date(inv.expires_at) < new Date());
+  const waiting = inv?.status === 'pending' && !expired;
+
   return (
-    <Btn
-      size="sm"
-      kind="accent"
-      onClick={() => void createInvite()}
-      disabled={state === 'busy'}
-      title="Create a login link for the parent"
-    >
-      {state === 'error' ? 'Try again' : state === 'busy' ? '…' : '🔗 Invite parent'}
-    </Btn>
+    <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+      <Btn
+        size="sm"
+        kind="accent"
+        onClick={() => void createInvite()}
+        disabled={state === 'busy'}
+        title="Create a login link for the parent"
+      >
+        {state === 'error'
+          ? 'Try again'
+          : state === 'busy'
+            ? '…'
+            : inv
+              ? '🔗 Send a new link'
+              : '🔗 Invite parent'}
+      </Btn>
+      {waiting && (
+        <Chip tone="butter" style={{ whiteSpace: 'normal' }}>
+          Sent {daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : `${daysAgo} days ago`} · not
+          opened yet
+        </Chip>
+      )}
+      {expired && <Chip tone="red">That link expired — send a new one</Chip>}
+    </span>
   );
 }
