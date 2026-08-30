@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { api, ApiError } from '../../lib/api';
-import { B, readFamilySlug, familyLabel, formatMoney, shortDate, DAY_SHORT, ALL_DAYS } from '../theme';
+import { B, readFamilySlug, familyLabel, readDays, formatMoney, shortDate, DAY_SHORT, ALL_DAYS } from '../theme';
 import { useKids } from '../lib/data';
 import {
   useBabysittingConfig,
@@ -114,21 +114,20 @@ export function MessagesPage() {
   const sentToday = cfg.data?.runState?.date === todayKey() ? cfg.data.runState.sent : [];
   const doneCount = runFamilies.filter((f) => sentToday.includes(f.slug)).length;
 
-  // All families (even paid-up) — announcements go to everyone.
-  const allFamilies = useMemo(() => {
-    const byFam = new Map<string, string>(); // slug -> first active kid id
-    for (const k of active) {
-      const slug = readFamilySlug(k) || `solo-${k.id}`;
-      if (!byFam.has(slug)) byFam.set(slug, k.id);
-    }
-    return Array.from(byFam.entries());
-  }, [active]);
-
   const [announceText, setAnnounceText] = useState('');
   const [announceFrom, setAnnounceFrom] = useState('');
   const [announceUntil, setAnnounceUntil] = useState('');
   const [announceBusy, setAnnounceBusy] = useState(false);
   const [announceErr, setAnnounceErr] = useState('');
+  // Who gets it: no days picked = everyone. Picking days narrows it to
+  // families with a kid here on one of those days, so "closed Tuesday"
+  // doesn't reach the Thursday-only families.
+  const [announceDays, setAnnounceDays] = useState<string[]>([]);
+  // How it goes out. The app post is instant; text and email open her
+  // own apps with the note written, one tap per family.
+  const [postToApp, setPostToApp] = useState(true);
+  const [sendText, setSendText] = useState(false);
+  const [sendEmail, setSendEmail] = useState(false);
   // The last note posted — kept around so she can also text it out.
   const [lastPosted, setLastPosted] = useState('');
 
@@ -142,9 +141,18 @@ export function MessagesPage() {
     return Array.from(byFam.entries()).map(([slug, members]) => ({
       slug,
       label: slug.startsWith('solo-') ? members[0].full_name : familyLabel(slug),
+      members,
+      days: Array.from(new Set(members.flatMap((m) => readDays(m)))),
       ...familySummary(members),
     }));
   }, [active]);
+
+  /** The families this note is actually for. */
+  const announceAudience = useMemo(() => {
+    if (!announceDays.length) return familyGroups;
+    return familyGroups.filter((f) => f.days.some((d) => announceDays.includes(d)));
+  }, [familyGroups, announceDays]);
+  const audienceKidCount = announceAudience.reduce((s, f) => s + f.members.length, 0);
 
   /** The note with its "when" baked into the text, so parents see the
    *  dates wherever it shows up — portal, text, anywhere. */
@@ -208,16 +216,29 @@ export function MessagesPage() {
       return;
     }
     if (!user) return;
-    if (!allFamilies.length) {
-      setAnnounceErr('Add kids first — there is nobody to post to yet.');
+    if (!announceAudience.length) {
+      setAnnounceErr(
+        announceDays.length
+          ? 'No family has a kid here on those days. Widen the days, or clear them to reach everyone.'
+          : 'Add kids first — there is nobody to post to yet.',
+      );
+      return;
+    }
+    // Text / email only: skip the database write, just hand her the links.
+    if (!postToApp) {
+      setAnnounceText('');
+      setAnnounceFrom('');
+      setAnnounceUntil('');
+      setLastPosted(body);
+      saveConfig((c) => c, `Note for ${announceAudience.length} families: "${body.slice(0, 60)}"`);
       return;
     }
     setAnnounceBusy(true);
     setAnnounceErr('');
     try {
-      const rows = allFamilies.map(([, kidId]) => ({
+      const rows = announceAudience.map((f) => ({
         trainer_id: user.id,
-        client_id: kidId,
+        client_id: f.members[0].id,
         sender: 'trainer',
         body,
         // Marks this as a broadcast note, so the parent's portal can pin
@@ -690,9 +711,9 @@ export function MessagesPage() {
 
       {/* ── Announcements ────────────────────────────────────────── */}
       <Card>
-        <SectionTitle>📣 Note to all parents</SectionTitle>
+        <SectionTitle>📣 Note to parents</SectionTitle>
         <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 12 }}>
-          Post once — every family sees it at the top of their parent portal. Good for "closed Tuesday" or "bring bathing suits."
+          Write once, choose who gets it and how it reaches them. Good for "closed Tuesday" or "bring bathing suits."
         </div>
         {editMode && (
           <div style={{ marginBottom: 14 }}>
@@ -703,10 +724,100 @@ export function MessagesPage() {
                 onChange={(e) => setAnnounceText(e.target.value)}
                 placeholder="e.g. We're closed this Tuesday. See everyone Wednesday!"
               />
-              <Btn onClick={() => void postAnnouncement()} disabled={announceBusy || !announceText.trim()}>
-                {announceBusy ? 'Posting…' : '📣 Post to parents'}
+              <Btn
+                onClick={() => void postAnnouncement()}
+                disabled={announceBusy || !announceText.trim() || (!postToApp && !sendText && !sendEmail)}
+              >
+                {announceBusy ? 'Posting…' : postToApp ? '📣 Post to parents' : '📣 Prepare messages'}
               </Btn>
             </div>
+            {/* Who gets it */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: B.mute }}>Who gets it?</span>
+              <button
+                type="button"
+                onClick={() => setAnnounceDays([])}
+                style={{
+                  border: 'none',
+                  cursor: 'pointer',
+                  borderRadius: B.pill,
+                  padding: '6px 13px',
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  background: announceDays.length ? '#f2ede4' : B.primary,
+                  color: announceDays.length ? B.inkSoft : '#fff',
+                }}
+              >
+                Everyone
+              </button>
+              <span style={{ fontSize: '0.74rem', color: B.mute }}>or only kids here on:</span>
+              {ALL_DAYS.map((day) => {
+                const on = announceDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() =>
+                      setAnnounceDays((prev) =>
+                        prev.includes(day) ? prev.filter((x) => x !== day) : [...prev, day],
+                      )
+                    }
+                    style={{
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderRadius: B.pill,
+                      padding: '6px 11px',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      background: on ? B.accent : '#f2ede4',
+                      color: on ? '#fff' : B.inkSoft,
+                    }}
+                  >
+                    {DAY_SHORT[day]}
+                  </button>
+                );
+              })}
+              <Chip tone={announceAudience.length ? 'accent' : 'red'}>
+                {announceAudience.length} famil{announceAudience.length === 1 ? 'y' : 'ies'} · {audienceKidCount} kid
+                {audienceKidCount === 1 ? '' : 's'}
+              </Chip>
+            </div>
+
+            {/* How it goes out */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: B.mute }}>How?</span>
+              {([
+                ['app', postToApp, setPostToApp, '📱 In the app', 'Appears at the top of their parent portal, right away'],
+                ['text', sendText, setSendText, '💬 Text it', 'Opens your messaging app with the note written, one tap per family'],
+                ['email', sendEmail, setSendEmail, '✉️ Email it', 'Opens your email with the note written, one tap per family'],
+              ] as const).map(([key, on, set, label, hint]) => (
+                <button
+                  key={key}
+                  type="button"
+                  title={hint}
+                  onClick={() => set(!on)}
+                  style={{
+                    border: 'none',
+                    cursor: 'pointer',
+                    borderRadius: B.pill,
+                    padding: '6px 13px',
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                    background: on ? B.primary : '#f2ede4',
+                    color: on ? '#fff' : B.inkSoft,
+                  }}
+                >
+                  {on ? '✓ ' : ''}
+                  {label}
+                </button>
+              ))}
+            </div>
+            {!postToApp && (sendText || sendEmail) && (
+              <div style={{ fontSize: '0.74rem', color: B.mute, marginTop: 6 }}>
+                It won't appear in the app — only the texts/emails you send below.
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
               <span style={{ fontSize: '0.76rem', fontWeight: 800, color: B.mute }}>From when to when? (optional)</span>
               <input
@@ -744,16 +855,33 @@ export function MessagesPage() {
             }}
           >
             <div style={{ fontWeight: 800, color: B.accentDeep, marginBottom: 6 }}>
-              ✓ Posted to every family's portal. Want to also send it as a text?
+              {postToApp
+                ? `✓ Posted to ${announceAudience.length} famil${announceAudience.length === 1 ? "y's" : "ies'"} portal.`
+                : '✓ Ready to send.'}
+              {(sendText || sendEmail) && ' Tap each family to send it:'}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {familyGroups
-                .filter((f) => f.phone)
-                .map((f) => (
-                  <LinkBtn key={f.slug} kind="ghost" href={smsLink(f.phone!, lastPosted)} title={`Text the ${f.label}`}>
-                    📱 {f.label}
-                  </LinkBtn>
-                ))}
+              {sendText &&
+                announceAudience
+                  .filter((f) => f.phone)
+                  .map((f) => (
+                    <LinkBtn key={`sms-${f.slug}`} kind="ghost" href={smsLink(f.phone!, lastPosted)} title={`Text the ${f.label}`}>
+                      📱 {f.label}
+                    </LinkBtn>
+                  ))}
+              {sendEmail &&
+                announceAudience
+                  .filter((f) => f.email)
+                  .map((f) => (
+                    <LinkBtn
+                      key={`mail-${f.slug}`}
+                      kind="ghost"
+                      href={mailtoLink(f.email!, 'A note from your babysitter', lastPosted)}
+                      title={`Email the ${f.label}`}
+                    >
+                      ✉️ {f.label}
+                    </LinkBtn>
+                  ))}
               <Btn
                 size="sm"
                 kind="ghost"
@@ -767,8 +895,11 @@ export function MessagesPage() {
               >
                 📋 Copy the note
               </Btn>
-              {!familyGroups.some((f) => f.phone) && (
-                <span style={{ color: B.mute }}>No parent phone numbers on file yet.</span>
+              {sendText && !announceAudience.some((f) => f.phone) && (
+                <span style={{ color: B.mute }}>No phone numbers on file for these families.</span>
+              )}
+              {sendEmail && !announceAudience.some((f) => f.email) && (
+                <span style={{ color: B.mute }}>No email addresses on file for these families.</span>
               )}
             </div>
           </div>
