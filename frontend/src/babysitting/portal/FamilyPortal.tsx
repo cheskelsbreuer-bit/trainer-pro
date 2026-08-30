@@ -49,6 +49,11 @@ export function FamilyPortal({
   const [absenceNote, setAbsenceNote] = useState('');
   const [absenceState, setAbsenceState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const [linked, setLinked] = useState(false);
+  // Quick pay — one tap opens Stripe Checkout (card or bank/ACH), or the
+  // sitter's own payment link when Stripe isn't connected.
+  const [payBusy, setPayBusy] = useState(false);
+  const [payErr, setPayErr] = useState('');
+  const [payReturn] = useState(() => new URLSearchParams(window.location.search).get('payment'));
 
   // One-time on load: ask the server to link any sibling rows the invite
   // didn't cover. Idempotent and silent.
@@ -335,6 +340,60 @@ export function FamilyPortal({
                   ? 'Credit on your account — it counts toward the next bill.'
                   : "You're all paid up. Thank you! 💛"}
             </div>
+            {balance > 0.005 && (
+              <div style={{ marginTop: 14 }}>
+                <Btn
+                  size="lg"
+                  onClick={async () => {
+                    setPayBusy(true);
+                    setPayErr('');
+                    try {
+                      const res = await api<{ url: string; external: boolean }>('/portal/pay', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({}),
+                      });
+                      if (res.external) window.open(res.url, '_blank', 'noopener');
+                      else window.location.href = res.url;
+                    } catch (e) {
+                      setPayErr(e instanceof Error ? e.message.replace(/^\d+:\s*/, '') : 'Could not start the payment.');
+                    } finally {
+                      setPayBusy(false);
+                    }
+                  }}
+                  disabled={payBusy}
+                >
+                  {payBusy ? 'One moment…' : `💳 Pay ${formatMoney(balance)} now`}
+                </Btn>
+                <div style={{ fontSize: '0.72rem', color: B.mute, marginTop: 6 }}>
+                  Card or bank transfer — takes under a minute.
+                </div>
+                {payErr && (
+                  <div style={{ fontSize: '0.8rem', color: B.red, fontWeight: 700, marginTop: 8 }}>{payErr}</div>
+                )}
+              </div>
+            )}
+            {payReturn === 'success' && (
+              <div
+                style={{
+                  marginTop: 12,
+                  background: B.greenSoft,
+                  color: B.green,
+                  borderRadius: B.radiusSm,
+                  padding: '9px 13px',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
+                }}
+              >
+                ✓ Payment sent! Card payments show up in a minute; bank transfers take a few days to
+                clear — the balance moves when the money lands.
+              </div>
+            )}
+            {payReturn === 'cancel' && (
+              <div style={{ marginTop: 12, fontSize: '0.8rem', color: B.mute }}>
+                Payment cancelled — nothing was charged.
+              </div>
+            )}
             <div style={{ fontSize: '0.74rem', color: B.mute, marginTop: 8 }}>
               Lifetime paid: {formatMoney(totalPaid)}
             </div>

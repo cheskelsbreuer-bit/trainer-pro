@@ -155,7 +155,18 @@ async def stripe_webhook(request: Request) -> dict[str, Any]:
     event_type = event.get("type", "")
 
     if event_type == "checkout.session.completed":
+        # ACH (us_bank_account) completes the session while the debit is
+        # still processing — payment_status stays "unpaid" until the bank
+        # clears it, and async_payment_succeeded fires then. Only record
+        # money that has actually arrived.
+        if (event["data"]["object"].get("payment_status") or "paid") == "paid":
+            await _handle_checkout_completed(event["data"]["object"])
+    elif event_type == "checkout.session.async_payment_succeeded":
         await _handle_checkout_completed(event["data"]["object"])
+    elif event_type == "checkout.session.async_payment_failed":
+        # The bank debit bounced. Nothing was recorded, so there is
+        # nothing to undo — the balance simply still shows as owed.
+        pass
     elif event_type == "checkout.session.expired":
         # Optional: log / notify trainer that the link wasn't paid
         pass
@@ -209,6 +220,32 @@ async def _handle_checkout_completed(session: dict[str, Any]) -> None:
             "reference": session["id"],
         }
     ).execute()
+
+    # Babysitting balance payment: the family balance lives in tags
+    # (totalowed / totalpaid), so move totalpaid by the amount paid.
+    if meta.get("bs") == "1":
+        cur = (
+            sb.table("clients")
+            .select("tags")
+            .eq("id", client_id)
+            .single()
+            .execute()
+        )
+        tags = list((getattr(cur, "data", None) or {}).get("tags") or [])
+        prev_paid = 0.0
+        rest = []
+        for t in tags:
+            if isinstance(t, str) and t.startswith("totalpaid:"):
+                try:
+                    prev_paid = float(t[len("totalpaid:"):])
+                except ValueError:
+                    prev_paid = 0.0
+            else:
+                rest.append(t)
+        new_paid = round(prev_paid + amount, 2)
+        paid_str = f"{new_paid:g}"
+        sb.table("clients").update({"tags": rest + [f"totalpaid:{paid_str}"]}).eq("id", client_id).execute()
+        return  # no package bump for balance payments
 
     # Bump the client's package_balance by the sessions purchased
     if sessions_covered > 0:

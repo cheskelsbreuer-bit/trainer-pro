@@ -113,3 +113,126 @@ def report_absence(req: AbsenceRequest, authorization: str | None = Header(defau
         }
     ).execute()
     return {"ok": True}
+
+
+# ── Quick pay — the mother pays her balance right from the portal ──────
+#
+# One tap: we compute the family balance, open a Stripe Checkout page
+# that takes a card OR a US bank debit (ACH), and the webhook records
+# the payment and moves the balance the moment Stripe confirms it.
+# If the sitter hasn't connected Stripe but set a payment link
+# (Venmo / PayPal / Zelle), we hand that back instead — the button
+# always leads somewhere real, or says plainly that nothing is set up.
+
+
+class PortalPayRequest(BaseModel):
+    amount: float | None = None  # None = the whole family balance
+
+
+def _num_tag(tags: list | None, prefix: str) -> float:
+    raw = _tag_value(tags, prefix)
+    try:
+        return float(raw) if raw is not None else 0.0
+    except ValueError:
+        return 0.0
+
+
+def _family_rows(sb, user_id: str) -> list[dict]:
+    mine = (
+        sb.table("clients")
+        .select("id, trainer_id, full_name, email, status, tags, created_at")
+        .eq("auth_user_id", user_id)
+        .neq("status", "archived")
+        .execute()
+    )
+    return mine.data or []
+
+
+@router.post("/pay")
+def portal_pay(req: PortalPayRequest, authorization: str | None = Header(default=None)) -> dict:
+    from ..config import settings
+
+    user = _parent(authorization)
+    sb = supabase_admin()
+
+    kids = _family_rows(sb, user.user_id)
+    if not kids:
+        raise HTTPException(404, "No kids linked to this account")
+
+    balance = round(
+        sum(_num_tag(k.get("tags"), "totalowed:") - _num_tag(k.get("tags"), "totalpaid:") for k in kids),
+        2,
+    )
+    if balance <= 0.005:
+        raise HTTPException(400, "Nothing is owed right now")
+
+    amount = round(req.amount, 2) if req.amount else balance
+    if amount < 1:
+        raise HTTPException(400, "Minimum payment is $1")
+    if amount > balance:
+        amount = balance  # no overpaying by accident
+
+    trainer_id = kids[0]["trainer_id"]
+    trainer_resp = (
+        sb.table("trainers")
+        .select("id, full_name, business_name, public_profile")
+        .eq("id", trainer_id)
+        .single()
+        .execute()
+    )
+    trainer = trainer_resp.data or {}
+    bs_settings = ((trainer.get("public_profile") or {}).get("babysitting") or {}).get("settings") or {}
+    sitter_name = trainer.get("business_name") or trainer.get("full_name") or "your babysitter"
+
+    # The oldest kid row anchors the payment, same rule the chat uses.
+    anchor = sorted(kids, key=lambda k: (k.get("created_at") or "", k["id"]))[0]
+
+    # No Stripe on the server → the sitter's own payment link, if any.
+    if not settings.STRIPE_SECRET_KEY:
+        pay_link = (bs_settings.get("payLink") or "").strip()
+        if pay_link:
+            return {"url": pay_link, "external": True, "amount": amount}
+        raise HTTPException(
+            503,
+            f"Online payment isn't set up yet — pay {sitter_name} directly, or ask them to add a payment link.",
+        )
+
+    import stripe
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    base = settings.cors_origins[0] if settings.cors_origins else "http://localhost:5173"
+    kid_names = ", ".join(k["full_name"].split(" ")[0] for k in kids)
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            # Card for instant, US bank debit for the ACH crowd.
+            payment_method_types=["card", "us_bank_account"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {
+                            "name": f"Babysitting balance — {sitter_name}",
+                            "description": f"For {kid_names}",
+                        },
+                        "unit_amount": int(round(amount * 100)),
+                    },
+                    "quantity": 1,
+                }
+            ],
+            success_url=f"{base}/portal?payment=success",
+            cancel_url=f"{base}/portal?payment=cancel",
+            customer_email=next((k.get("email") for k in kids if k.get("email")), None),
+            metadata={
+                "trainer_id": trainer_id,
+                "client_id": anchor["id"],
+                "bs": "1",
+                "package_name": "Balance payment from the app",
+                "sessions_covered": "0",
+            },
+        )
+    except stripe.StripeError as e:  # type: ignore[attr-defined]
+        raise HTTPException(400, f"Stripe error: {getattr(e, 'user_message', None) or str(e)}") from e
+
+    return {"url": session.url or "", "external": False, "amount": amount}
