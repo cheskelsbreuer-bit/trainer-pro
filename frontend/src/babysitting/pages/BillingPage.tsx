@@ -6,6 +6,7 @@
 
 import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
+// (auto-billing setup lives on the Settings page now)
 import type { Client, Payment } from '../../lib/database.types';
 import { B, readFamilySlug, familyLabel, formatMoney, shortDate } from '../theme';
 import { useKids, usePayments, useDeletePayment, useAddCharge } from '../lib/data';
@@ -24,7 +25,6 @@ import {
   Modal,
 } from '../components/ui';
 import { PaymentModal } from '../components/PaymentModal';
-import { AutoBillingCard } from '../components/AutoBillingCard';
 import { ChargeModal } from '../components/ChargeModal';
 
 type Tab = 'payments' | 'charges';
@@ -234,9 +234,19 @@ export function BillingPage() {
     return <div style={{ padding: 60, textAlign: 'center', color: B.mute }}>Adding up the money…</div>;
   }
 
+  const ab = cfg.data?.settings.autoBilling;
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
   return (
     <div style={{ display: 'grid', gap: 18 }}>
-      <AutoBillingCard />
+      {/* Auto-billing status — the switch itself lives in Settings */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: '0.84rem', color: B.inkSoft, fontWeight: 700 }}>
+        🔁 Automatic weekly billing:{' '}
+        {ab?.enabled ? <Chip tone="green">On — every {DAY_NAMES[ab.day]}</Chip> : <Chip tone="neutral">Off</Chip>}
+        <Link to="/settings" style={{ color: B.primaryDeep, fontWeight: 800, textDecoration: 'none' }}>
+          Set up in Settings →
+        </Link>
+      </div>
       {/* Tabs + actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {tabBtn('payments', '💛 Payments')}

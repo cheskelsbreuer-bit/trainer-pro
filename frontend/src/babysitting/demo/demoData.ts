@@ -174,6 +174,7 @@ export const DEMO_CONFIG: BabysittingConfig = {
   version: 1,
   settings: {
     currency: '$',
+    billingMode: 'weekly',
     defaultWeeklyRate: 120,
     defaultHourlyRate: 12,
     smsTemplate:

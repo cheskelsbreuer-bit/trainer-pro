@@ -3,7 +3,7 @@
 // quiet pages; this list is "who's in care right now".
 
 import { useMemo, useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import type { Client } from '../../lib/database.types';
 import {
   B,
@@ -78,6 +78,7 @@ function PillToggle({
 export function KidsPage() {
   const { editMode } = useOutletContext<{ editMode: boolean }>();
   const { data: kids, isLoading } = useKids();
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
   const [family, setFamily] = useState('');
@@ -268,8 +269,14 @@ export function KidsPage() {
               <Btn size="sm" onClick={() => setBillSelection(selectedKids)}>🧾 Bill them</Btn>
               <Btn size="sm" kind="ghost" onClick={() => void bulkArchive()}>🗃 Move to Former</Btn>
               {(cfg.data?.kidTags ?? []).map((tg) => (
-                <Btn key={tg.id} size="sm" kind="ghost" onClick={() => void bulkTag(tg.id)} title={`Tag all as ${tg.label}`}>
-                  🏷 {tg.label}
+                <Btn
+                  key={tg.id}
+                  size="sm"
+                  kind="ghost"
+                  onClick={() => void bulkTag(tg.id)}
+                  title={`Put your "${tg.label}" label on everyone selected. These are your own labels — add or remove them in Settings → Make it yours.`}
+                >
+                  🏷 Tag as "{tg.label}"
                 </Btn>
               ))}
               <Btn size="sm" kind="ghost" onClick={() => setSelected(new Set())}>Clear</Btn>
@@ -295,12 +302,18 @@ export function KidsPage() {
               const parent = readParent(k);
               const age = ageOf(k.date_of_birth);
               return (
-                <tr key={k.id}>
+                // The whole row opens the kid — not just their name.
+                <tr
+                  key={k.id}
+                  onClick={() => navigate(`/kids/${k.id}`)}
+                  style={{ cursor: 'pointer' }}
+                >
                   {editMode && (
                     <Td>
                       <input
                         type="checkbox"
                         checked={selected.has(k.id)}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={() => toggleSelect(k.id)}
                         aria-label={`Select ${k.full_name}`}
                       />
@@ -330,7 +343,7 @@ export function KidsPage() {
                     <BalancePill balance={readBalance(k)} />
                   </Td>
                   <Td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: 6 }}>
+                    <div style={{ display: 'inline-flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
                       <Link to={`/kids/${k.id}`} style={{ textDecoration: 'none' }}>
                         <Btn size="sm" kind="ghost">View</Btn>
                       </Link>

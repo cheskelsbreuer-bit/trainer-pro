@@ -178,6 +178,12 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
             />
           </Field>
         ))}
+        {!(cfg.data?.customFields ?? []).length && (
+          <div style={{ gridColumn: '1 / -1', fontSize: '0.74rem', color: B.mute, margin: '0 0 13px' }}>
+            Want more boxes on this form — doctor, pickup password, nap schedule? Add your own fields
+            in Settings → 🧰 Make it yours. They'll show up here and on every kid's page.
+          </div>
+        )}
         {(cfg.data?.kidTags ?? []).length > 0 && (
           <Field label="Tags" style={{ gridColumn: '1 / -1' }}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

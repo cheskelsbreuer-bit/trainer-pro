@@ -22,7 +22,7 @@ import {
 } from '../lib/config';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
 import { useDemo } from '../demo/flag';
-import { Card, SectionTitle, Btn, LinkBtn, Chip, EmptyState, Field, inputStyle } from '../components/ui';
+import { Card, SectionTitle, Btn, LinkBtn, Chip, EmptyState, Field, inputStyle, Collapse } from '../components/ui';
 
 interface RunFamily {
   slug: string;
@@ -125,8 +125,38 @@ export function MessagesPage() {
   }, [active]);
 
   const [announceText, setAnnounceText] = useState('');
+  const [announceFrom, setAnnounceFrom] = useState('');
+  const [announceUntil, setAnnounceUntil] = useState('');
   const [announceBusy, setAnnounceBusy] = useState(false);
   const [announceErr, setAnnounceErr] = useState('');
+  // The last note posted — kept around so she can also text it out.
+  const [lastPosted, setLastPosted] = useState('');
+
+  // Every family (with contact info), owing or not — notes go to all.
+  const familyGroups = useMemo(() => {
+    const byFam = new Map<string, typeof active>();
+    for (const k of active) {
+      const slug = readFamilySlug(k) || `solo-${k.id}`;
+      byFam.set(slug, [...(byFam.get(slug) ?? []), k]);
+    }
+    return Array.from(byFam.entries()).map(([slug, members]) => ({
+      slug,
+      label: slug.startsWith('solo-') ? members[0].full_name : familyLabel(slug),
+      ...familySummary(members),
+    }));
+  }, [active]);
+
+  /** The note with its "when" baked into the text, so parents see the
+   *  dates wherever it shows up — portal, text, anywhere. */
+  function announceBody(): string {
+    const body = announceText.trim();
+    const fmt = (d: string) =>
+      new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (announceFrom && announceUntil) return `${body} (${fmt(announceFrom)} – ${fmt(announceUntil)})`;
+    if (announceFrom) return `${body} (from ${fmt(announceFrom)})`;
+    if (announceUntil) return `${body} (until ${fmt(announceUntil)})`;
+    return body;
+  }
 
   // Announcements the demo has posted this session (memory only).
   const [demoAnnouncements, setDemoAnnouncements] = useState<
@@ -163,14 +193,17 @@ export function MessagesPage() {
   const postedAnnouncements = demo ? demoAnnouncements : announcements.data ?? [];
 
   async function postAnnouncement() {
-    const body = announceText.trim();
-    if (!body) return;
+    if (!announceText.trim()) return;
+    const body = announceBody();
     if (demo) {
       setDemoAnnouncements((prev) => [
         { id: `demo-ann-${Date.now()}`, body, created_at: new Date().toISOString() },
         ...prev,
       ]);
       setAnnounceText('');
+      setAnnounceFrom('');
+      setAnnounceUntil('');
+      setLastPosted(body);
       saveConfig((c) => c, `Posted to all parents: "${body.slice(0, 60)}"`);
       return;
     }
@@ -191,6 +224,9 @@ export function MessagesPage() {
       const { error } = await supabase.from('messages').insert(rows);
       if (error) throw error;
       setAnnounceText('');
+      setAnnounceFrom('');
+      setAnnounceUntil('');
+      setLastPosted(body);
       saveConfig((c) => c, `Posted to all parents: "${body.slice(0, 60)}"`);
       announcements.refetch();
     } catch (e) {
@@ -329,19 +365,20 @@ export function MessagesPage() {
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
-      {/* ── 1 · The Thursday Run ─────────────────────────────────── */}
+      {/* ── 1 · The Thursday Run — folded until she opens it ──────── */}
+      <Collapse
+        title="✉️ The reminder run"
+        badge={
+          runFamilies.length ? (
+            <Chip tone={doneCount === runFamilies.length ? 'green' : 'butter'}>
+              {doneCount} of {runFamilies.length} done today
+            </Chip>
+          ) : (
+            <Chip tone="green">nobody owes 🎉</Chip>
+          )
+        }
+      >
       <Card>
-        <SectionTitle
-          right={
-            runFamilies.length ? (
-              <Chip tone={doneCount === runFamilies.length ? 'green' : 'butter'}>
-                {doneCount} of {runFamilies.length} done today
-              </Chip>
-            ) : undefined
-          }
-        >
-          ✉️ The reminder run
-        </SectionTitle>
         <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 14 }}>
           Every family that owes, message ready. Tap <b>Text</b> and your messaging app opens with it written;
           tap <b>Email</b> for a ready-to-send email; <b>Copy</b> is for Google Voice. Mark each family done as you go.
@@ -424,6 +461,7 @@ export function MessagesPage() {
           </div>
         )}
       </Card>
+      </Collapse>
 
       {/* ── 2 · Automatic sending ────────────────────────────────── */}
       <Card>
@@ -654,19 +692,84 @@ export function MessagesPage() {
           Post once — every family sees it at the top of their parent portal. Good for "closed Tuesday" or "bring bathing suits."
         </div>
         {editMode && (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14, flexWrap: 'wrap' }}>
-            <textarea
-              style={{ ...inputStyle, flex: '1 1 260px', minHeight: 54, resize: 'vertical' }}
-              value={announceText}
-              onChange={(e) => setAnnounceText(e.target.value)}
-              placeholder="e.g. We're closed this Tuesday. See everyone Wednesday!"
-            />
-            <Btn onClick={() => void postAnnouncement()} disabled={announceBusy || !announceText.trim()}>
-              {announceBusy ? 'Posting…' : '📣 Post to parents'}
-            </Btn>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <textarea
+                style={{ ...inputStyle, flex: '1 1 260px', minHeight: 54, resize: 'vertical' }}
+                value={announceText}
+                onChange={(e) => setAnnounceText(e.target.value)}
+                placeholder="e.g. We're closed this Tuesday. See everyone Wednesday!"
+              />
+              <Btn onClick={() => void postAnnouncement()} disabled={announceBusy || !announceText.trim()}>
+                {announceBusy ? 'Posting…' : '📣 Post to parents'}
+              </Btn>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: B.mute }}>From when to when? (optional)</span>
+              <input
+                style={{ ...inputStyle, width: 148, padding: '7px 10px' }}
+                type="date"
+                value={announceFrom}
+                onChange={(e) => setAnnounceFrom(e.target.value)}
+                title="From"
+              />
+              <span style={{ color: B.mute, fontSize: '0.8rem', fontWeight: 700 }}>to</span>
+              <input
+                style={{ ...inputStyle, width: 148, padding: '7px 10px' }}
+                type="date"
+                value={announceUntil}
+                onChange={(e) => setAnnounceUntil(e.target.value)}
+                title="Until"
+              />
+              {(announceFrom || announceUntil) && announceText.trim() && (
+                <span style={{ fontSize: '0.78rem', color: B.inkSoft, fontStyle: 'italic' }}>
+                  They'll see: "{announceBody()}"
+                </span>
+              )}
+            </div>
           </div>
         )}
         {announceErr && <Chip tone="red" style={{ marginBottom: 10 }}>{announceErr}</Chip>}
+        {lastPosted && (
+          <div
+            style={{
+              background: B.accentSoft,
+              borderRadius: B.radiusSm,
+              padding: '10px 14px',
+              marginBottom: 12,
+              fontSize: '0.84rem',
+            }}
+          >
+            <div style={{ fontWeight: 800, color: B.accentDeep, marginBottom: 6 }}>
+              ✓ Posted to every family's portal. Want to also send it as a text?
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              {familyGroups
+                .filter((f) => f.phone)
+                .map((f) => (
+                  <LinkBtn key={f.slug} kind="ghost" href={smsLink(f.phone!, lastPosted)} title={`Text the ${f.label}`}>
+                    📱 {f.label}
+                  </LinkBtn>
+                ))}
+              <Btn
+                size="sm"
+                kind="ghost"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(lastPosted);
+                  } catch {
+                    window.prompt('Copy the note:', lastPosted);
+                  }
+                }}
+              >
+                📋 Copy the note
+              </Btn>
+              {!familyGroups.some((f) => f.phone) && (
+                <span style={{ color: B.mute }}>No parent phone numbers on file yet.</span>
+              )}
+            </div>
+          </div>
+        )}
         {postedAnnouncements.length ? (
           <div style={{ display: 'grid', gap: 8 }}>
             {postedAnnouncements.map((a) => (

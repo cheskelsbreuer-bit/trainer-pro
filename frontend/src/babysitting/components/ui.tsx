@@ -3,7 +3,7 @@
 // white cards with soft shadows, terracotta primary actions, teal
 // support, pill-shaped chips, generous rounding.
 
-import { useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { B, avatarTone, initials, formatBalance } from '../theme';
 
 // ── Layout ────────────────────────────────────────────────────────────
@@ -126,6 +126,71 @@ export function EmptyState({
       <div style={{ fontFamily: B.fontDisplay, fontWeight: 800, fontSize: '1.05rem', color: B.ink }}>{title}</div>
       {body && <div style={{ fontSize: '0.86rem', marginTop: 6, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>{body}</div>}
       {action && <div style={{ marginTop: 16 }}>{action}</div>}
+    </div>
+  );
+}
+
+/** A closed-by-default section: a card-styled header row you tap to
+ *  open. Settings and Messages use it so long pages stay one calm list
+ *  of headings — only what you're touching unfolds. */
+export function Collapse({
+  title,
+  badge,
+  children,
+  defaultOpen = false,
+}: {
+  title: ReactNode;
+  badge?: ReactNode;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: B.card,
+          border: `1px solid ${B.rule}`,
+          borderRadius: B.radiusLg,
+          boxShadow: B.shadowSoft,
+          padding: '15px 20px',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: B.fontDisplay,
+            fontSize: '1.02rem',
+            fontWeight: 800,
+            color: B.ink,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {title}
+        </span>
+        {badge}
+        <span
+          style={{
+            color: B.mute,
+            fontWeight: 800,
+            fontSize: '0.85rem',
+            transform: open ? 'rotate(90deg)' : 'none',
+            transition: 'transform 0.15s',
+          }}
+        >
+          ▸
+        </span>
+      </button>
+      {open && <div style={{ display: 'grid', gap: 18, marginTop: 12 }}>{children}</div>}
     </div>
   );
 }

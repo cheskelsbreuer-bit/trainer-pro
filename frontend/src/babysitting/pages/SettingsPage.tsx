@@ -1,6 +1,8 @@
-// Settings — billing defaults, reminder message templates (with a live
-// preview), the Customize Studio, Stripe status, and CSV exports. This
-// page has its own Save buttons, so it works regardless of edit mode.
+// Settings — every section is a closed drawer; tap the one you want and
+// it unfolds. Billing (how you bill + automatic weekly billing) lives
+// here now, followed by reminder messages, customization, Stripe, her
+// comforts, the health check, and CSV exports. Sections have their own
+// Save buttons, so the page works regardless of edit mode.
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -17,11 +19,12 @@ import {
 } from '../lib/config';
 import { fillTemplate } from '../lib/messages';
 import { kidsCsv, paymentsCsv, yearCsv, downloadCsv } from '../lib/csv';
-import { Card, SectionTitle, Btn, Field, inputStyle } from '../components/ui';
+import { Card, SectionTitle, Btn, Field, inputStyle, Collapse, Chip } from '../components/ui';
 import { CustomizeStudio } from '../../components/CustomizeStudio';
 import { HealthPanel } from '../components/HealthPanel';
 import { ComfortPanels } from '../components/ComfortPanels';
 import { StripeStatusCard } from '../../components/StripeStatusCard';
+import { AutoBillingCard } from '../components/AutoBillingCard';
 
 // The pretend family every template preview renders against.
 const SAMPLE_FAMILY: { parentName: string; kidNames: string[]; balance: number } = {
@@ -97,6 +100,17 @@ export function SettingsPage() {
     flash('rates');
   }
 
+  function saveMode(mode: 'weekly' | 'hourly') {
+    if (!cfg.data) return;
+    const next = {
+      ...cfg.data,
+      settings: { ...cfg.data.settings, billingMode: mode },
+    };
+    cfg.save.mutate(
+      appendLog(next, 'settings', `Billing switched to ${mode === 'weekly' ? 'by the week' : 'by the hour'}`),
+    );
+  }
+
   function saveMessages() {
     if (!cfg.data) return;
     const next = {
@@ -137,45 +151,89 @@ export function SettingsPage() {
     return <div style={{ padding: 60, textAlign: 'center', color: B.mute }}>Loading your settings…</div>;
   }
 
+  const mode = cfg.data?.settings.billingMode ?? 'weekly';
+  const autoBillingOn = cfg.data?.settings.autoBilling.enabled ?? false;
+
+  const modePill = (m: 'weekly' | 'hourly', label: string) => (
+    <button
+      type="button"
+      onClick={() => saveMode(m)}
+      disabled={!canSave}
+      style={{
+        border: 'none',
+        cursor: canSave ? 'pointer' : 'not-allowed',
+        borderRadius: 999,
+        padding: '9px 18px',
+        fontSize: '0.84rem',
+        fontWeight: 800,
+        fontFamily: B.fontDisplay,
+        background: mode === m ? B.accent : '#f2ede4',
+        color: mode === m ? '#fff' : B.inkSoft,
+        transition: 'background 0.15s, color 0.15s',
+      }}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <div style={{ display: 'grid', gap: 18, maxWidth: 780 }}>
-      {/* ── Billing defaults ─────────────────────────────────────────── */}
-      <Card>
-        <SectionTitle
-          right={
-            <Btn size="sm" onClick={saveRates} disabled={!canSave}>
-              {cfg.save.isPending ? 'Saving…' : savedNote === 'rates' ? '✓ Saved' : 'Save'}
-            </Btn>
-          }
-        >
-          💛 Billing defaults
-        </SectionTitle>
-        <p style={mutedLine}>New kids start with these rates — you can always change them per kid.</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 14px' }}>
-          <Field label="Default weekly rate ($)" hint="Flat rate for a normal week.">
-            <input
-              style={inputStyle}
-              type="number"
-              min="0"
-              value={weeklyRate}
-              onChange={(e) => setWeeklyRate(e.target.value)}
-              placeholder="0"
-            />
-          </Field>
-          <Field label="Default hourly rate ($)" hint="For billing by the hour.">
-            <input
-              style={inputStyle}
-              type="number"
-              min="0"
-              value={hourlyRate}
-              onChange={(e) => setHourlyRate(e.target.value)}
-              placeholder="0"
-            />
-          </Field>
-        </div>
-      </Card>
+    <div style={{ display: 'grid', gap: 14, maxWidth: 780 }}>
+      {/* ── Billing ──────────────────────────────────────────────────── */}
+      <Collapse
+        title="💛 Billing"
+        badge={
+          <span style={{ display: 'inline-flex', gap: 6 }}>
+            <Chip tone="accent">{mode === 'weekly' ? 'by the week' : 'by the hour'}</Chip>
+            <Chip tone={autoBillingOn ? 'green' : 'neutral'}>{autoBillingOn ? 'auto ✓' : 'auto off'}</Chip>
+          </span>
+        }
+      >
+        <Card>
+          <SectionTitle
+            right={
+              <Btn size="sm" onClick={saveRates} disabled={!canSave}>
+                {cfg.save.isPending ? 'Saving…' : savedNote === 'rates' ? '✓ Saved' : 'Save'}
+              </Btn>
+            }
+          >
+            How you bill
+          </SectionTitle>
+          <p style={mutedLine}>
+            Your usual way of charging. It picks what comes up first when you bill someone — you can
+            always do the other one for a single bill.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            {modePill('weekly', '📅 By the week')}
+            {modePill('hourly', '⏱ By the hour')}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 14px' }}>
+            <Field label="Default weekly rate ($)" hint="Flat rate for a normal week. New kids start with this.">
+              <input
+                style={inputStyle}
+                type="number"
+                min="0"
+                value={weeklyRate}
+                onChange={(e) => setWeeklyRate(e.target.value)}
+                placeholder="0"
+              />
+            </Field>
+            <Field label="Default hourly rate ($)" hint="For billing by the hour.">
+              <input
+                style={inputStyle}
+                type="number"
+                min="0"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="0"
+              />
+            </Field>
+          </div>
+        </Card>
+        <AutoBillingCard />
+      </Collapse>
 
       {/* ── Reminder messages ────────────────────────────────────────── */}
+      <Collapse title="💬 Reminder messages">
       <Card>
         <SectionTitle
           right={
@@ -189,7 +247,7 @@ export function SettingsPage() {
             </div>
           }
         >
-          💬 Reminder messages
+          The wording
         </SectionTitle>
         <p style={mutedLine}>
           These fill in automatically when you text or email a balance. You can use{' '}
@@ -248,11 +306,12 @@ export function SettingsPage() {
           </div>
         </Card>
       </Card>
+      </Collapse>
 
       {/* ── Customize studio ─────────────────────────────────────────── */}
+      <Collapse title="🎨 Customize your app">
       <Card>
-        <SectionTitle>🎨 Customize your app</SectionTitle>
-        <p style={mutedLine}>Turn features on or off, pick your colors and fonts, and reorder the menu.</p>
+        <p style={{ ...mutedLine, marginTop: 0 }}>Turn features on or off, pick your colors and fonts, and reorder the menu.</p>
         <CustomizeStudio
           templateSlugs={trainer?.template_slugs?.length ? trainer.template_slugs : ['babysitting']}
           accent={trainer?.primary_color || '#d96f4e'}
@@ -269,27 +328,33 @@ export function SettingsPage() {
           ]}
         />
       </Card>
+      </Collapse>
 
       {/* ── Online payments ──────────────────────────────────────────── */}
+      <Collapse title="💳 Online payments">
       <Card>
-        <SectionTitle>💳 Online payments</SectionTitle>
-        <p style={mutedLine}>
+        <p style={{ ...mutedLine, marginTop: 0 }}>
           Connect Stripe if you'd like parents to pay you online. A parent portal with bank-transfer
           (ACH) payments arrives in a later step — connecting now means you'll be ready.
         </p>
         <StripeStatusCard />
       </Card>
+      </Collapse>
 
       {/* ── Her comforts ─────────────────────────────────────────────── */}
-      <ComfortPanels />
+      <Collapse title="🧰 Make it yours">
+        <ComfortPanels />
+      </Collapse>
 
       {/* ── Health check ─────────────────────────────────────────────── */}
-      <HealthPanel />
+      <Collapse title="🩺 Health check">
+        <HealthPanel />
+      </Collapse>
 
       {/* ── Your data ────────────────────────────────────────────────── */}
+      <Collapse title="🗂 Your data">
       <Card>
-        <SectionTitle>🗂 Your data</SectionTitle>
-        <p style={mutedLine}>
+        <p style={{ ...mutedLine, marginTop: 0 }}>
           Everything lives in your own database — nothing is locked in. Download a copy any time.
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -342,6 +407,7 @@ export function SettingsPage() {
           </Btn>
         </div>
       </Card>
+      </Collapse>
     </div>
   );
 }

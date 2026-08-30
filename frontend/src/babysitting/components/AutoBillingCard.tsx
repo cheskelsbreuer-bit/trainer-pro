@@ -123,9 +123,20 @@ export function AutoBillingCard() {
       >
         🔁 Automatic weekly billing
       </SectionTitle>
-      <div style={{ color: B.inkSoft, fontSize: '0.86rem', marginBottom: 12 }}>
-        Pick a day and the week's charges post themselves — every active kid's weekly rate, sibling discounts
-        included, away kids skipped. Kids without a weekly rate are left alone (bill their hours by hand).
+      <div style={{ color: B.inkSoft, fontSize: '0.86rem', marginBottom: 12, lineHeight: 1.55 }}>
+        <b>What it does:</b> once a week, on the day you pick, every active kid's weekly rate is added
+        to their family's bill — like writing "this week: $150" in your notebook, but by itself.
+        Sibling discounts are applied, away kids are skipped, and kids without a weekly rate are left
+        alone (bill their hours by hand).
+        <div style={{ marginTop: 6 }}>
+          <b>This is not the same as Messages:</b> this <i>creates</i> the bill. The Messages page
+          <i> reminds</i> parents about what they already owe. Most people turn both on — bill Sunday,
+          remind Thursday.
+        </div>
+        <div style={{ marginTop: 6 }}>
+          Not sure? Tap <b>Practice run</b> — it shows exactly who would be billed and how much,
+          without charging anyone.
+        </div>
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         <button

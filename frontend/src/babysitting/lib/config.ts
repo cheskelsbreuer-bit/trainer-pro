@@ -28,6 +28,7 @@ export interface ReceiptSettings {
 
 export interface BabysittingSettings {
   currency: string; // '$'
+  billingMode: 'weekly' | 'hourly'; // how she usually bills — picks the default everywhere
   defaultWeeklyRate: number;
   defaultHourlyRate: number;
   smsTemplate: string; // {parent} {kids} {currency}{balance}
@@ -127,6 +128,7 @@ export interface BabysittingConfig {
 
 export const DEFAULT_SETTINGS: BabysittingSettings = {
   currency: '$',
+  billingMode: 'weekly',
   defaultWeeklyRate: 0,
   defaultHourlyRate: 0,
   smsTemplate:
@@ -165,6 +167,7 @@ function hydrate(raw: unknown): BabysittingConfig {
       ? r.settings!.paymentMethods
       : DEFAULT_SETTINGS.paymentMethods;
   if (!['simple', 'standard', 'pro'].includes(s.appLevel)) s.appLevel = 'standard';
+  if (!['weekly', 'hourly'].includes(s.billingMode)) s.billingMode = 'weekly';
   s.familyDiscount = { ...DEFAULT_SETTINGS.familyDiscount, ...(r.settings?.familyDiscount ?? {}) };
   s.autoBilling = { ...DEFAULT_SETTINGS.autoBilling, ...(r.settings?.autoBilling ?? {}) };
   return {

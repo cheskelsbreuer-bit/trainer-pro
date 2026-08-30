@@ -347,50 +347,64 @@ export function KidDetailPage() {
         </div>
       </Card>
 
-      {/* Allergies + care notes */}
-      {(kid.medical_notes?.trim() || kid.notes?.trim()) && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 18,
-          }}
-        >
-          {kid.medical_notes?.trim() && (
-            <Card style={{ background: B.redSoft, border: `1.5px dashed ${B.red}` }}>
-              <div
-                style={{
-                  fontFamily: B.fontDisplay,
-                  fontWeight: 800,
-                  fontSize: '0.95rem',
-                  color: B.red,
-                  marginBottom: 6,
-                }}
-              >
-                ⚠️ Allergies
-              </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: B.ink, lineHeight: 1.45 }}>
-                {kid.medical_notes}
-              </div>
-            </Card>
+      {/* Allergies + care notes — the notes card always shows, so it's
+          obvious where they live and how to add them. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 18,
+        }}
+      >
+        {kid.medical_notes?.trim() && (
+          <Card style={{ background: B.redSoft, border: `1.5px dashed ${B.red}` }}>
+            <div
+              style={{
+                fontFamily: B.fontDisplay,
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                color: B.red,
+                marginBottom: 6,
+              }}
+            >
+              ⚠️ Allergies
+            </div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: B.ink, lineHeight: 1.45 }}>
+              {kid.medical_notes}
+            </div>
+          </Card>
+        )}
+        <Card>
+          <SectionTitle
+            right={
+              editMode ? (
+                <Btn size="sm" kind="ghost" onClick={() => setShowEdit(true)}>
+                  ✏️ {kid.notes?.trim() ? 'Edit' : 'Add notes'}
+                </Btn>
+              ) : undefined
+            }
+          >
+            📝 Care notes
+          </SectionTitle>
+          {kid.notes?.trim() ? (
+            <div
+              style={{
+                fontSize: '0.9rem',
+                color: B.inkSoft,
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.55,
+              }}
+            >
+              {kid.notes}
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.86rem', color: B.mute }}>
+              Nothing written yet — nap schedule, favorite snack, pickup notes.
+              {editMode ? ' Tap "Add notes" to write some.' : ''}
+            </div>
           )}
-          {kid.notes?.trim() && (
-            <Card>
-              <SectionTitle>📝 Care notes</SectionTitle>
-              <div
-                style={{
-                  fontSize: '0.9rem',
-                  color: B.inkSoft,
-                  whiteSpace: 'pre-wrap',
-                  lineHeight: 1.55,
-                }}
-              >
-                {kid.notes}
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
+        </Card>
+      </div>
 
       {/* Money */}
       <Card>

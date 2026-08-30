@@ -32,7 +32,10 @@ export function ChargeModal({
   const addCharge = useAddCharge();
   const cfg = useBabysittingConfig();
 
-  const [kind, setKind] = useState<Kind>('week');
+  // Open on however she usually bills (Settings → Billing → How you bill).
+  const [kind, setKind] = useState<Kind>(
+    cfg.data?.settings.billingMode === 'hourly' ? 'hours' : 'week',
+  );
   const [hours, setHours] = useState('');
   const [note, setNote] = useState('');
   const [overrides, setOverrides] = useState<Record<string, string>>({});
