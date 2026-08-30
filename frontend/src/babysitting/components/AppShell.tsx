@@ -13,6 +13,7 @@ import { B } from '../theme';
 import { useBabysittingConfig } from '../lib/config';
 import { useDemo, setDemoActive } from '../demo/flag';
 import { useChatMessages, unreadByClient } from '../lib/chat';
+import { useWords } from '../lib/words';
 import { TourWizard } from './TourWizard';
 import { CommentWidget } from './CommentWidget';
 
@@ -90,7 +91,10 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const cfg = useBabysittingConfig();
   const name = trainer?.business_name || trainer?.full_name || 'Babysitting';
   const level: Level = cfg.data?.settings.appLevel ?? 'standard';
-  const nav = NAV.filter((n) => LEVEL_RANK[n.minLevel] <= LEVEL_RANK[level]);
+  const words = useWords();
+  const nav = NAV.filter((n) => LEVEL_RANK[n.minLevel] <= LEVEL_RANK[level]).map((n) =>
+    n.to === '/kids' ? { ...n, label: words.Many } : n,
+  );
   // Unread parent messages, shown as a dot on the Chat tab. The demo has
   // no message table behind it, so it stays quiet there.
   const chat = useChatMessages(!demo);

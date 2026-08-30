@@ -22,6 +22,7 @@ import {
 } from '../theme';
 import { useKids, usePayments } from '../lib/data';
 import { useBabysittingConfig } from '../lib/config';
+import { useWords } from '../lib/words';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
 import {
   Card,
@@ -70,6 +71,7 @@ export function DashboardPage() {
   });
   const { data: payments } = usePayments();
   const cfg = useBabysittingConfig();
+  const words = useWords();
   const [payKid, setPayKid] = useState<Client | null>(null);
   const [showPay, setShowPay] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -149,9 +151,9 @@ export function DashboardPage() {
       <Card pad={0}>
         <EmptyState
           emoji="🧸"
-          title="Welcome! Let's add your first kid."
-          body="Each kid gets a family, a parent contact, allergies, and their days — then billing and balances take care of themselves."
-          action={<Btn size="lg" onClick={() => setShowAdd(true)}>+ Add your first kid</Btn>}
+          title={`Welcome! Let's add your first ${words.one}.`}
+          body={`Each ${words.one} gets a family, a parent contact, allergies, and their days — then billing and balances take care of themselves.`}
+          action={<Btn size="lg" onClick={() => setShowAdd(true)}>+ Add your first {words.one}</Btn>}
         />
         {showAdd && <KidModal kid={null} onClose={() => setShowAdd(false)} />}
       </Card>
@@ -163,7 +165,7 @@ export function DashboardPage() {
       {/* Stat row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         <StatTile label={`Here today · ${todayName}`} value={todayKids.length} tone="accent" />
-        <StatTile label="Kids in care" value={active.length} />
+        <StatTile label={`${words.Many} in care`} value={active.length} />
         <StatTile label="Away right now" value={away.length} tone={away.length ? 'primary' : 'plain'} />
         <StatTile label="Owed to you" value={formatMoney(totalOwed)} tone={totalOwed > 0 ? 'warn' : 'good'} />
         <StatTile label="Collected this week" value={formatMoney(weekCollected)} tone="good" />
@@ -175,7 +177,7 @@ export function DashboardPage() {
           right={
             editMode ? (
               <div style={{ display: 'flex', gap: 8 }}>
-                <Btn size="sm" kind="soft" onClick={() => setShowAdd(true)}>+ Add kid</Btn>
+                <Btn size="sm" kind="soft" onClick={() => setShowAdd(true)}>+ Add {words.one}</Btn>
                 <Btn size="sm" onClick={() => { setPayKid(null); setShowPay(true); }}>💛 Record payment</Btn>
               </div>
             ) : undefined
@@ -221,7 +223,7 @@ export function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div style={{ color: B.mute, fontSize: '0.88rem' }}>No kids scheduled for {todayName}. Quiet day ☕</div>
+          <div style={{ color: B.mute, fontSize: '0.88rem' }}>No {words.many} scheduled for {todayName}. Quiet day ☕</div>
         )}
       </Card>
 

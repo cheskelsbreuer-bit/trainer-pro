@@ -28,6 +28,11 @@ export interface ReceiptSettings {
 
 export interface BabysittingSettings {
   currency: string; // '$'
+  /** What she calls the children — 'kid'/'kids' by default, but a day
+   *  camp says 'camper', a daycare says 'child'. Used in headings and
+   *  counts across the app. */
+  kidWord: string;
+  kidWordPlural: string;
   billingMode: 'weekly' | 'hourly'; // how she usually bills — picks the default everywhere
   defaultWeeklyRate: number;
   defaultHourlyRate: number;
@@ -128,6 +133,8 @@ export interface BabysittingConfig {
 
 export const DEFAULT_SETTINGS: BabysittingSettings = {
   currency: '$',
+  kidWord: 'kid',
+  kidWordPlural: 'kids',
   billingMode: 'weekly',
   defaultWeeklyRate: 0,
   defaultHourlyRate: 0,
@@ -168,6 +175,8 @@ function hydrate(raw: unknown): BabysittingConfig {
       : DEFAULT_SETTINGS.paymentMethods;
   if (!['simple', 'standard', 'pro'].includes(s.appLevel)) s.appLevel = 'standard';
   if (!['weekly', 'hourly'].includes(s.billingMode)) s.billingMode = 'weekly';
+  if (!s.kidWord?.trim()) s.kidWord = DEFAULT_SETTINGS.kidWord;
+  if (!s.kidWordPlural?.trim()) s.kidWordPlural = DEFAULT_SETTINGS.kidWordPlural;
   s.familyDiscount = { ...DEFAULT_SETTINGS.familyDiscount, ...(r.settings?.familyDiscount ?? {}) };
   s.autoBilling = { ...DEFAULT_SETTINGS.autoBilling, ...(r.settings?.autoBilling ?? {}) };
   return {

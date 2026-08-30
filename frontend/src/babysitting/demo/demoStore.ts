@@ -11,10 +11,20 @@ import type { Client, Payment } from '../../lib/database.types';
 import type { BabysittingConfig } from '../lib/config';
 import { DEMO_KIDS, DEMO_PAYMENTS, DEMO_CONFIG } from './demoData';
 
+export interface DemoChatMessage {
+  id: string;
+  client_id: string;
+  sender: 'trainer' | 'client';
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}
+
 interface DemoStore {
   kids: Client[];
   payments: Payment[];
   config: BabysittingConfig;
+  chat: DemoChatMessage[];
 }
 
 function clone<T>(v: T): T {
@@ -26,6 +36,7 @@ function fresh(): DemoStore {
     kids: clone(DEMO_KIDS),
     payments: clone(DEMO_PAYMENTS),
     config: clone(DEMO_CONFIG),
+    chat: [],
   };
 }
 
@@ -43,6 +54,23 @@ export function demoConfig(): BabysittingConfig {
 export function setDemoConfig(next: BabysittingConfig): void {
   store.config = next;
 }
+// ── Chat, so the demo's Chat tab is a real conversation ─────────────
+export function demoChat(): DemoChatMessage[] {
+  return [...store.chat];
+}
+export function demoSendChat(msg: Omit<DemoChatMessage, 'id' | 'created_at' | 'read_at'>): void {
+  store.chat = [
+    ...store.chat,
+    { ...msg, id: newId('dm'), read_at: null, created_at: new Date().toISOString() },
+  ];
+}
+export function demoMarkChatRead(clientIds: string[], from: 'trainer' | 'client'): void {
+  const now = new Date().toISOString();
+  store.chat = store.chat.map((m) =>
+    clientIds.includes(m.client_id) && m.sender === from && !m.read_at ? { ...m, read_at: now } : m,
+  );
+}
+
 export function resetDemo(): void {
   store = fresh();
 }

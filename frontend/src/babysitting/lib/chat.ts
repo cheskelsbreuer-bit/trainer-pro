@@ -15,6 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
 import { readFamilySlug } from '../theme';
+import { useDemo } from '../demo/flag';
 
 export interface ChatMessage {
   id: string;
@@ -56,9 +57,16 @@ export function familyThreads(kids: Client[]): Array<{
  *  a parent's RLS narrows the same query to their own. */
 export function useChatMessages(enabled = true) {
   const { user } = useAuth();
+  const demo = useDemo();
   return useQuery({
-    queryKey: ['bs-chat', user?.id],
+    queryKey: ['bs-chat', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<ChatMessage[]> => {
+      // The demo has no database and no signed-in user, but its chat is a
+      // real conversation against the in-memory store.
+      if (demo) {
+        const { demoChat } = await import('../demo/demoStore');
+        return demoChat();
+      }
       const { data, error } = await supabase
         .from('messages')
         .select('id, client_id, sender, body, read_at, created_at')
@@ -67,7 +75,7 @@ export function useChatMessages(enabled = true) {
       if (error) throw error;
       return (data ?? []) as ChatMessage[];
     },
-    enabled: enabled && !!user,
+    enabled: enabled && (demo || !!user),
     // A conversation should feel alive without a socket: poll while the
     // tab is open, and refetch the moment it regains focus.
     refetchInterval: 20_000,
@@ -77,6 +85,7 @@ export function useChatMessages(enabled = true) {
 
 export function useSendChat() {
   const { user } = useAuth();
+  const demo = useDemo();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
@@ -85,6 +94,11 @@ export function useSendChat() {
       sender: 'trainer' | 'client';
       body: string;
     }) => {
+      if (demo) {
+        const { demoSendChat } = await import('../demo/demoStore');
+        demoSendChat({ client_id: args.clientId, sender: args.sender, body: args.body });
+        return;
+      }
       if (!user) throw new Error('Not signed in');
       const { error } = await supabase.from('messages').insert({
         trainer_id: args.trainerId,
@@ -101,10 +115,16 @@ export function useSendChat() {
 /** Mark the other side's messages in a thread as read. Best-effort:
  *  a failure here should never interrupt reading the conversation. */
 export function useMarkThreadRead() {
+  const demo = useDemo();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { clientIds: string[]; from: 'trainer' | 'client' }) => {
       if (!args.clientIds.length) return;
+      if (demo) {
+        const { demoMarkChatRead } = await import('../demo/demoStore');
+        demoMarkChatRead(args.clientIds, args.from);
+        return;
+      }
       const { error } = await supabase
         .from('messages')
         .update({ read_at: new Date().toISOString() })

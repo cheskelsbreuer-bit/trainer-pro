@@ -15,6 +15,10 @@ import {
   type ClosureDay,
 } from '../lib/config';
 import { Card, SectionTitle, Btn, Chip, Field, inputStyle } from './ui';
+
+function cap(w: string): string {
+  return w.charAt(0).toUpperCase() + w.slice(1);
+}
 import { TOUR_OPEN_EVENT } from './TourWizard';
 
 const TAG_COLORS = ['#d96f4e', '#4f9d94', '#b98420', '#7c5e8e', '#4e7e52', '#98455e', '#3a5e85'];
@@ -220,6 +224,53 @@ export function ComfortPanels() {
       </Card>
 
       {/* Custom fields */}
+      {/* What you call the children */}
+      <Card>
+        <SectionTitle>🔤 What do you call them?</SectionTitle>
+        <p style={{ fontSize: '0.84rem', color: B.mute, margin: '0 0 12px' }}>
+          A day camp says "campers", a daycare says "children", a babysitter says "kids". Whatever
+          you type here is what the app calls them — the menu, the counts, the buttons.
+        </p>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ flex: '1 1 150px' }}>
+            <Field label="One of them">
+              <input
+                style={inputStyle}
+                defaultValue={c.settings.kidWord}
+                disabled={!editMode}
+                placeholder="kid"
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (v && v !== c.settings.kidWord) {
+                    save((x) => ({ ...x, settings: { ...x.settings, kidWord: v } }), `Now called a "${v}"`);
+                  }
+                }}
+              />
+            </Field>
+          </div>
+          <div style={{ flex: '1 1 150px' }}>
+            <Field label="More than one">
+              <input
+                style={inputStyle}
+                defaultValue={c.settings.kidWordPlural}
+                disabled={!editMode}
+                placeholder="kids"
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (v && v !== c.settings.kidWordPlural) {
+                    save((x) => ({ ...x, settings: { ...x.settings, kidWordPlural: v } }), `Now called "${v}"`);
+                  }
+                }}
+              />
+            </Field>
+          </div>
+        </div>
+        <div style={{ background: B.butterSoft, borderRadius: B.radiusSm, padding: '9px 13px', fontSize: '0.84rem' }}>
+          Menu will read <b>{cap(c.settings.kidWordPlural)}</b> · Home will say{' '}
+          <b>7 {c.settings.kidWordPlural} in care</b>
+        </div>
+      </Card>
+
       <Card>
         <SectionTitle>📋 Your own fields on every kid</SectionTitle>
         <div style={{ color: B.inkSoft, fontSize: '0.85rem', marginBottom: 10 }}>

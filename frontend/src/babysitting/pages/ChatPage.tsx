@@ -208,10 +208,11 @@ export function ChatPage() {
             otherName={open.parent || open.label}
             sending={send.isPending}
             onSend={(body) =>
-              user &&
+              // The demo has no signed-in user but a working in-memory
+              // chat, so this must not be gated on `user`.
               send.mutate({
                 clientId: open.anchor.id,
-                trainerId: user.id,
+                trainerId: user?.id ?? open.anchor.trainer_id,
                 sender: 'trainer',
                 body,
               })
