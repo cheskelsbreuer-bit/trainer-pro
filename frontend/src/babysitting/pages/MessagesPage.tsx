@@ -220,6 +220,9 @@ export function MessagesPage() {
         client_id: kidId,
         sender: 'trainer',
         body,
+        // Marks this as a broadcast note, so the parent's portal can pin
+        // it apart from ordinary back-and-forth chat messages.
+        attachments: [{ kind: 'announcement' }],
       }));
       const { error } = await supabase.from('messages').insert(rows);
       if (error) throw error;

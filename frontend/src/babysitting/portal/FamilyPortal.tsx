@@ -18,6 +18,14 @@ import {
   ageOf,
 } from '../theme';
 import { Card, Chip, Btn, Avatar, Field, inputStyle } from '../components/ui';
+import { ChatThread } from '../components/ChatThread';
+import {
+  useChatMessages,
+  useSendChat,
+  useMarkThreadRead,
+  threadAnchor,
+  unreadByClient,
+} from '../lib/chat';
 
 export interface PortalTrainer {
   full_name: string | null;
@@ -73,6 +81,7 @@ export function FamilyPortal({
         .select('id, body, created_at')
         .in('client_id', active.map((k) => k.id))
         .eq('sender', 'trainer')
+        .contains('attachments', [{ kind: 'announcement' }])
         .order('created_at', { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -88,6 +97,31 @@ export function FamilyPortal({
     },
     enabled: active.length > 0,
   });
+
+  // ── Chat with the sitter ────────────────────────────────────────
+  // Every message for this family hangs off one anchor kid, so siblings
+  // share a single conversation.
+  const chat = useChatMessages();
+  const sendChat = useSendChat();
+  const markRead = useMarkThreadRead();
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const chatAnchor = useMemo(() => (active.length ? threadAnchor(active) : null), [active]);
+  const chatMessages = useMemo(() => {
+    const mine = new Set(active.map((k) => k.id));
+    return (chat.data ?? []).filter((m) => mine.has(m.client_id));
+  }, [chat.data, active]);
+  const chatUnread = useMemo(() => {
+    const byClient = unreadByClient(chat.data, 'trainer');
+    return active.reduce((s, k) => s + (byClient.get(k.id) ?? 0), 0);
+  }, [chat.data, active]);
+
+  // Reading the thread clears the badge.
+  useEffect(() => {
+    if (!chatOpen || !chatUnread) return;
+    markRead.mutate({ clientIds: active.map((k) => k.id), from: 'trainer' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatOpen, chatUnread]);
 
   const payments = useQuery({
     queryKey: ['portal-family-payments', active.map((k) => k.id).join(',')],
@@ -187,6 +221,88 @@ export function FamilyPortal({
                   </div>
                 ))}
               </div>
+            </Card>
+          )}
+
+          {/* Chat with the sitter */}
+          {chatAnchor && (
+            <Card>
+              <button
+                type="button"
+                onClick={() => setChatOpen((o) => !o)}
+                aria-expanded={chatOpen}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  border: 'none',
+                  background: 'transparent',
+                  padding: 0,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <span style={{ fontFamily: B.fontDisplay, fontWeight: 800, flex: 1 }}>
+                  💬 Message {sitterName}
+                </span>
+                {chatUnread > 0 && (
+                  <span
+                    style={{
+                      background: B.red,
+                      color: '#fff',
+                      borderRadius: 999,
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      padding: '2px 9px',
+                    }}
+                  >
+                    {chatUnread} new
+                  </span>
+                )}
+                <span
+                  style={{
+                    color: B.mute,
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    transform: chatOpen ? 'rotate(90deg)' : 'none',
+                    transition: 'transform 0.15s',
+                  }}
+                >
+                  ▸
+                </span>
+              </button>
+              {!chatOpen && (
+                <div style={{ fontSize: '0.82rem', color: B.mute, marginTop: 6 }}>
+                  {chatMessages.length
+                    ? chatMessages[chatMessages.length - 1].body.slice(0, 90)
+                    : 'Questions about pickup, a late day, anything — write here.'}
+                </div>
+              )}
+              {chatOpen && (
+                <div style={{ marginTop: 12 }}>
+                  <ChatThread
+                    messages={chatMessages}
+                    me="client"
+                    otherName={sitterName}
+                    height={340}
+                    sending={sendChat.isPending}
+                    onSend={(body) =>
+                      sendChat.mutate({
+                        clientId: chatAnchor.id,
+                        trainerId: chatAnchor.trainer_id,
+                        sender: 'client',
+                        body,
+                      })
+                    }
+                  />
+                  {sendChat.isError && (
+                    <Chip tone="red" style={{ marginTop: 10 }}>
+                      Could not send — check your connection and try again.
+                    </Chip>
+                  )}
+                </div>
+              )}
             </Card>
           )}
 

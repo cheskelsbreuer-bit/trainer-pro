@@ -85,9 +85,11 @@ function ProtectedShell() {
         .from('trainers')
         .select('*')
         .eq('id', user!.id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as Trainer;
+      // null = this account is not a coach. Parents sign in with the
+      // same auth system and simply have no trainers row.
+      return (data as Trainer | null) ?? null;
     },
     enabled: !!user,
   });
@@ -140,8 +142,12 @@ function ProtectedShell() {
     );
   }
   if (!user) return <Login />;
+  // No trainers row = not a coach. That's a PARENT (or client) who signed
+  // in at the site root rather than /portal — send them to their own
+  // portal instead of a coach dashboard they can't use.
+  if (!trainer) return <FamilyPortalGate />;
   // First-time signup: walk them through the wizard before showing the app.
-  if (trainer && !trainer.onboarded_at) return <OnboardingWizard trainer={trainer} />;
+  if (!trainer.onboarded_at) return <OnboardingWizard trainer={trainer} />;
 
   // A coach who does several disciplines chose at signup how they want
   // it: ONE combined app (the neutral all-in-one shell) or SEPARATE apps

@@ -5,13 +5,14 @@
 // secondary links + edit switch on the right. No heavy color bars —
 // the warmth comes from the palette and the soft shapes.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 import { B } from '../theme';
 import { useBabysittingConfig } from '../lib/config';
 import { useDemo, setDemoActive } from '../demo/flag';
+import { useChatMessages, unreadByClient } from '../lib/chat';
 import { TourWizard } from './TourWizard';
 
 // ── Edit mode — a deliberate switch so day-to-day browsing can't
@@ -64,7 +65,8 @@ const NAV: Array<{ to: string; label: string; emoji: string; end?: boolean; minL
   { to: '/kids', label: 'Kids', emoji: '🧸', minLevel: 'simple' },
   { to: '/families', label: 'Families', emoji: '👨‍👩‍👧', minLevel: 'standard' },
   { to: '/billing', label: 'Billing', emoji: '💛', minLevel: 'standard' },
-  { to: '/messages', label: 'Messages', emoji: '✉️', minLevel: 'simple' },
+  { to: '/chat', label: 'Chat', emoji: '💬', minLevel: 'simple' },
+  { to: '/messages', label: 'Reminders', emoji: '✉️', minLevel: 'simple' },
   { to: '/reports', label: 'Reports', emoji: '📈', minLevel: 'pro' },
   { to: '/settings', label: 'Settings', emoji: '⚙️', minLevel: 'simple' },
 ];
@@ -88,6 +90,13 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const name = trainer?.business_name || trainer?.full_name || 'Babysitting';
   const level: Level = cfg.data?.settings.appLevel ?? 'standard';
   const nav = NAV.filter((n) => LEVEL_RANK[n.minLevel] <= LEVEL_RANK[level]);
+  // Unread parent messages, shown as a dot on the Chat tab. The demo has
+  // no message table behind it, so it stays quiet there.
+  const chat = useChatMessages(!demo);
+  const unreadTotal = useMemo(
+    () => Array.from(unreadByClient(chat.data, 'client').values()).reduce((a, b) => a + b, 0),
+    [chat.data],
+  );
   const showQuiet = level === 'pro';
 
   useEffect(() => {
@@ -183,6 +192,21 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
               >
                 <span style={{ marginRight: 6 }}>{n.emoji}</span>
                 {n.label}
+                {n.to === '/chat' && unreadTotal > 0 && (
+                  <span
+                    style={{
+                      marginLeft: 6,
+                      background: B.red,
+                      color: '#fff',
+                      borderRadius: 999,
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '1px 7px',
+                    }}
+                  >
+                    {unreadTotal}
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>

@@ -2,7 +2,7 @@
 // where the money stands, and every charge & payment in one timeline.
 
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { Link, useOutletContext, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import type { Client } from '../../lib/database.types';
 import {
   B,
@@ -101,6 +101,7 @@ export function KidDetailPage() {
   const { data: payments } = usePayments();
   const cfg = useBabysittingConfig();
   const setStatus = useSetKidStatus();
+  const navigate = useNavigate();
 
   const [showPay, setShowPay] = useState(false);
   const [showCharge, setShowCharge] = useState(false);
@@ -432,6 +433,14 @@ export function KidDetailPage() {
             </Btn>
             <Btn size="sm" kind="soft" onClick={() => setShowCharge(true)}>
               🧾 Add to bill
+            </Btn>
+            <Btn
+              size="sm"
+              kind="ghost"
+              onClick={() => navigate(`/chat?family=${famSlug || `solo-${kid.id}`}`)}
+              title={parentName ? `Chat with ${parentName}` : 'Chat with the parent'}
+            >
+              💬 Message parent
             </Btn>
             <Btn size="sm" kind="ghost" onClick={() => setShowEdit(true)}>
               ✏️ Edit
