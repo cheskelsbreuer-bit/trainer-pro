@@ -6,7 +6,9 @@ import type { Client } from '../../lib/database.types';
 import { readParent, readBalance } from '../theme';
 import type { BabysittingSettings } from './config';
 
-/** Fill {parent} {kids} {currency}{balance} into a template for one family. */
+/** Fill {parent} {kids} {currency}{balance} {paylink} into a template.
+ *  If the sitter set a pay link but the template never mentions it, it's
+ *  appended — a money message should always carry the way to pay. */
 export function fillTemplate(
   template: string,
   family: { parentName: string; kidNames: string[]; balance: number },
@@ -18,11 +20,18 @@ export function fillTemplate(
       : family.kidNames.slice(0, -1).join(', ') +
         ' and ' +
         family.kidNames[family.kidNames.length - 1];
-  return template
+  const payLink = (settings.payLink || '').trim();
+  let out = template
     .replace(/\{parent\}/g, family.parentName || 'there')
     .replace(/\{kids\}/g, kids)
     .replace(/\{currency\}/g, settings.currency || '$')
     .replace(/\{balance\}/g, family.balance.toFixed(family.balance % 1 === 0 ? 0 : 2));
+  if (out.includes('{paylink}')) {
+    out = out.replace(/\{paylink\}/g, payLink);
+  } else if (payLink && family.balance > 0.005) {
+    out = `${out.trimEnd()} Pay here: ${payLink}`;
+  }
+  return out.trim();
 }
 
 /** Family summary for one group of sibling rows. */

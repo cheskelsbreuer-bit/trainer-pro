@@ -11,7 +11,10 @@ import { useDemo } from '../demo/flag';
 
 export interface MessageSchedule {
   enabled: boolean;
-  day: number; // 0=Sunday … 6=Saturday (JS convention)
+  /** 'weekly' = a weekday (day), 'monthly' = a date (dayOfMonth). */
+  frequency: 'weekly' | 'monthly';
+  day: number; // 0=Sunday … 6=Saturday (JS convention) — weekly mode
+  dayOfMonth: number; // 1–28 — monthly mode ("every 1st")
   emailAuto: boolean; // send emails automatically on the scheduled day
   smsAuto: boolean; // send texts automatically (needs Twilio on the server)
 }
@@ -23,7 +26,8 @@ export interface GmailSending {
 
 export interface ReceiptSettings {
   enabled: boolean;
-  template: string; // {parent} {kids} {currency}{amount} {currency}{balance}
+  smsEnabled: boolean; // ALSO text the receipt (when the server has an SMS provider)
+  template: string; // {parent} {kids} {currency}{amount} {currency}{balance} {paylink}
 }
 
 export interface BabysittingSettings {
@@ -46,6 +50,10 @@ export interface BabysittingSettings {
   appLevel: 'simple' | 'standard' | 'pro'; // how much of the app shows
   familyDiscount: { enabled: boolean; type: 'percent' | 'flat'; value: number }; // 2nd+ siblings
   autoBilling: { enabled: boolean; day: number }; // weekly charges post themselves (day: 0=Sun…6=Sat)
+  /** Where parents pay — a Venmo/PayPal.me/Zelle/Stripe payment-link URL.
+   *  When set, it rides along on balance reminders and receipts as
+   *  {paylink}, so every money text ends with a way to pay right now. */
+  payLink: string;
   editPin: string; // '' = no PIN; otherwise 4 digits asked before editing
   readOnlyLock: boolean; // true = editing can't be turned on at all
   paymentMethods: string[]; // her own list of how people pay
@@ -143,17 +151,19 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
   emailSubject: 'Your babysitting balance',
   emailTemplate:
     'Hi {parent},\n\nJust a friendly note that the current babysitting balance for {kids} is {currency}{balance}.\n\nThank you!',
-  schedule: { enabled: false, day: 4, emailAuto: true, smsAuto: false },
+  schedule: { enabled: false, frequency: 'weekly', day: 4, dayOfMonth: 1, emailAuto: true, smsAuto: false },
   mutedFamilies: [],
   gmail: { address: '', appPassword: '' },
   receipts: {
     enabled: false,
+    smsEnabled: true,
     template:
       'Hi {parent}! Received {currency}{amount} — thank you! The balance for {kids} is now {currency}{balance}.',
   },
   appLevel: 'standard',
   familyDiscount: { enabled: false, type: 'percent', value: 10 },
   autoBilling: { enabled: false, day: 0 },
+  payLink: '',
   editPin: '',
   readOnlyLock: false,
   paymentMethods: ['cash', 'check', 'zelle', 'venmo', 'other'],
@@ -166,6 +176,8 @@ function hydrate(raw: unknown): BabysittingConfig {
   const r = (raw ?? {}) as Partial<BabysittingConfig>;
   const s = { ...DEFAULT_SETTINGS, ...(r.settings ?? {}) };
   s.schedule = { ...DEFAULT_SETTINGS.schedule, ...(r.settings?.schedule ?? {}) };
+  if (!['weekly', 'monthly'].includes(s.schedule.frequency)) s.schedule.frequency = 'weekly';
+  if (!(s.schedule.dayOfMonth >= 1 && s.schedule.dayOfMonth <= 28)) s.schedule.dayOfMonth = 1;
   s.gmail = { ...DEFAULT_SETTINGS.gmail, ...(r.settings?.gmail ?? {}) };
   s.receipts = { ...DEFAULT_SETTINGS.receipts, ...(r.settings?.receipts ?? {}) };
   s.mutedFamilies = Array.isArray(r.settings?.mutedFamilies) ? r.settings!.mutedFamilies : [];

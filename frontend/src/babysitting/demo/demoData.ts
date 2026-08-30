@@ -184,17 +184,19 @@ export const DEMO_CONFIG: BabysittingConfig = {
     emailSubject: 'Your babysitting balance',
     emailTemplate:
       'Hi {parent},\n\nJust a friendly note that the current babysitting balance for {kids} is {currency}{balance}.\n\nThank you!',
-    schedule: { enabled: true, day: 4, emailAuto: true, smsAuto: false },
+    schedule: { enabled: true, frequency: 'monthly', day: 4, dayOfMonth: 1, emailAuto: true, smsAuto: true },
     mutedFamilies: [],
     gmail: { address: 'leah.littleones@gmail.com', appPassword: '••••••••' },
     receipts: {
       enabled: true,
+      smsEnabled: true,
       template:
         'Hi {parent}! Received {currency}{amount} — thank you! The balance for {kids} is now {currency}{balance}.',
     },
     appLevel: 'pro',
     familyDiscount: { enabled: true, type: 'percent', value: 10 },
     autoBilling: { enabled: true, day: 0 },
+    payLink: 'https://venmo.com/u/leahs-little-ones',
     editPin: '',
     readOnlyLock: false,
     paymentMethods: ['cash', 'check', 'zelle', 'venmo', 'other'],

@@ -213,18 +213,33 @@ def _family_label(slug: str) -> str:
     return " ".join(p.capitalize() for p in slug.split("-") if p) + " family"
 
 
-def _fill_template(template: str, parent: str, kid_names: list[str], balance: float, currency: str) -> str:
+def _fill_template(
+    template: str,
+    parent: str,
+    kid_names: list[str],
+    balance: float,
+    currency: str,
+    pay_link: str = "",
+) -> str:
     if len(kid_names) <= 1:
         kids = kid_names[0] if kid_names else "your kids"
     else:
         kids = ", ".join(kid_names[:-1]) + " and " + kid_names[-1]
     amount = f"{balance:.0f}" if balance == int(balance) else f"{balance:.2f}"
-    return (
+    out = (
         template.replace("{parent}", parent or "there")
         .replace("{kids}", kids)
         .replace("{currency}", currency or "$")
         .replace("{balance}", amount)
     )
+    # A money message should always carry the way to pay: fill {paylink}
+    # if the template mentions it, otherwise append the link (only when
+    # something is actually owed).
+    if "{paylink}" in out:
+        out = out.replace("{paylink}", pay_link or "")
+    elif pay_link and balance > 0.005:
+        out = out.rstrip() + f" Pay here: {pay_link}"
+    return out.strip()
 
 
 def _group_families(kids: list[dict], muted: set[str]) -> list[dict]:
@@ -330,6 +345,7 @@ def _run_for_trainer(sb_admin, trainer: dict, req: WeeklyBalancesRequest, trigge
     schedule = bs_settings.get("schedule") or {}
 
     currency = bs_settings.get("currency") or "$"
+    pay_link = (bs_settings.get("payLink") or "").strip()
     sms_template = bs_settings.get("smsTemplate") or (
         "Hi {parent}! Friendly reminder from your babysitter: the balance for {kids} is {currency}{balance}. Thank you!"
     )
@@ -383,8 +399,8 @@ def _run_for_trainer(sb_admin, trainer: dict, req: WeeklyBalancesRequest, trigge
 
     plan = []
     for f in families:
-        sms_body = _fill_template(sms_template, f["parent"], f["kid_names"], f["balance"], currency)
-        email_body = _fill_template(email_template, f["parent"], f["kid_names"], f["balance"], currency)
+        sms_body = _fill_template(sms_template, f["parent"], f["kid_names"], f["balance"], currency, pay_link)
+        email_body = _fill_template(email_template, f["parent"], f["kid_names"], f["balance"], currency, pay_link)
         plan.append({**f, "sms_body": sms_body, "email_body": email_body})
 
     if req.dry_run:
@@ -473,16 +489,22 @@ def weekly_balances(
             .contains("template_slugs", ["babysitting"])
             .execute()
         )
-        today = datetime.now(timezone.utc).weekday()  # Mon=0 … Sun=6
+        now = datetime.now(timezone.utc)
+        today = now.weekday()  # Mon=0 … Sun=6
         results = []
         for t in trainers.data or []:
             schedule = ((t.get("public_profile") or {}).get("babysitting") or {}).get("settings", {}).get("schedule") or {}
             if not schedule.get("enabled"):
                 continue
-            # schedule.day uses JS convention: Sun=0 … Sat=6. Convert.
-            js_today = (today + 1) % 7
-            if int(schedule.get("day", 4)) != js_today:
-                continue
+            if schedule.get("frequency") == "monthly":
+                # "Every 1st of the month" style — fires on that date.
+                if int(schedule.get("dayOfMonth", 1)) != now.day:
+                    continue
+            else:
+                # Weekly. schedule.day uses JS convention: Sun=0 … Sat=6.
+                js_today = (today + 1) % 7
+                if int(schedule.get("day", 4)) != js_today:
+                    continue
             try:
                 results.append(_run_for_trainer(sb_admin, t, req, triggered_by="cron"))
             except Exception as e:  # noqa: BLE001 — one bad tenant never kills the run
@@ -575,19 +597,40 @@ def payment_receipt(
     kid_names = [m["full_name"].split(" ")[0] for m in members]
 
     currency = bs_settings.get("currency") or "$"
+    pay_link = (bs_settings.get("payLink") or "").strip()
     template = receipts.get("template") or (
         "Hi {parent}! Received {currency}{amount} — thank you! The balance for {kids} is now {currency}{balance}."
     )
     amount_str = f"{req.amount:.0f}" if req.amount == int(req.amount) else f"{req.amount:.2f}"
-    body = _fill_template(template.replace("{amount}", amount_str), parent, kid_names, balance, currency)
+    body = _fill_template(template.replace("{amount}", amount_str), parent, kid_names, balance, currency, pay_link)
     trainer_name = trainer.get("business_name") or trainer.get("full_name") or "Your babysitter"
 
-    if not email:
-        return {"sent": False, "reason": "no parent email on file"}
-    try:
-        channel = _send_email_for(trainer_name, bs_settings, email, "Payment received — thank you!", body)
-    except Exception as e:  # noqa: BLE001
-        return {"sent": False, "reason": str(e)[:200]}
+    phone = next((m.get("phone") for m in members if m.get("phone")), None)
+    sms_wanted = receipts.get("smsEnabled", True)
+
+    channels: list[str] = []
+    errors: list[str] = []
+
+    # Text first — the parent's phone is where this lands best.
+    if sms_wanted and phone and settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and settings.TWILIO_FROM_NUMBER:
+        try:
+            from twilio.rest import Client as TwilioClient
+
+            _send_sms(phone, body, TwilioClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN))
+            channels.append("sms")
+        except Exception as e:  # noqa: BLE001 — the email still goes
+            errors.append(f"sms: {e}")
+
+    if email:
+        try:
+            channels.append(_send_email_for(trainer_name, bs_settings, email, "Payment received — thank you!", body))
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"email: {e}")
+
+    if not channels:
+        reason = "; ".join(errors) if errors else "no parent phone or email on file"
+        return {"sent": False, "reason": reason[:200]}
+    channel = "+".join(channels)
 
     try:
         sb.table("activity_log").insert(
@@ -597,7 +640,7 @@ def payment_receipt(
                 "action": "payment_receipt",
                 "entity_type": "client",
                 "entity_id": kid["id"],
-                "details": {"amount": req.amount, "channel": channel, "to": email},
+                "details": {"amount": req.amount, "channel": channel, "to": email or phone},
             }
         ).execute()
     except Exception:  # noqa: BLE001

@@ -55,6 +55,11 @@ interface ReminderRunRow {
   } | null;
 }
 
+function ordinal(n: number): string {
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
+  return `${n}${suffix}`;
+}
+
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -491,7 +496,15 @@ export function MessagesPage() {
       <Card>
         <SectionTitle
           right={
-            settings.schedule.enabled ? <Chip tone="green">On — {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][settings.schedule.day]}s</Chip> : <Chip tone="neutral">Off</Chip>
+            settings.schedule.enabled ? (
+              <Chip tone="green">
+                {settings.schedule.frequency === 'monthly'
+                  ? `On — the ${ordinal(settings.schedule.dayOfMonth)} of every month`
+                  : `On — ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][settings.schedule.day]}s`}
+              </Chip>
+            ) : (
+              <Chip tone="neutral">Off</Chip>
+            )
           }
         >
           🤖 Automatic sending
@@ -512,27 +525,73 @@ export function MessagesPage() {
             '✓ Automatic sending is ON',
             'Turn automatic sending on',
           )}
+          {/* Weekly on a weekday, or monthly on a date ("every 1st") */}
           <div style={{ display: 'flex', gap: 5 }}>
-            {ALL_DAYS.map((day, i) => (
+            {(['weekly', 'monthly'] as const).map((f) => (
               <button
-                key={day}
+                key={f}
                 disabled={!editMode}
-                onClick={() => saveAutomation({ schedule: { ...settings.schedule, day: i } }, `Send day set to ${DAY_SHORT[day]}`)}
+                onClick={() => saveAutomation({ schedule: { ...settings.schedule, frequency: f } }, `Reminders now ${f}`)}
                 style={{
                   border: 'none',
                   cursor: editMode ? 'pointer' : 'not-allowed',
                   borderRadius: B.pill,
-                  padding: '7px 11px',
+                  padding: '7px 13px',
                   fontSize: '0.74rem',
                   fontWeight: 800,
-                  background: settings.schedule.day === i ? B.primary : '#f2ede4',
-                  color: settings.schedule.day === i ? '#fff' : B.inkSoft,
+                  background: settings.schedule.frequency === f ? B.accent : '#f2ede4',
+                  color: settings.schedule.frequency === f ? '#fff' : B.inkSoft,
                 }}
               >
-                {DAY_SHORT[day]}
+                {f === 'weekly' ? 'Every week' : 'Once a month'}
               </button>
             ))}
           </div>
+          {settings.schedule.frequency === 'weekly' ? (
+            <div style={{ display: 'flex', gap: 5 }}>
+              {ALL_DAYS.map((day, i) => (
+                <button
+                  key={day}
+                  disabled={!editMode}
+                  onClick={() => saveAutomation({ schedule: { ...settings.schedule, day: i } }, `Send day set to ${DAY_SHORT[day]}`)}
+                  style={{
+                    border: 'none',
+                    cursor: editMode ? 'pointer' : 'not-allowed',
+                    borderRadius: B.pill,
+                    padding: '7px 11px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    background: settings.schedule.day === i ? B.primary : '#f2ede4',
+                    color: settings.schedule.day === i ? '#fff' : B.inkSoft,
+                  }}
+                >
+                  {DAY_SHORT[day]}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', fontWeight: 700, color: B.inkSoft }}>
+              on the
+              <select
+                disabled={!editMode}
+                value={settings.schedule.dayOfMonth}
+                onChange={(e) =>
+                  saveAutomation(
+                    { schedule: { ...settings.schedule, dayOfMonth: parseInt(e.target.value, 10) } },
+                    `Send date set to the ${ordinal(parseInt(e.target.value, 10))}`,
+                  )
+                }
+                style={{ ...inputStyle, width: 84, padding: '7px 9px' }}
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {ordinal(d)}
+                  </option>
+                ))}
+              </select>
+              of every month
+            </label>
+          )}
           {toggle(
             settings.schedule.emailAuto,
             () => saveAutomation({ schedule: { ...settings.schedule, emailAuto: !settings.schedule.emailAuto } }, 'Email channel toggled'),
@@ -572,12 +631,28 @@ export function MessagesPage() {
           </Field>
         </div>
 
+        <Field
+          label="💳 Where do they pay? (your payment link)"
+          hint="Venmo, PayPal.me, Zelle, or a Stripe payment link. Added to the end of every balance reminder and receipt — so paying is one tap from the text."
+        >
+          <input
+            style={inputStyle}
+            defaultValue={settings.payLink}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== settings.payLink) saveAutomation({ payLink: v }, 'Payment link updated');
+            }}
+            placeholder="https://venmo.com/u/your-name"
+            disabled={!editMode}
+          />
+        </Field>
+
         <details style={{ marginBottom: 14 }}>
           <summary style={{ cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', color: B.inkSoft }}>
             ✏️ Edit the message wording
           </summary>
           <div style={{ marginTop: 12 }}>
-            <Field label="Text message" hint="Placeholders: {parent} {kids} {currency}{balance}">
+            <Field label="Text message" hint="Placeholders: {parent} {kids} {currency}{balance} {paylink}">
               <textarea
                 style={{ ...inputStyle, minHeight: 64, resize: 'vertical' }}
                 value={d.smsTemplate}
@@ -926,8 +1001,8 @@ export function MessagesPage() {
           🧾 Payment receipts
         </SectionTitle>
         <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 12 }}>
-          When you record a payment, the parent automatically gets a thank-you email with their new balance.
-          Uses the same Gmail setup as above.
+          When you record a payment, the parent automatically gets a thank-you with their new balance —
+          by email (your Gmail above) and, once texting is set up on the server, by text too.
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
           {toggle(
@@ -940,6 +1015,17 @@ export function MessagesPage() {
             '✓ Receipts are ON',
             'Turn receipts on',
           )}
+          {settings.receipts.enabled &&
+            toggle(
+              settings.receipts.smsEnabled,
+              () =>
+                saveAutomation(
+                  { receipts: { ...settings.receipts, smsEnabled: !settings.receipts.smsEnabled } },
+                  settings.receipts.smsEnabled ? 'Receipt texts turned off' : 'Receipt texts turned on',
+                ),
+              '📱 Also texted',
+              '📱 Text it too',
+            )}
         </div>
         <div style={{ background: B.butterSoft, borderRadius: B.radiusSm, padding: '10px 14px', fontSize: '0.84rem' }}>
           <b>They'll get:</b>{' '}
