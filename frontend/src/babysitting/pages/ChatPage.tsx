@@ -13,10 +13,12 @@ import {
   useMarkThreadRead,
   familyThreads,
   unreadByClient,
+  familyHasPortal,
   chatTime,
 } from '../lib/chat';
 import { Card, SectionTitle, EmptyState, Avatar, Chip } from '../components/ui';
 import { ChatThread } from '../components/ChatThread';
+import { InviteParentButton } from '../components/InviteParentButton';
 
 // Two columns on a laptop, one on a phone. Scoped to this page.
 const RESPONSIVE_CSS = `
@@ -49,6 +51,7 @@ export function ChatPage() {
           msgs,
           last,
           unreadCount,
+          hasPortal: familyHasPortal(t.members),
           label: t.slug.startsWith('solo-') ? t.members[0].full_name : familyLabel(t.slug),
           parent: readParent(t.anchor),
         };
@@ -152,6 +155,11 @@ export function ChatPage() {
                     {t.last ? t.last.body : 'No messages yet'}
                   </div>
                 </div>
+                {!t.hasPortal && (
+                  <span title="Parent hasn't set up their login yet" style={{ fontSize: '0.8rem' }}>
+                    🔒
+                  </span>
+                )}
                 {t.unreadCount > 0 && <Chip tone="red">{t.unreadCount}</Chip>}
                 {!t.unreadCount && t.last && (
                   <span style={{ fontSize: '0.68rem', color: B.mute, fontWeight: 700 }}>
@@ -176,6 +184,24 @@ export function ChatPage() {
           >
             {open.parent ? `${open.parent} · ${open.label}` : open.label}
           </SectionTitle>
+          {!open.hasPortal && (
+            <div
+              style={{
+                background: B.butterSoft,
+                borderRadius: B.radiusSm,
+                padding: '11px 14px',
+                marginBottom: 12,
+                fontSize: '0.84rem',
+                lineHeight: 1.5,
+              }}
+            >
+              <b>{open.parent || 'This parent'} hasn't opened the portal yet.</b> You can write here,
+              but they won't see it until they set up their login. Send them one:
+              <div style={{ marginTop: 8 }}>
+                <InviteParentButton kids={open.members} />
+              </div>
+            </div>
+          )}
           <ChatThread
             messages={open.msgs}
             me="trainer"

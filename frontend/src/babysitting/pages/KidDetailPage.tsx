@@ -43,6 +43,8 @@ import {
 import { PaymentModal } from '../components/PaymentModal';
 import { ChargeModal } from '../components/ChargeModal';
 import { KidModal } from '../components/KidModal';
+import { InviteParentButton } from '../components/InviteParentButton';
+import { familyHasPortal } from '../lib/chat';
 
 const linkStyle: CSSProperties = {
   color: B.accentDeep,
@@ -151,6 +153,16 @@ export function KidDetailPage() {
       sub: r.sub ?? (r.kind === 'payment' ? methodByRow.get(r.id) : undefined),
     }));
   }, [kid, payments, cfg.data]);
+
+  // The portal login belongs to the FAMILY, so a sibling's account
+  // counts — otherwise a second child looks "not invited" forever.
+  const family = useMemo<Client[]>(() => {
+    if (!kid) return [];
+    const slug = readFamilySlug(kid);
+    if (!slug) return [kid];
+    return (kids ?? []).filter((k) => readFamilySlug(k) === slug);
+  }, [kids, kid]);
+  const hasPortal = useMemo(() => familyHasPortal(family.length ? family : kid ? [kid] : []), [family, kid]);
 
   const paymentMethod = useMemo<Map<string, string>>(() => {
     const m = new Map<string, string>();
@@ -339,6 +351,16 @@ export function KidDetailPage() {
                 )}
               </Info>
               <Info label="Started">{started ? shortDate(started) : '—'}</Info>
+              <Info label="Parent portal">
+                {hasPortal ? (
+                  <Chip tone="green">✓ Signed up</Chip>
+                ) : (
+                  <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Chip tone="neutral">Not set up yet</Chip>
+                    {editMode && <InviteParentButton kids={family.length ? family : [kid]} />}
+                  </span>
+                )}
+              </Info>
               {(cfg.data?.customFields ?? []).map((f) => {
                 const v = readCustomValues(kid)[f.id];
                 return v ? <Info key={f.id} label={f.label}>{v}</Info> : null;

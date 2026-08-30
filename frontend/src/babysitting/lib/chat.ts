@@ -130,6 +130,14 @@ export function unreadByClient(
   return out;
 }
 
+/** Has anyone in this family actually created a portal login? Until one
+ *  of them has, the sitter's messages sit unread in the database and the
+ *  parent has no way to see them — so every surface that can send a
+ *  message says so plainly instead of failing silently. */
+export function familyHasPortal(members: Client[]): boolean {
+  return members.some((m) => !!m.auth_user_id);
+}
+
 /** Clock time for a bubble — "2:14 PM" today, "Aug 12" before that. */
 export function chatTime(iso: string): string {
   const d = new Date(iso);
