@@ -76,6 +76,9 @@ export function MessagesPage() {
   const [busy, setBusy] = useState(false);
   const [runResult, setRunResult] = useState<DryRunResult | null>(null);
   const [runErr, setRunErr] = useState('');
+  // "Send me a test email" — one tap, real answer.
+  const [testState, setTestState] = useState<'idle' | 'busy' | 'ok' | 'fail'>('idle');
+  const [testMsg, setTestMsg] = useState('');
 
   // Draft state for the automation panel (seeded from saved settings once loaded).
   const [drafts, setDrafts] = useState<{
@@ -701,6 +704,38 @@ export function MessagesPage() {
             >
               {cfg.save.isPending ? 'Saving…' : '💾 Save message settings'}
             </Btn>
+            <Btn
+              kind="ghost"
+              disabled={testState === 'busy'}
+              onClick={async () => {
+                setTestState('busy');
+                setTestMsg('');
+                if (demo) {
+                  await new Promise((r) => setTimeout(r, 600));
+                  setTestState('ok');
+                  setTestMsg('(demo) A real account emails you right here.');
+                  return;
+                }
+                try {
+                  const res = await api<{ sent: boolean; channel?: string; to?: string; error?: string }>(
+                    '/reminders/test-email',
+                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+                  );
+                  if (res.sent) {
+                    setTestState('ok');
+                    setTestMsg(`Sent to ${res.to} via ${res.channel}. Check your inbox!`);
+                  } else {
+                    setTestState('fail');
+                    setTestMsg(res.error || 'Send failed.');
+                  }
+                } catch (e) {
+                  setTestState('fail');
+                  setTestMsg(e instanceof ApiError ? `${e.status}: ${e.message}` : e instanceof Error ? e.message : 'Failed');
+                }
+              }}
+            >
+              {testState === 'busy' ? 'Sending…' : '📬 Send me a test email'}
+            </Btn>
             <Btn kind="accent" onClick={() => runBackend(true)} disabled={busy}>
               {busy ? 'Checking…' : '🧪 Practice run (sends nothing)'}
             </Btn>
@@ -717,6 +752,22 @@ export function MessagesPage() {
           </div>
         )}
 
+        {testMsg && (
+          <div
+            style={{
+              marginTop: 10,
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              color: testState === 'ok' ? B.green : B.red,
+              background: testState === 'ok' ? B.greenSoft : B.redSoft,
+              borderRadius: B.radiusSm,
+              padding: '8px 12px',
+            }}
+          >
+            {testState === 'ok' ? '✓ ' : '✗ '}
+            {testMsg}
+          </div>
+        )}
         {runErr && <Chip tone="red" style={{ marginTop: 12 }}>{runErr}</Chip>}
         {runResult && (
           <div style={{ marginTop: 14, border: `1.5px solid ${B.rule}`, borderRadius: B.radiusSm, padding: '12px 14px' }}>

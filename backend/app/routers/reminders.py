@@ -282,19 +282,27 @@ def _send_email_for(trainer_name: str, bs_settings: dict, to_email: str, subject
     g_addr = (gmail.get("address") or "").strip()
     g_pass = (gmail.get("appPassword") or "").replace(" ", "").strip()
 
+    gmail_error: str | None = None
     if g_addr and g_pass:
         import smtplib
         from email.mime.text import MIMEText
         from email.utils import formataddr
 
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = subject
-        msg["From"] = formataddr((trainer_name, g_addr))
-        msg["To"] = to_email
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as smtp:
-            smtp.login(g_addr, g_pass)
-            smtp.sendmail(g_addr, [to_email], msg.as_string())
-        return "gmail"
+        try:
+            msg = MIMEText(body, "plain", "utf-8")
+            msg["Subject"] = subject
+            msg["From"] = formataddr((trainer_name, g_addr))
+            msg["To"] = to_email
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as smtp:
+                smtp.login(g_addr, g_pass)
+                smtp.sendmail(g_addr, [to_email], msg.as_string())
+            return "gmail"
+        except smtplib.SMTPAuthenticationError as e:
+            # Wrong / revoked app password. Don't kill the run — fall
+            # through to Resend if the deploy has it.
+            gmail_error = f"Gmail sign-in failed ({e.smtp_code}): check the app password"
+        except Exception as e:  # noqa: BLE001 — network, port blocks, etc.
+            gmail_error = f"Gmail send failed: {type(e).__name__}: {e}"
 
     if settings.RESEND_API_KEY:
         import httpx
@@ -314,9 +322,11 @@ def _send_email_for(trainer_name: str, bs_settings: dict, to_email: str, subject
             timeout=15,
         )
         if resp.status_code >= 300:
-            raise RuntimeError(f"Resend {resp.status_code}: {resp.text[:200]}")
-        return "resend"
+            raise RuntimeError(f"Resend {resp.status_code}: {resp.text[:200]}" + (f" (after {gmail_error})" if gmail_error else ""))
+        return "resend (gmail failed)" if gmail_error else "resend"
 
+    if gmail_error:
+        raise RuntimeError(gmail_error)
     raise RuntimeError("No email path configured (add Gmail in Messages settings, or set RESEND_API_KEY).")
 
 
@@ -646,3 +656,49 @@ def payment_receipt(
     except Exception:  # noqa: BLE001
         pass
     return {"sent": True, "channel": channel}
+
+
+class TestEmailRequest(BaseModel):
+    pass
+
+
+@router.post("/test-email")
+def test_email(authorization: str | None = Header(default=None)) -> dict:
+    """Sends ONE email to the sitter's own login address through the exact
+    same path the reminders use, and returns the channel or the real
+    error text — the one-tap answer to "why aren't my emails going?"."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Missing token")
+    from ..auth import get_current_user
+    from ..db import supabase_admin
+
+    user = get_current_user(authorization)
+    if not user.email:
+        raise HTTPException(400, "Your login has no email address")
+
+    sb = supabase_admin()
+    trainer_resp = (
+        sb.table("trainers")
+        .select("id, full_name, business_name, public_profile")
+        .eq("id", user.user_id)
+        .single()
+        .execute()
+    )
+    if not trainer_resp.data:
+        raise HTTPException(404, "Trainer not found")
+    trainer = trainer_resp.data
+    bs_settings = ((trainer.get("public_profile") or {}).get("babysitting") or {}).get("settings") or {}
+    trainer_name = trainer.get("business_name") or trainer.get("full_name") or "Your babysitting app"
+
+    try:
+        channel = _send_email_for(
+            trainer_name,
+            bs_settings,
+            user.email,
+            "Test — your reminders are working",
+            "This is a test from your babysitting app. If you can read this, "
+            "automatic emails are working. 💛",
+        )
+    except Exception as e:  # noqa: BLE001 — the error text IS the answer
+        return {"sent": False, "error": str(e)[:300]}
+    return {"sent": True, "channel": channel, "to": user.email}
