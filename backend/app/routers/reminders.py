@@ -314,10 +314,16 @@ def _send_email_for(trainer_name: str, bs_settings: dict, to_email: str, subject
                 "Content-Type": "application/json",
             },
             json={
-                "from": settings.RESEND_FROM_EMAIL,
+                # From: the sitter's name, our verified domain. Reply-To:
+                # her own inbox (Gmail or whatever she saved), so a parent
+                # hitting Reply reaches HER, not the platform.
+                "from": f"{trainer_name} <{settings.RESEND_FROM_EMAIL}>"
+                if "<" not in settings.RESEND_FROM_EMAIL
+                else settings.RESEND_FROM_EMAIL,
                 "to": [to_email],
                 "subject": subject,
                 "text": body,
+                **({"reply_to": [g_addr]} if g_addr else {}),
             },
             timeout=15,
         )
