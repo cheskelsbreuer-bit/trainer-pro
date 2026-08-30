@@ -36,6 +36,15 @@ export function AutoBillingCard() {
 
   const ab = cfg.data?.settings.autoBilling ?? { enabled: false, day: 0 };
 
+  // The most recent automatic weekly charge — the double-billing guard.
+  const lastAutoBill = (cfg.data?.charges ?? []).find(
+    (c) => c.kind === 'week' && (c.note ?? '').startsWith('auto'),
+  );
+  const daysSinceLastRun = lastAutoBill
+    ? Math.floor((Date.now() - new Date(lastAutoBill.ts).getTime()) / 86400000)
+    : null;
+  const ranRecently = daysSinceLastRun !== null && daysSinceLastRun < 5;
+
   function saveAb(next: { enabled: boolean; day: number }, log: string) {
     if (!cfg.data) return;
     cfg.save.mutate(
@@ -43,7 +52,7 @@ export function AutoBillingCard() {
     );
   }
 
-  async function run(dryRun: boolean) {
+  async function run(dryRun: boolean, force = false) {
     setBusy(true);
     setErr('');
     setResult(null);
@@ -52,6 +61,11 @@ export function AutoBillingCard() {
     // sibling discount on the 2nd+ child in a family.
     if (demo) {
       await new Promise((r) => setTimeout(r, 650));
+      if (!dryRun && !force && daysSinceLastRun === 0) {
+        setResult({ dry_run: false, skipped: 'already billed today' });
+        setBusy(false);
+        return;
+      }
       const awayIds = new Set((cfg.data?.away ?? []).filter((a) => !a.endedAt).map((a) => a.clientId));
       const fd = cfg.data?.settings.familyDiscount;
       const seenInFamily = new Map<string, number>();
@@ -102,7 +116,7 @@ export function AutoBillingCard() {
       const res = await api<BillingRunResult>('/billing/run-weekly', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dry_run: dryRun, force: true }),
+        body: JSON.stringify({ dry_run: dryRun, force }),
       });
       setResult(res);
       if (!dryRun) {
@@ -186,7 +200,13 @@ export function AutoBillingCard() {
             <Btn
               size="sm"
               onClick={() => {
-                if (window.confirm("Bill the whole week now, for real? Every active kid's weekly rate goes on their balance.")) void run(false);
+                const msg = ranRecently
+                  ? `⚠️ You already billed the week ${daysSinceLastRun === 0 ? 'TODAY' : daysSinceLastRun === 1 ? 'yesterday' : `${daysSinceLastRun} days ago`}. Billing again puts a SECOND weekly charge on every family. Are you sure?`
+                  : "Bill the whole week now, for real? Every active kid's weekly rate goes on their balance.";
+                // Never force from here — the server's same-day guard gets
+                // the final say; "bill again anyway" below is the only
+                // deliberate way past it.
+                if (window.confirm(msg)) void run(false);
               }}
               disabled={busy}
             >
@@ -213,6 +233,23 @@ export function AutoBillingCard() {
                 {!(result.would_bill ?? []).length && <span style={{ color: B.mute }}>Nobody has a weekly rate set yet.</span>}
               </div>
             </>
+          ) : result.skipped ? (
+            <div style={{ fontWeight: 800 }}>
+              🛡️ Nothing charged — the week was already billed today.
+              <div style={{ fontWeight: 600, fontSize: '0.84rem', color: B.inkSoft, marginTop: 6 }}>
+                That's the double-billing guard. If you really mean to bill a second time,{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Really bill AGAIN today? Every family gets a second weekly charge.')) void run(false, true);
+                  }}
+                  style={{ border: 'none', background: 'none', color: B.red, fontWeight: 800, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                >
+                  bill again anyway
+                </button>
+                .
+              </div>
+            </div>
           ) : (
             <div style={{ fontWeight: 800 }}>
               ✅ Billed {formatMoney(result.total ?? 0)} across {result.billed_kids ?? 0} kids.

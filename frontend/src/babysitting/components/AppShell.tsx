@@ -14,6 +14,7 @@ import { useBabysittingConfig } from '../lib/config';
 import { useDemo, setDemoActive } from '../demo/flag';
 import { useChatMessages, unreadByClient } from '../lib/chat';
 import { TourWizard } from './TourWizard';
+import { CommentWidget } from './CommentWidget';
 
 // ── Edit mode — a deliberate switch so day-to-day browsing can't
 //    accidentally change money. Shared across pages via localStorage +
@@ -339,6 +340,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
         <Outlet context={{ editMode }} />
       </main>
       <TourWizard />
+      <CommentWidget />
     </div>
   );
 }
