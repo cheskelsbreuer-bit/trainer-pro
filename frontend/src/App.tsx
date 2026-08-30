@@ -194,7 +194,7 @@ function ProtectedShell() {
     (p) => location.pathname === p || location.pathname.startsWith(p + '/'),
   );
   function renderApp(key: AppKey) {
-    if (key === 'babysitting') return <BabysittingApp trainer={trainer} />;
+    if (key === 'babysitting') return <BabysittingApp trainer={trainer ?? undefined} />;
     if (key === 'coach' && !onClassicPath) return <CoachApp />;
     return <Layout />;
   }
