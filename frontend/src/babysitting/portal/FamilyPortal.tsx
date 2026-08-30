@@ -366,7 +366,7 @@ export function FamilyPortal({
                   {payBusy ? 'One moment…' : `💳 Pay ${formatMoney(balance)} now`}
                 </Btn>
                 <div style={{ fontSize: '0.72rem', color: B.mute, marginTop: 6 }}>
-                  Card or bank transfer — takes under a minute.
+                  Pay by card — takes under a minute.
                 </div>
                 {payErr && (
                   <div style={{ fontSize: '0.8rem', color: B.red, fontWeight: 700, marginTop: 8 }}>{payErr}</div>
@@ -385,8 +385,7 @@ export function FamilyPortal({
                   fontWeight: 800,
                 }}
               >
-                ✓ Payment sent! Card payments show up in a minute; bank transfers take a few days to
-                clear — the balance moves when the money lands.
+                ✓ Payment sent! It shows up on your balance in a minute.
               </div>
             )}
             {payReturn === 'cancel' && (

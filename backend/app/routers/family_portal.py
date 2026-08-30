@@ -206,8 +206,8 @@ def portal_pay(req: PortalPayRequest, authorization: str | None = Header(default
     try:
         session = stripe.checkout.Session.create(
             mode="payment",
-            # Card for instant, US bank debit for the ACH crowd.
-            payment_method_types=["card", "us_bank_account"],
+            # Card only — instant, no bank-clearing wait.
+            payment_method_types=["card"],
             line_items=[
                 {
                     "price_data": {
