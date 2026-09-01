@@ -22,7 +22,7 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 
 from .config import settings
-from .routers import admin, analytics, auto_billing, family_portal, health, reminders, reports, stripe_checkout, workouts_ai
+from .routers import admin, analytics, auto_billing, family_portal, health, inbound_email, reminders, reports, stripe_checkout, workouts_ai
 
 
 @asynccontextmanager
@@ -88,6 +88,7 @@ app.include_router(stripe_checkout.router)
 app.include_router(admin.router)
 app.include_router(family_portal.router)
 app.include_router(auto_billing.router)
+app.include_router(inbound_email.router)
 
 
 @app.get("/")

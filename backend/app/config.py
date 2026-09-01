@@ -32,6 +32,16 @@ class Settings(BaseSettings):
     # Shared secret for scheduled jobs (GitHub Actions cron → /reminders/*).
     # Empty = scheduled endpoints refuse to run (fail closed).
     CRON_SECRET: str = ""
+    # ── Email replies coming back IN ───────────────────────────────────
+    # Comment notifications go out with Reply-To set to this address, so
+    # hitting Reply in the inbox routes the answer through Resend Inbound
+    # back to POST /reminders/inbound-reply, which drops it into the
+    # sender's app. Empty = replies still work as plain email to the
+    # user, they just don't land inside the app.
+    REPLY_INBOUND_EMAIL: str = ""
+    # Svix signing secret for that inbound webhook ("whsec_..." from the
+    # Resend webhook page). Empty = the endpoint refuses every delivery.
+    INBOUND_WEBHOOK_SECRET: str = ""
 
     @property
     def cors_origins(self) -> list[str]:

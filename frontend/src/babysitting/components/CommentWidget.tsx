@@ -49,6 +49,10 @@ export function CommentWidget() {
       return (data ?? []) as CommentRow[];
     },
     enabled: demo || !!user,
+    // An answer can land at any moment (it arrives as an email reply, not
+    // from anything she does), so check every half-minute rather than
+    // making her refresh to find out.
+    refetchInterval: demo ? false : 30_000,
   });
 
   const send = useMutation({
@@ -67,21 +71,27 @@ export function CommentWidget() {
         ]);
         return;
       }
-      const { error } = await supabase.from('feedback').insert({
-        trainer_id: user!.id,
-        trainer_email: user?.email ?? null,
-        category: 'feature',
-        message,
-        user_agent: navigator.userAgent,
-        url: window.location.href,
-      });
+      // Ask for the new row's id back: it's what lets the reply to the
+      // notification email find its way onto THIS comment.
+      const { data, error } = await supabase
+        .from('feedback')
+        .insert({
+          trainer_id: user!.id,
+          trainer_email: user?.email ?? null,
+          category: 'feature',
+          message,
+          user_agent: navigator.userAgent,
+          url: window.location.href,
+        })
+        .select('id')
+        .single();
       if (error) throw error;
       // Email it to the builder so it doesn't sit unseen. Fire-and-forget:
       // a notification hiccup must never lose her comment.
       void api('/reminders/comment-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, feedback_id: (data as { id?: string } | null)?.id ?? null }),
       }).catch(() => undefined);
     },
     onSuccess: () => {

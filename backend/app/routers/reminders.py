@@ -863,6 +863,10 @@ def announce(req: AnnounceRequest, authorization: str | None = Header(default=No
 
 class CommentNotifyRequest(BaseModel):
     message: str
+    # The feedback row this comment was just saved as. Carrying it lets the
+    # notification email be answered by simply hitting Reply — see
+    # routers/inbound_email.py for the trip back.
+    feedback_id: str | None = None
 
 
 @router.post("/comment-notify")
@@ -897,15 +901,36 @@ def comment_notify(req: CommentNotifyRequest, authorization: str | None = Header
     who = row.get("business_name") or row.get("full_name") or "A user"
     from_addr = settings.RESEND_FROM_EMAIL
 
+    # Reply-To decides where hitting Reply goes. With an inbound address
+    # configured it goes back through Resend into the app; without one it
+    # falls back to plain email straight to the person who wrote it.
+    short = (req.feedback_id or "").replace("-", "")[:8]
+    inbound = settings.REPLY_INBOUND_EMAIL.strip()
+    reply_into_app = bool(inbound and req.feedback_id)
+    if reply_into_app:
+        local, _, domain = inbound.partition("@")
+        reply_to = f"{local}+{req.feedback_id}@{domain}"
+        how_to_answer = (
+            "Just hit Reply. Your answer lands inside their app, on this "
+            "comment, with a dot so they know it's new.\n"
+            "(Type above the quoted text — everything below it is trimmed off.)\n"
+        )
+    else:
+        reply_to = user.email or ""
+        how_to_answer = (
+            "Reply to this email to answer them directly.\n"
+            "To have your reply appear inside their app, answer it here:\n"
+            "https://www.trainerpro.coach/chesky\n"
+        )
+
     text = (
         f"{who} wrote a comment in the app:\n\n"
         f"    {body}\n\n"
         f"— {who}\n"
         f"Their email: {user.email or 'unknown'}\n\n"
-        "Reply to this email to answer them directly.\n"
-        "To have your reply appear inside their app, answer it here:\n"
-        "https://www.trainerpro.coach/chesky\n"
+        f"{how_to_answer}"
     )
+    subject = f"💡 App comment from {who}" + (f" [#{short}]" if short else "")
 
     if not settings.RESEND_API_KEY:
         return {"sent": False, "reason": "no email path configured"}
@@ -925,9 +950,9 @@ def comment_notify(req: CommentNotifyRequest, authorization: str | None = Header
                 json={
                     "from": from_addr,
                     "to": [to],
-                    "subject": f"💡 App comment from {who}",
+                    "subject": subject,
                     "text": text,
-                    **({"reply_to": [user.email]} if user.email else {}),
+                    **({"reply_to": [reply_to]} if reply_to else {}),
                 },
                 timeout=15,
             )
@@ -938,4 +963,4 @@ def comment_notify(req: CommentNotifyRequest, authorization: str | None = Header
         except Exception as e:  # noqa: BLE001 — a notify hiccup never breaks the comment
             errors.append(str(e)[:120])
 
-    return {"sent": sent > 0, "count": sent, "errors": errors[:3]}
+    return {"sent": sent > 0, "count": sent, "reply_into_app": reply_into_app, "errors": errors[:3]}

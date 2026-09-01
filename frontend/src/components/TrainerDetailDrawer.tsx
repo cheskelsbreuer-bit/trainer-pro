@@ -17,6 +17,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { adminRpc, type AdminTrainerDetail, type AdminTrainerActivity } from '../lib/adminRpc';
+import { appKeyForSlug, type AppKey } from '../lib/workspaces';
+import { TEMPLATES_BY_SLUG } from '../lib/templates';
 
 type TrainerDetail = AdminTrainerDetail;
 
@@ -304,6 +306,8 @@ function OverviewTab({
 
       <LastActivityCard data={data} />
 
+      <WhichAppCard data={data} onPatch={onPatch} patchPending={patchPending} />
+
       <section className="bg-slate-50 border border-slate-200 rounded-lg p-4">
         <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2.5">
           Visibility & status
@@ -420,6 +424,85 @@ function OverviewTab({
 }
 
 /* ─────────────── Onboarding progress card ─────────────── */
+// ── Which app is this account actually in? ──────────────────────────────
+// The template someone picks at signup decides which app they land in. If
+// they picked the wrong one — signed up "as a regular guy" and got the
+// coach app instead of babysitting — there was no way to see it, let alone
+// fix it. This card shows the answer in one line and moves them in one
+// click.
+
+const APP_LABELS: Record<AppKey, string> = {
+  babysitting: '🧸 Babysitting app',
+  coach: '🏋️ 1-on-1 Coach app',
+  default: '📋 Classic app',
+  martial: 'Martial arts',
+  boxing: 'Boxing',
+  nutrition: 'Nutrition',
+  exercise: 'Exercise',
+  studio_classes: 'Studio classes',
+};
+
+function WhichAppCard({
+  data,
+  onPatch,
+  patchPending,
+}: {
+  data: TrainerDetail;
+  onPatch: (body: Record<string, unknown>) => void;
+  patchPending: boolean;
+}) {
+  const slugs = data.template_slugs ?? [];
+  // Same rule App.tsx uses to decide what to mount: the Coach app wins
+  // when the account owns it, and an account with no templates gets it.
+  const keys = slugs.map(appKeyForSlug);
+  const landsIn: AppKey = keys.includes('coach') ? 'coach' : (keys[0] ?? 'coach');
+  const isBabysitting = landsIn === 'babysitting';
+  const templateNames = slugs
+    .map((s) => TEMPLATES_BY_SLUG[s]?.name ?? s)
+    .join(', ');
+
+  return (
+    <section className="bg-white border border-slate-200 rounded-lg p-4">
+      <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2.5">
+        Which app they open
+      </p>
+      <p className="text-sm font-semibold text-slate-800">{APP_LABELS[landsIn] ?? landsIn}</p>
+      <p className="text-xs text-slate-500 mt-1">
+        {slugs.length ? `Signed up as: ${templateNames}` : 'They never picked a template.'}
+      </p>
+      {!isBabysitting && (
+        <div className="mt-3 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 p-2.5">
+          <AlertTriangle size={14} className="text-amber-600 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-800">
+            This account is not in the babysitting app. If that's where they belong,
+            switch them — they'll see the babysitting app next time they load the page.
+          </p>
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={patchPending || isBabysitting}
+          onClick={() => onPatch({ template_slugs: ['babysitting'] })}
+          className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isBabysitting ? '✓ In the babysitting app' : 'Move to the babysitting app'}
+        </button>
+        {isBabysitting && (
+          <button
+            type="button"
+            disabled={patchPending}
+            onClick={() => onPatch({ template_slugs: ['solo_trainer'] })}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-300 hover:bg-slate-50 disabled:opacity-40"
+          >
+            Move back to the coach app
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function OnboardingProgressCard({ data }: { data: TrainerDetail }) {
   const total = data.onboarding_total_steps || 8;
   const done = data.onboarding_step_count || 0;
