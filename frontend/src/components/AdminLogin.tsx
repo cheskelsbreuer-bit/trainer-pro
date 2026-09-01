@@ -27,7 +27,8 @@ export function AdminLogin() {
         options: {
           // Land back on /chesky with a marker the AdminShell will pick up.
           // (Renamed from /admin to bypass Livigent URL filtering.)
-          emailRedirectTo: `${window.location.origin}/chesky?verified=1`,
+          // Come back to the same door they started at (/chesky or /hq).
+          emailRedirectTo: `${window.location.origin}${window.location.pathname}?verified=1`,
         },
       });
       if (error) throw error;

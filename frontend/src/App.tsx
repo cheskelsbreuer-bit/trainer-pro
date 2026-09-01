@@ -290,7 +290,9 @@ function AdminShell() {
     if (params.get('verified') === '1' && user) {
       writeAdminVerified();
       setVerified(true);
-      window.history.replaceState({}, '', '/chesky');
+      // Keep whichever door they came in by (/chesky or /hq) — rewriting
+      // it to a fixed path would bounce them off the alias.
+      window.history.replaceState({}, '', window.location.pathname);
     }
   }, [user]);
 
@@ -462,7 +464,12 @@ export default function App() {
               {/* Admin — must be present on the apex host too, otherwise
                   trainerpro.coach/chesky falls through to LandingPage. */}
               <Route path="/chesky" element={<AdminShell />} />
-              <Route path="/admin" element={<Navigate to="/chesky" replace />} />
+              {/* /hq is the same page under a shorter name. Chrome's address
+                  bar autocompletes "chesky" to another site of his, so there
+                  needs to be a door whose first letters aren't a prefix of
+                  anything else he visits. */}
+              <Route path="/hq" element={<AdminShell />} />
+              <Route path="/admin" element={<Navigate to="/hq" replace />} />
               {/* Shareable no-signup babysitting demo — must exist on the
                   www/apex router too, or the link dead-ends on the homepage. */}
               <Route path="/babysitting-demo" element={<DemoEntry />} />
@@ -520,7 +527,8 @@ export default function App() {
             {/* Renamed from /admin → /chesky to bypass Livigent-style URL
                 filters that block paths containing 'admin'. */}
             <Route path="/chesky" element={<AdminShell />} />
-            <Route path="/admin" element={<Navigate to="/chesky" replace />} />
+            <Route path="/hq" element={<AdminShell />} />
+            <Route path="/admin" element={<Navigate to="/hq" replace />} />
 
             {/* Trainer app — protected. Feature tabs sit behind ModuleGate,
                 so a switched-off feature shows a one-click turn-on screen
