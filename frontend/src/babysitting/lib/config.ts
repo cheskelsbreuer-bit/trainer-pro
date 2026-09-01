@@ -111,6 +111,15 @@ export interface AwayRecord {
   reason?: string;
 }
 
+/** One day's attendance. Stored in the config blob rather than its own
+ *  table so it needs no database migration; capped so the blob stays
+ *  small (a year of six-day weeks is ~310 entries). */
+export interface AttendanceDay {
+  date: string; // YYYY-MM-DD
+  present: string[]; // client ids
+  absent: string[]; // client ids
+}
+
 /** Recycle bin — deleted payments wait here before they're truly gone. */
 export interface BinEntry {
   id: string;
@@ -136,6 +145,7 @@ export interface BabysittingConfig {
   customFields: CustomFieldDef[];
   kidTags: KidTagDef[];
   closures: ClosureDay[];
+  attendance: AttendanceDay[]; // newest first, capped
   runState?: RunState;
 }
 
@@ -170,6 +180,7 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
 };
 
 const LOG_CAP = 300;
+const ATTENDANCE_CAP = 400;
 const CHARGE_CAP = 1000;
 
 function hydrate(raw: unknown): BabysittingConfig {
@@ -201,6 +212,7 @@ function hydrate(raw: unknown): BabysittingConfig {
     customFields: Array.isArray(r.customFields) ? r.customFields : [],
     kidTags: Array.isArray(r.kidTags) ? r.kidTags : [],
     closures: Array.isArray(r.closures) ? r.closures : [],
+    attendance: Array.isArray(r.attendance) ? r.attendance : [],
     runState: r.runState,
   };
 }
@@ -317,4 +329,64 @@ export function appendCharge(
     note: charge.note,
   };
   return { ...cfg, charges: [entry, ...cfg.charges].slice(0, CHARGE_CAP) };
+}
+
+
+/** Mark one kid present / absent / unmarked for a day. Returns a new
+ *  config — the caller saves it, like every other edit here. */
+export function setAttendance(
+  cfg: BabysittingConfig,
+  date: string,
+  clientId: string,
+  state: 'present' | 'absent' | 'clear',
+): BabysittingConfig {
+  const rest = cfg.attendance.filter((d) => d.date !== date);
+  const day = cfg.attendance.find((d) => d.date === date) ?? { date, present: [], absent: [] };
+  const present = day.present.filter((id) => id !== clientId);
+  const absent = day.absent.filter((id) => id !== clientId);
+  if (state === 'present') present.push(clientId);
+  if (state === 'absent') absent.push(clientId);
+  const next: AttendanceDay = { date, present, absent };
+  const kept = present.length || absent.length ? [next, ...rest] : rest;
+  return {
+    ...cfg,
+    attendance: kept
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, ATTENDANCE_CAP),
+  };
+}
+
+/** Mark several kids at once — the "everyone's here" tap. */
+export function setAttendanceMany(
+  cfg: BabysittingConfig,
+  date: string,
+  clientIds: string[],
+  state: 'present' | 'absent',
+): BabysittingConfig {
+  let next = cfg;
+  for (const id of clientIds) next = setAttendance(next, date, id, state);
+  return next;
+}
+
+export function attendanceFor(cfg: BabysittingConfig | undefined, date: string): AttendanceDay {
+  return cfg?.attendance.find((d) => d.date === date) ?? { date, present: [], absent: [] };
+}
+
+/** How many days this kid was here / out across the stored history. */
+export function attendanceTally(
+  cfg: BabysittingConfig | undefined,
+  clientId: string,
+  sinceDays = 30,
+): { here: number; out: number } {
+  const cut = new Date();
+  cut.setDate(cut.getDate() - sinceDays);
+  const cutKey = cut.toISOString().slice(0, 10);
+  let here = 0;
+  let out = 0;
+  for (const d of cfg?.attendance ?? []) {
+    if (d.date < cutKey) continue;
+    if (d.present.includes(clientId)) here++;
+    else if (d.absent.includes(clientId)) out++;
+  }
+  return { here, out };
 }

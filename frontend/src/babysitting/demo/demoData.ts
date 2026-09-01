@@ -249,6 +249,7 @@ export const DEMO_CONFIG: BabysittingConfig = {
     { id: 'demo-kt1', label: 'New', color: '#4f9d94' },
     { id: 'demo-kt2', label: 'Potty training', color: '#b98420' },
   ],
+  attendance: [],
   closures: [
     { id: 'demo-cl1', date: dateIn(9), name: 'Yom Tov — closed' },
     { id: 'demo-cl2', date: dateIn(10), name: 'Yom Tov — closed' },

@@ -21,7 +21,13 @@ import {
   ALL_DAYS,
 } from '../theme';
 import { useKids, usePayments } from '../lib/data';
-import { useBabysittingConfig } from '../lib/config';
+import {
+  useBabysittingConfig,
+  appendLog,
+  attendanceFor,
+  setAttendance,
+  setAttendanceMany,
+} from '../lib/config';
 import { useWords } from '../lib/words';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
 import {
@@ -81,6 +87,28 @@ export function DashboardPage() {
   const todayKids = useMemo(() => active.filter((k) => scheduledToday(k)), [active]);
   const todayName = DAY_LABELS[ALL_DAYS[new Date().getDay()]];
   const todayIso = new Date().toISOString().slice(0, 10);
+
+  // ── Attendance: who actually showed up today ────────────────────
+  const today = attendanceFor(cfg.data, todayIso);
+  const markedCount = today.present.length + today.absent.length;
+  function mark(kidId: string, state: 'present' | 'absent' | 'clear') {
+    if (!cfg.data) return;
+    cfg.save.mutate(setAttendance(cfg.data, todayIso, kidId, state));
+  }
+  function markAllHere() {
+    if (!cfg.data) return;
+    const unmarked = todayKids
+      .filter((k) => !today.present.includes(k.id) && !today.absent.includes(k.id))
+      .map((k) => k.id);
+    if (!unmarked.length) return;
+    cfg.save.mutate(
+      appendLog(
+        setAttendanceMany(cfg.data, todayIso, unmarked, 'present'),
+        'kid',
+        `Marked ${unmarked.length} here today`,
+      ),
+    );
+  }
   const closureToday = (cfg.data?.closures ?? []).find((c) => c.date === todayIso);
 
   const totalOwed = useMemo(
@@ -164,7 +192,12 @@ export function DashboardPage() {
     <div style={{ display: 'grid', gap: 18 }}>
       {/* Stat row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <StatTile label={`Here today · ${todayName}`} value={todayKids.length} tone="accent" />
+        <StatTile
+          label={`Here today · ${todayName}`}
+          value={markedCount ? today.present.length : todayKids.length}
+          tone="accent"
+          hint={markedCount ? `${today.absent.length} out` : 'tap each name below'}
+        />
         <StatTile label={`${words.Many} in care`} value={active.length} />
         <StatTile label="Away right now" value={away.length} tone={away.length ? 'primary' : 'plain'} />
         <StatTile label="Owed to you" value={formatMoney(totalOwed)} tone={totalOwed > 0 ? 'warn' : 'good'} />
@@ -185,23 +218,41 @@ export function DashboardPage() {
         >
           Who's here today
         </SectionTitle>
+        {!closureToday && todayKids.length > 0 && editMode && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: B.mute }}>
+              {markedCount
+                ? `${today.present.length} here · ${today.absent.length} out`
+                : 'Tap a name when they arrive'}
+            </span>
+            <Btn size="sm" kind="soft" onClick={markAllHere}>
+              ✓ Everyone's here
+            </Btn>
+          </div>
+        )}
         {closureToday ? (
           <div style={{ background: B.plumSoft, color: B.plum, borderRadius: B.radiusSm, padding: '12px 16px', fontWeight: 800, fontSize: '0.92rem' }}>
             📅 Closed today — {closureToday.name}. Enjoy the day off!
           </div>
         ) : todayKids.length ? (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {todayKids.map((k) => (
-              <Link key={k.id} to={`/kids/${k.id}`} style={{ textDecoration: 'none' }}>
+            {todayKids.map((k) => {
+              const isHere = today.present.includes(k.id);
+              const isOut = today.absent.includes(k.id);
+              return (
+              <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Link to={`/kids/${k.id}`} style={{ textDecoration: 'none' }}>
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
-                    background: B.rowAlt,
-                    border: `1px solid ${B.rule}`,
+                    background: isHere ? B.greenSoft : isOut ? '#f2ede4' : B.rowAlt,
+                    border: `1px solid ${isHere ? B.green : B.rule}`,
                     borderRadius: B.pill,
                     padding: '7px 16px 7px 8px',
+                    opacity: isOut ? 0.55 : 1,
+                    textDecoration: isOut ? 'line-through' : 'none',
                   }}
                 >
                   <Avatar name={k.full_name} size={32} />
@@ -220,7 +271,47 @@ export function DashboardPage() {
                   </div>
                 </div>
               </Link>
-            ))}
+              {editMode && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <button
+                    type="button"
+                    title={isHere ? 'Here — tap to clear' : 'Mark here'}
+                    onClick={() => mark(k.id, isHere ? 'clear' : 'present')}
+                    style={{
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderRadius: 8,
+                      padding: '2px 7px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      background: isHere ? B.green : '#f2ede4',
+                      color: isHere ? '#fff' : B.inkSoft,
+                    }}
+                  >
+                    ✓
+                  </button>
+                  <button
+                    type="button"
+                    title={isOut ? 'Out — tap to clear' : 'Mark out'}
+                    onClick={() => mark(k.id, isOut ? 'clear' : 'absent')}
+                    style={{
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderRadius: 8,
+                      padding: '2px 7px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      background: isOut ? B.red : '#f2ede4',
+                      color: isOut ? '#fff' : B.inkSoft,
+                    }}
+                  >
+                    ✗
+                  </button>
+                </div>
+              )}
+              </div>
+              );
+            })}
           </div>
         ) : (
           <div style={{ color: B.mute, fontSize: '0.88rem' }}>No {words.many} scheduled for {todayName}. Quiet day ☕</div>

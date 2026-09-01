@@ -195,7 +195,16 @@ export async function uploadChatPhoto(
   const { error } = await supabase.storage
     .from(CHAT_BUCKET)
     .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // The photo storage area is created by supabase/40_chat_photos.sql.
+    // Until that has been run, say so in plain words instead of leaking
+    // a raw storage error at a babysitter.
+    const m = error.message || '';
+    if (/bucket|not found|404/i.test(m)) {
+      throw new Error('Photo sending isn\'t switched on for this account yet — everything else in chat works.');
+    }
+    throw new Error(m);
+  }
   return { path, name: file.name, mime: file.type };
 }
 

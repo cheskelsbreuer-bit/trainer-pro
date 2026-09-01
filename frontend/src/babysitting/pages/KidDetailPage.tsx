@@ -26,6 +26,7 @@ import { useKids, usePayments, useSetKidStatus } from '../lib/data';
 import {
   useBabysittingConfig,
   appendLog,
+  attendanceTally,
   type AwayRecord,
   type BabysittingConfig,
   type ChargeEntry,
@@ -351,6 +352,18 @@ export function KidDetailPage() {
                 )}
               </Info>
               <Info label="Started">{started ? shortDate(started) : '—'}</Info>
+              <Info label="Last 30 days">
+                {(() => {
+                  const t = attendanceTally(cfg.data, kid.id, 30);
+                  if (!t.here && !t.out) return <span style={{ color: B.mute }}>Not tracked yet</span>;
+                  return (
+                    <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+                      <Chip tone="green">{t.here} day{t.here === 1 ? '' : 's'} here</Chip>
+                      {t.out > 0 && <Chip tone="neutral">{t.out} out</Chip>}
+                    </span>
+                  );
+                })()}
+              </Info>
               <Info label="Parent portal">
                 {hasPortal ? (
                   <Chip tone="green">✓ Signed up</Chip>
