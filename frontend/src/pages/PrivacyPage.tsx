@@ -163,6 +163,19 @@ export function PrivacyPage() {
           </p>
         </Section>
 
+        <Section title="Text messages and phone numbers">
+          <p>
+            Phone numbers collected by a business using Trainer Pro are used only to send that
+            business's own customers account notifications — balance reminders, payment receipts and
+            schedule announcements. Mobile information is never shared with, sold, or rented to third
+            parties or affiliates for marketing or promotional purposes. Numbers are passed only to
+            the messaging carrier strictly to deliver the message you asked for.
+          </p>
+          <p>
+            Reply STOP to any message to stop receiving them, or HELP for help.
+          </p>
+        </Section>
+
         <Section title="Contact">
           <p>
             Questions, requests, or complaints:{' '}

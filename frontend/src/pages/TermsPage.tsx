@@ -176,6 +176,52 @@ export function TermsPage() {
           </p>
         </Section>
 
+        {/* Carrier vetting (A2P 10DLC) requires the SMS program terms to
+            be publicly readable: program name, frequency, rates, HELP and
+            STOP in bold, and a support contact. */}
+        <Section title="SMS / text message program terms">
+          <p>
+            <strong>Program name:</strong> Trainer Pro account notifications.
+          </p>
+          <p>
+            <strong>What we send:</strong> businesses using Trainer Pro (for example a babysitter,
+            childcare provider or coach) send their own existing customers account notifications —
+            balance reminders, payment receipts, and schedule announcements such as closures. These
+            messages may contain a secure link for the customer to view their balance or pay online.
+          </p>
+          <p>
+            <strong>How you opt in:</strong> you provide your mobile number to that business when
+            you enrol or sign up with them, and agree at that time to receive billing and schedule
+            messages. Numbers are never purchased, rented, or obtained from third parties, and are
+            never shared with third parties or used for marketing.
+          </p>
+          <p>
+            <strong>Message frequency:</strong> recurring; typically 1–4 messages per month,
+            depending on your account activity and the business's billing schedule.
+          </p>
+          <p>
+            <strong>Cost:</strong> Trainer Pro does not charge you for these messages.{' '}
+            <strong>Message and data rates may apply</strong> from your mobile carrier.
+          </p>
+          <p>
+            <strong>To stop:</strong> reply <strong>STOP</strong> to any message and you will
+            immediately be unsubscribed and receive no further texts. You can rejoin by asking the
+            business to add your number again.
+          </p>
+          <p>
+            <strong>For help:</strong> reply <strong>HELP</strong> to any message, contact the
+            business that sends you the messages directly, or email{' '}
+            <a href="mailto:hello@trainerpro.coach" className="text-blue-600 hover:underline">
+              hello@trainerpro.coach
+            </a>
+            .
+          </p>
+          <p>
+            Carriers are not liable for delayed or undelivered messages. Message delivery is
+            best-effort and depends on your carrier and device.
+          </p>
+        </Section>
+
         <Section title="Contact">
           <p>
             Questions about these Terms:{' '}
