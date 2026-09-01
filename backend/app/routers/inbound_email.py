@@ -227,7 +227,14 @@ async def inbound_email(
 
     token = _reply_token(to_addrs, subject)
     if not token:
-        return {"ok": True, "ignored": "no comment id on this email"}
+        # Echo back what we could see. Resend keeps the response in its
+        # webhook log, so a delivery that lands in the wrong shape is
+        # debuggable without adding logging we'd have to go read.
+        return {
+            "ok": True,
+            "ignored": "no comment id on this email",
+            "saw": {"to": to_addrs, "subject": subject[:120], "keys": sorted(data.keys())[:20]},
+        }
 
     reply = _strip_quoted(data.get("text") or "")
     if not reply and data.get("html"):
