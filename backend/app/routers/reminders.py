@@ -708,3 +708,108 @@ def test_email(authorization: str | None = Header(default=None)) -> dict:
     except Exception as e:  # noqa: BLE001 — the error text IS the answer
         return {"sent": False, "error": str(e)[:300]}
     return {"sent": True, "channel": channel, "to": user.email}
+
+
+class AnnounceRequest(BaseModel):
+    body: str
+    family_slugs: list[str] | None = None  # None = every active family
+    channels: list[Literal["sms", "email"]] = ["email"]
+
+
+@router.post("/announce")
+def announce(req: AnnounceRequest, authorization: str | None = Header(default=None)) -> dict:
+    """Send a note to parents FROM THE SERVER — no mail app, no tapping
+    one family at a time. Email goes now; SMS goes the moment the 10DLC
+    campaign is approved (until then it reports itself as unavailable
+    rather than pretending to have sent)."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Missing token")
+    from ..auth import get_current_user
+    from ..db import supabase_admin
+
+    body = (req.body or "").strip()
+    if not body:
+        raise HTTPException(400, "Nothing to send")
+
+    user = get_current_user(authorization)
+    sb = supabase_admin()
+
+    trainer_resp = (
+        sb.table("trainers")
+        .select("id, full_name, business_name, public_profile")
+        .eq("id", user.user_id)
+        .single()
+        .execute()
+    )
+    if not trainer_resp.data:
+        raise HTTPException(404, "Trainer not found")
+    trainer = trainer_resp.data
+    bs_settings = ((trainer.get("public_profile") or {}).get("babysitting") or {}).get("settings") or {}
+    trainer_name = trainer.get("business_name") or trainer.get("full_name") or "Your babysitter"
+
+    kids_resp = (
+        sb.table("clients")
+        .select("id, full_name, phone, email, status, tags")
+        .eq("trainer_id", trainer["id"])
+        .eq("status", "active")
+        .contains("tags", [_KID_MARKER])
+        .execute()
+    )
+    families = _group_families(kids_resp.data or [], set())
+    if req.family_slugs is not None:
+        wanted = set(req.family_slugs)
+        families = [f for f in families if f["slug"] in wanted]
+    families = families[:_MAX_SENDS_PER_RUN]
+
+    channels = set(req.channels or ["email"])
+    tw_client = None
+    sms_unavailable = None
+    if "sms" in channels:
+        if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and settings.TWILIO_FROM_NUMBER:
+            from twilio.rest import Client as TwilioClient
+
+            tw_client = TwilioClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        else:
+            sms_unavailable = "Texting isn't switched on yet — the email went out."
+
+    sent_email = sent_sms = 0
+    errors: list[str] = []
+    for f in families:
+        if "email" in channels and f["email"]:
+            try:
+                _send_email_for(trainer_name, bs_settings, f["email"], f"A note from {trainer_name}", body)
+                sent_email += 1
+            except Exception as e:  # noqa: BLE001 — one family never stops the rest
+                errors.append(f"{f['label']}: {str(e)[:120]}")
+        if "sms" in channels and tw_client is not None and f["phone"]:
+            try:
+                _send_sms(f["phone"], body, tw_client)
+                sent_sms += 1
+            except Exception as e:  # noqa: BLE001
+                msg = str(e)
+                # The pending-campaign error is expected, not a bug.
+                if "30034" in msg or "unregistered" in msg.lower():
+                    sms_unavailable = "Texting is still waiting on carrier approval — the email went out."
+                else:
+                    errors.append(f"{f['label']} text: {msg[:120]}")
+
+    result = {
+        "families": len(families),
+        "sent_email": sent_email,
+        "sent_sms": sent_sms,
+        "sms_unavailable": sms_unavailable,
+        "errors": errors[:10],
+    }
+    try:
+        sb.table("activity_log").insert(
+            {
+                "trainer_id": trainer["id"],
+                "actor": "trainer",
+                "action": "parent_announcement",
+                "entity_type": "announcement",
+                "details": {**result, "body": body[:200]},
+            }
+        ).execute()
+    except Exception:  # noqa: BLE001
+        pass
+    return result

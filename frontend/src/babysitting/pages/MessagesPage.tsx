@@ -138,6 +138,8 @@ export function MessagesPage() {
   const [sendEmail, setSendEmail] = useState(false);
   // The last note posted — kept around so she can also text it out.
   const [lastPosted, setLastPosted] = useState('');
+  // What the server actually did, in plain words.
+  const [sendReport, setSendReport] = useState('');
 
   // Every family (with contact info), owing or not — notes go to all.
   const familyGroups = useMemo(() => {
@@ -211,6 +213,7 @@ export function MessagesPage() {
   async function postAnnouncement() {
     if (!announceText.trim()) return;
     const body = announceBody();
+    setSendReport('');
     if (demo) {
       setDemoAnnouncements((prev) => [
         { id: `demo-ann-${Date.now()}`, body, created_at: new Date().toISOString() },
@@ -244,6 +247,32 @@ export function MessagesPage() {
     setAnnounceBusy(true);
     setAnnounceErr('');
     try {
+      // Email (and, once approved, text) goes out FROM THE SERVER —
+      // she taps once, every chosen family gets it. No mail app.
+      if (sendEmail || sendText) {
+        const res = await api<{
+          sent_email: number;
+          sent_sms: number;
+          sms_unavailable: string | null;
+          errors: string[];
+        }>('/reminders/announce', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            body,
+            family_slugs: announceAudience.map((f) => f.slug),
+            channels: [...(sendEmail ? ['email'] : []), ...(sendText ? ['sms'] : [])],
+          }),
+        });
+        const bits: string[] = [];
+        if (res.sent_email) bits.push(`${res.sent_email} email${res.sent_email === 1 ? '' : 's'}`);
+        if (res.sent_sms) bits.push(`${res.sent_sms} text${res.sent_sms === 1 ? '' : 's'}`);
+        setSendReport(
+          (bits.length ? `Sent ${bits.join(' and ')}.` : 'Nothing sent — no contact details on file.') +
+            (res.sms_unavailable ? ` ${res.sms_unavailable}` : '') +
+            (res.errors.length ? ` Problems: ${res.errors.join('; ')}` : ''),
+        );
+      }
       const rows = announceAudience.map((f) => ({
         trainer_id: user.id,
         client_id: f.members[0].id,
@@ -514,7 +543,7 @@ export function MessagesPage() {
         </SectionTitle>
         <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 14 }}>
           Pick a day and the reminders go out by themselves. Emails send from your own Gmail (free).
-          Always try a <b>practice run</b> first — it shows exactly what would go out, without sending anything.
+          Use <b>Send me a test email</b> first to check your setup.
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
@@ -736,9 +765,6 @@ export function MessagesPage() {
             >
               {testState === 'busy' ? 'Sending…' : '📬 Send me a test email'}
             </Btn>
-            <Btn kind="accent" onClick={() => runBackend(true)} disabled={busy}>
-              {busy ? 'Checking…' : '🧪 Practice run (sends nothing)'}
-            </Btn>
             <Btn
               onClick={() => {
                 if (window.confirm(`Really send now? Reminders go out to ${runFamilies.length} famil${runFamilies.length === 1 ? 'y' : 'ies'}.`)) {
@@ -854,7 +880,7 @@ export function MessagesPage() {
                 onClick={() => void postAnnouncement()}
                 disabled={announceBusy || !announceText.trim() || (!postToApp && !sendText && !sendEmail)}
               >
-                {announceBusy ? 'Posting…' : postToApp ? '📣 Post to parents' : '📣 Prepare messages'}
+                {announceBusy ? 'Sending…' : '📣 Send to parents'}
               </Btn>
             </div>
             {/* Who gets it */}
@@ -914,8 +940,8 @@ export function MessagesPage() {
               <span style={{ fontSize: '0.76rem', fontWeight: 800, color: B.mute }}>How?</span>
               {([
                 ['app', postToApp, setPostToApp, '📱 In the app', 'Appears at the top of their parent portal, right away'],
-                ['text', sendText, setSendText, '💬 Text it', 'Opens your messaging app with the note written, one tap per family'],
-                ['email', sendEmail, setSendEmail, '✉️ Email it', 'Opens your email with the note written, one tap per family'],
+                ['text', sendText, setSendText, '💬 Text it', 'Sends the text by itself to every family you picked (once carrier approval is through)'],
+                ['email', sendEmail, setSendEmail, '✉️ Email it', 'Sends the email by itself to every family you picked'],
               ] as const).map(([key, on, set, label, hint]) => (
                 <button
                   key={key}
@@ -940,7 +966,7 @@ export function MessagesPage() {
             </div>
             {!postToApp && (sendText || sendEmail) && (
               <div style={{ fontSize: '0.74rem', color: B.mute, marginTop: 6 }}>
-                It won't appear in the app — only the texts/emails you send below.
+                It won't appear in the app — only the texts/emails go out.
               </div>
             )}
 
@@ -970,66 +996,28 @@ export function MessagesPage() {
           </div>
         )}
         {announceErr && <Chip tone="red" style={{ marginBottom: 10 }}>{announceErr}</Chip>}
-        {lastPosted && (
+        {(lastPosted || sendReport) && (
           <div
             style={{
               background: B.accentSoft,
               borderRadius: B.radiusSm,
-              padding: '10px 14px',
+              padding: '11px 14px',
               marginBottom: 12,
-              fontSize: '0.84rem',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
             }}
           >
-            <div style={{ fontWeight: 800, color: B.accentDeep, marginBottom: 6 }}>
-              {postToApp
-                ? `✓ Posted to ${announceAudience.length} famil${announceAudience.length === 1 ? "y's" : "ies'"} portal.`
-                : '✓ Ready to send.'}
-              {(sendText || sendEmail) && ' Tap each family to send it:'}
+            <div style={{ fontWeight: 800, color: B.accentDeep }}>
+              {postToApp &&
+                `✓ Posted to ${announceAudience.length} famil${announceAudience.length === 1 ? "y's" : "ies'"} portal. `}
+              {sendReport}
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {sendText &&
-                announceAudience
-                  .filter((f) => f.phone)
-                  .map((f) => (
-                    <LinkBtn key={`sms-${f.slug}`} kind="ghost" href={smsLink(f.phone!, lastPosted)} title={`Text the ${f.label}`}>
-                      📱 {f.label}
-                    </LinkBtn>
-                  ))}
-              {sendEmail &&
-                announceAudience
-                  .filter((f) => f.email)
-                  .map((f) => (
-                    <LinkBtn
-                      key={`mail-${f.slug}`}
-                      kind="ghost"
-                      href={mailtoLink(f.email!, 'A note from your babysitter', lastPosted)}
-                      title={`Email the ${f.label}`}
-                    >
-                      ✉️ {f.label}
-                    </LinkBtn>
-                  ))}
-              <Btn
-                size="sm"
-                kind="ghost"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(lastPosted);
-                  } catch {
-                    window.prompt('Copy the note:', lastPosted);
-                  }
-                }}
-              >
-                📋 Copy the note
-              </Btn>
-              {sendText && !announceAudience.some((f) => f.phone) && (
-                <span style={{ color: B.mute }}>No phone numbers on file for these families.</span>
-              )}
-              {sendEmail && !announceAudience.some((f) => f.email) && (
-                <span style={{ color: B.mute }}>No email addresses on file for these families.</span>
-              )}
-            </div>
+            {lastPosted && (
+              <div style={{ color: B.inkSoft, marginTop: 6, fontStyle: 'italic' }}>"{lastPosted}"</div>
+            )}
           </div>
         )}
+
         {postedAnnouncements.length ? (
           <div style={{ display: 'grid', gap: 8 }}>
             {postedAnnouncements.map((a) => (
