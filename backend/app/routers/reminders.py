@@ -813,3 +813,83 @@ def announce(req: AnnounceRequest, authorization: str | None = Header(default=No
     except Exception:  # noqa: BLE001
         pass
     return result
+
+
+class CommentNotifyRequest(BaseModel):
+    message: str
+
+
+@router.post("/comment-notify")
+def comment_notify(req: CommentNotifyRequest, authorization: str | None = Header(default=None)) -> dict:
+    """A sitter wrote in the 💡 Comment box — email it to the builder so it
+    isn't sitting unseen in a database. Reply-To is HER address, so hitting
+    Reply in the inbox answers her directly; the admin page is linked for a
+    reply that lands back inside her app."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Missing token")
+    from ..auth import get_current_user
+    from ..db import supabase_admin
+
+    body = (req.message or "").strip()
+    if not body:
+        raise HTTPException(400, "Empty comment")
+
+    admins = [e.strip() for e in (settings.ADMIN_EMAILS or "").split(",") if e.strip()]
+    if not admins:
+        return {"sent": False, "reason": "no admin email configured"}
+
+    user = get_current_user(authorization)
+    sb = supabase_admin()
+    t = (
+        sb.table("trainers")
+        .select("id, full_name, business_name")
+        .eq("id", user.user_id)
+        .single()
+        .execute()
+    )
+    row = t.data or {}
+    who = row.get("business_name") or row.get("full_name") or "A user"
+    from_addr = settings.RESEND_FROM_EMAIL
+
+    text = (
+        f"{who} wrote a comment in the app:\n\n"
+        f"    {body}\n\n"
+        f"— {who}\n"
+        f"Their email: {user.email or 'unknown'}\n\n"
+        "Reply to this email to answer them directly.\n"
+        "To have your reply appear inside their app, answer it here:\n"
+        "https://www.trainerpro.coach/chesky\n"
+    )
+
+    if not settings.RESEND_API_KEY:
+        return {"sent": False, "reason": "no email path configured"}
+
+    import httpx
+
+    sent = 0
+    errors = []
+    for to in admins:
+        try:
+            resp = httpx.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": from_addr,
+                    "to": [to],
+                    "subject": f"💡 App comment from {who}",
+                    "text": text,
+                    **({"reply_to": [user.email]} if user.email else {}),
+                },
+                timeout=15,
+            )
+            if resp.status_code >= 300:
+                errors.append(f"{resp.status_code}: {resp.text[:120]}")
+            else:
+                sent += 1
+        except Exception as e:  # noqa: BLE001 — a notify hiccup never breaks the comment
+            errors.append(str(e)[:120])
+
+    return {"sent": sent > 0, "count": sent, "errors": errors[:3]}

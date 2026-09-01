@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { B } from '../theme';
 import { chatTime } from '../lib/chat';
@@ -75,6 +76,13 @@ export function CommentWidget() {
         url: window.location.href,
       });
       if (error) throw error;
+      // Email it to the builder so it doesn't sit unseen. Fire-and-forget:
+      // a notification hiccup must never lose her comment.
+      void api('/reminders/comment-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      }).catch(() => undefined);
     },
     onSuccess: () => {
       setDraft('');
@@ -194,8 +202,8 @@ export function CommentWidget() {
           <div style={{ overflowY: 'auto', padding: '12px 16px', display: 'grid', gap: 10 }}>
             {list.length === 0 ? (
               <div style={{ color: B.mute, fontSize: '0.84rem', lineHeight: 1.5 }}>
-                Anything you'd add, change, or that bugs you — write it here. It stays in the app,
-                and you'll see the answer here too.
+                Anything you'd add, change, or that bugs you — write it here. It goes straight to
+                the person who builds the app, and their answer shows up right here.
               </div>
             ) : (
               list.map((r) => (

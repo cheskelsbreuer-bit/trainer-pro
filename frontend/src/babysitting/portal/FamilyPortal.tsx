@@ -25,6 +25,7 @@ import {
   useMarkThreadRead,
   threadAnchor,
   unreadByClient,
+  uploadChatPhoto,
 } from '../lib/chat';
 
 export interface PortalTrainer {
@@ -300,6 +301,20 @@ export function FamilyPortal({
                         body,
                       })
                     }
+                    onSendPhoto={async (file, caption) => {
+                      const attachment = await uploadChatPhoto(
+                        file,
+                        chatAnchor.trainer_id,
+                        chatAnchor.id,
+                      );
+                      await sendChat.mutateAsync({
+                        clientId: chatAnchor.id,
+                        trainerId: chatAnchor.trainer_id,
+                        sender: 'client',
+                        body: caption,
+                        attachments: [attachment],
+                      });
+                    }}
                   />
                   {sendChat.isError && (
                     <Chip tone="red" style={{ marginTop: 10 }}>

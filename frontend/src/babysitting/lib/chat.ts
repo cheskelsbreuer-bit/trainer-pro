@@ -17,14 +17,27 @@ import type { Client } from '../../lib/database.types';
 import { readFamilySlug } from '../theme';
 import { useDemo } from '../demo/flag';
 
+export interface ChatAttachment {
+  /** Storage path inside the private 'chat-photos' bucket. */
+  path: string;
+  name?: string;
+  mime?: string;
+}
+
 export interface ChatMessage {
   id: string;
   client_id: string;
   sender: 'trainer' | 'client';
   body: string;
+  attachments: ChatAttachment[] | null;
   read_at: string | null;
   created_at: string;
 }
+
+export const CHAT_BUCKET = 'chat-photos';
+/** Phones take huge photos; anything past this is refused with a clear
+ *  message rather than a silent failure halfway through the upload. */
+export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
 /** The kid whose row carries a family's whole conversation. Stable
  *  regardless of order: the oldest kid row in the family wins. */
@@ -65,11 +78,11 @@ export function useChatMessages(enabled = true) {
       // real conversation against the in-memory store.
       if (demo) {
         const { demoChat } = await import('../demo/demoStore');
-        return demoChat();
+        return demoChat().map((m) => ({ ...m, attachments: m.attachments ?? null }));
       }
       const { data, error } = await supabase
         .from('messages')
-        .select('id, client_id, sender, body, read_at, created_at')
+        .select('id, client_id, sender, body, attachments, read_at, created_at')
         .order('created_at', { ascending: true })
         .limit(500);
       if (error) throw error;
@@ -93,10 +106,16 @@ export function useSendChat() {
       trainerId: string;
       sender: 'trainer' | 'client';
       body: string;
+      attachments?: ChatAttachment[];
     }) => {
       if (demo) {
         const { demoSendChat } = await import('../demo/demoStore');
-        demoSendChat({ client_id: args.clientId, sender: args.sender, body: args.body });
+        demoSendChat({
+          client_id: args.clientId,
+          sender: args.sender,
+          body: args.body,
+          attachments: args.attachments ?? null,
+        });
         return;
       }
       if (!user) throw new Error('Not signed in');
@@ -105,6 +124,7 @@ export function useSendChat() {
         client_id: args.clientId,
         sender: args.sender,
         body: args.body,
+        attachments: args.attachments ?? [],
       });
       if (error) throw error;
     },
@@ -156,6 +176,53 @@ export function unreadByClient(
  *  message says so plainly instead of failing silently. */
 export function familyHasPortal(members: Client[]): boolean {
   return members.some((m) => !!m.auth_user_id);
+}
+
+/** Put one photo in the private bucket and hand back its stored path.
+ *  Folder is {trainer_id}/{client_id}/… — the storage policies key off
+ *  that shape, so a parent can only ever write into their own kid's
+ *  folder. */
+export async function uploadChatPhoto(
+  file: File,
+  trainerId: string,
+  clientId: string,
+): Promise<ChatAttachment> {
+  if (file.size > MAX_PHOTO_BYTES) {
+    throw new Error("That picture is too big — please send one under 10MB.");
+  }
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const path = `${trainerId}/${clientId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from(CHAT_BUCKET)
+    .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false });
+  if (error) throw new Error(error.message);
+  return { path, name: file.name, mime: file.type };
+}
+
+/** Signed links for every photo in a thread, in one round trip. The
+ *  bucket is private, so links are short-lived by design. */
+export function useChatPhotoUrls(messages: ChatMessage[]) {
+  const paths = messages
+    .flatMap((m) => m.attachments ?? [])
+    .map((a) => a.path)
+    .filter(Boolean);
+  return useQuery({
+    queryKey: ['bs-chat-photos', paths.join(',')],
+    queryFn: async (): Promise<Record<string, string>> => {
+      if (!paths.length) return {};
+      const { data, error } = await supabase.storage
+        .from(CHAT_BUCKET)
+        .createSignedUrls(paths, 60 * 60);
+      if (error) throw error;
+      const out: Record<string, string> = {};
+      for (const row of data ?? []) {
+        if (row.path && row.signedUrl) out[row.path] = row.signedUrl;
+      }
+      return out;
+    },
+    enabled: paths.length > 0,
+    staleTime: 50 * 60 * 1000,
+  });
 }
 
 /** Clock time for a bubble — "2:14 PM" today, "Aug 12" before that. */

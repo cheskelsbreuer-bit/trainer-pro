@@ -14,6 +14,7 @@ import {
   familyThreads,
   unreadByClient,
   familyHasPortal,
+  uploadChatPhoto,
   chatTime,
 } from '../lib/chat';
 import { Card, SectionTitle, EmptyState, Avatar, Chip } from '../components/ui';
@@ -217,6 +218,17 @@ export function ChatPage() {
                 body,
               })
             }
+            onSendPhoto={async (file, caption) => {
+              const trainerId = user?.id ?? open.anchor.trainer_id;
+              const attachment = await uploadChatPhoto(file, trainerId, open.anchor.id);
+              await send.mutateAsync({
+                clientId: open.anchor.id,
+                trainerId,
+                sender: 'trainer',
+                body: caption,
+                attachments: [attachment],
+              });
+            }}
           />
           {send.isError && (
             <Chip tone="red" style={{ marginTop: 10 }}>

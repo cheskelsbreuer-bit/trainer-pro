@@ -16,6 +16,7 @@ export interface DemoChatMessage {
   client_id: string;
   sender: 'trainer' | 'client';
   body: string;
+  attachments: Array<{ path: string; name?: string; mime?: string }> | null;
   read_at: string | null;
   created_at: string;
 }

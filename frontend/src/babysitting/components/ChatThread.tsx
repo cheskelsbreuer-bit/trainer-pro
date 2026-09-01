@@ -4,14 +4,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { B } from '../theme';
-import { chatTime, type ChatMessage } from '../lib/chat';
-import { Btn, EmptyState, inputStyle } from './ui';
+import { chatTime, useChatPhotoUrls, type ChatMessage } from '../lib/chat';
+import { Btn, Chip, EmptyState, inputStyle } from './ui';
 
 export function ChatThread({
   messages,
   me,
   otherName,
   onSend,
+  onSendPhoto,
   sending,
   height = 420,
 }: {
@@ -19,11 +20,17 @@ export function ChatThread({
   me: 'trainer' | 'client';
   otherName: string;
   onSend: (body: string) => void;
+  /** Given a picked file, upload it and post it. Omit to hide the button. */
+  onSendPhoto?: (file: File, caption: string) => Promise<void>;
   sending?: boolean;
   height?: number;
 }) {
   const [draft, setDraft] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoErr, setPhotoErr] = useState('');
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const photos = useChatPhotoUrls(messages);
 
   // Land on the newest message, the way every messaging app does.
   useEffect(() => {
@@ -81,6 +88,44 @@ export function ChatThread({
                     wordBreak: 'break-word',
                   }}
                 >
+                  {(m.attachments ?? []).map((a) => {
+                    const url = photos.data?.[a.path];
+                    return (
+                      <div key={a.path} style={{ marginBottom: m.body ? 6 : 0 }}>
+                        {url ? (
+                          <a href={url} target="_blank" rel="noreferrer">
+                            <img
+                              src={url}
+                              alt={a.name || 'photo'}
+                              style={{
+                                maxWidth: '100%',
+                                borderRadius: 12,
+                                display: 'block',
+                                maxHeight: 260,
+                                objectFit: 'cover',
+                              }}
+                            />
+                          </a>
+                        ) : (
+                          <div
+                            style={{
+                              width: 180,
+                              height: 120,
+                              borderRadius: 12,
+                              background: mine ? 'rgba(255,255,255,0.18)' : '#e8e0d4',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.75rem',
+                              opacity: 0.8,
+                            }}
+                          >
+                            📷 loading…
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {m.body}
                   <div
                     style={{
@@ -102,7 +147,41 @@ export function ChatThread({
         <div ref={endRef} />
       </div>
 
+      {photoErr && <Chip tone="red">{photoErr}</Chip>}
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        {onSendPhoto && (
+          <>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (!file) return;
+                setPhotoBusy(true);
+                setPhotoErr('');
+                try {
+                  await onSendPhoto(file, draft.trim());
+                  setDraft('');
+                } catch (err) {
+                  setPhotoErr(err instanceof Error ? err.message : 'Could not send that picture.');
+                } finally {
+                  setPhotoBusy(false);
+                }
+              }}
+            />
+            <Btn
+              kind="ghost"
+              onClick={() => fileRef.current?.click()}
+              disabled={photoBusy || sending}
+              title="Send a picture"
+            >
+              {photoBusy ? '…' : '📷'}
+            </Btn>
+          </>
+        )}
         <textarea
           style={{ ...inputStyle, flex: 1, minHeight: 44, maxHeight: 130, resize: 'vertical' }}
           value={draft}
