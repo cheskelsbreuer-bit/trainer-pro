@@ -17,7 +17,7 @@ import {
   shortDate,
   ageOf,
 } from '../theme';
-import { Card, Chip, Btn, Avatar, Field, inputStyle } from '../components/ui';
+import { Card, Chip, Btn, Avatar, Field, inputStyle, PhoneSafety } from '../components/ui';
 import { ChatThread } from '../components/ChatThread';
 import {
   useChatMessages,
@@ -173,7 +173,11 @@ export function FamilyPortal({
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: B.bg, fontFamily: B.fontBody, color: B.ink, padding: '0 16px 60px' }}>
+    // bs-shell carries the phone-safety rules (see AppShell): grid stacks
+    // that can be narrower than a wide table inside them, and nothing
+    // painting off the right edge.
+    <div className="bs-shell" style={{ minHeight: '100vh', background: B.bg, fontFamily: B.fontBody, color: B.ink, padding: '0 16px 60px' }}>
+      <PhoneSafety />
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         {/* Header */}
         <header style={{ padding: '28px 4px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>

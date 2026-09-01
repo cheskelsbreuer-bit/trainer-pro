@@ -1,3 +1,4 @@
+import { PhoneSafety } from './ui';
 // Babysitting app shell — the frame every page lives in.
 //
 // Design: a warm linen page with a floating rounded "canopy" header:
@@ -81,6 +82,7 @@ const QUIET_NAV: Array<{ to: string; label: string }> = [
 
 const LEVEL_RANK: Record<Level, number> = { simple: 0, standard: 1, pro: 2 };
 
+
 export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const [rawEditMode, setEditMode] = useEditMode();
   const demo = useDemo();
@@ -132,7 +134,8 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: B.bg, fontFamily: B.fontBody, color: B.ink }}>
+    <div className="bs-shell" style={{ minHeight: '100vh', background: B.bg, fontFamily: B.fontBody, color: B.ink }}>
+      <PhoneSafety />
       <header style={{ position: 'sticky', top: 0, zIndex: 40, padding: '14px 16px 6px' }}>
         <div
           style={{

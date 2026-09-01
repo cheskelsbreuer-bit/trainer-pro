@@ -25,6 +25,11 @@ export function Card({
         boxShadow: B.shadowSoft,
         border: `1px solid ${B.rule}`,
         padding: pad,
+        // A card sitting in a grid or flex row defaults to min-width:auto,
+        // which means it refuses to shrink below the widest thing inside
+        // it. One wide table then drags the whole page sideways on a
+        // phone. This lets the card shrink and the table scroll on its own.
+        minWidth: 0,
         ...style,
       }}
     >
@@ -399,6 +404,29 @@ export function Avatar({ name, size = 38 }: { name: string; size?: number }) {
   );
 }
 
+// ── Phone safety net ──────────────────────────────────────────────────
+//
+// A stack of cards written as `display: grid` gets an implicit column
+// sized `auto` — and an `auto` track flatly refuses to be narrower than
+// the widest thing inside it. One table of families is ~600px wide at
+// min-content, so on a 375px phone the track stayed 600px and the ENTIRE
+// page scrolled sideways: half of every stat tile off the edge, the nav
+// sliding under your thumb. Pinning the implicit column to minmax(0, 1fr)
+// lets those stacks be exactly as wide as the screen, and a wide table
+// scrolls inside its own box, which is what TableWrap was always for.
+// Grids that name their own columns are untouched.
+//
+// Render this once inside any root that carries className="bs-shell".
+export function PhoneSafety() {
+  return (
+    <style>{`
+      .bs-shell *[style*="grid"] { grid-auto-columns: minmax(0, 1fr); }
+      .bs-shell table { max-width: 100%; }
+      .bs-shell { overflow-x: clip; }
+    `}</style>
+  );
+}
+
 // ── Tables ────────────────────────────────────────────────────────────
 
 export function TableWrap({ children }: { children: ReactNode }) {
@@ -406,6 +434,11 @@ export function TableWrap({ children }: { children: ReactNode }) {
     <div
       style={{
         overflowX: 'auto',
+        // Same reason as Card: without this, overflow-x has nothing to do
+        // because the box never gets narrower than the table inside it.
+        minWidth: 0,
+        // Momentum scrolling, and don't steal the page's vertical swipe.
+        WebkitOverflowScrolling: 'touch',
         background: B.card,
         borderRadius: B.radiusLg,
         border: `1px solid ${B.rule}`,

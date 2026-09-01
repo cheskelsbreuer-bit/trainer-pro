@@ -122,11 +122,22 @@ export function CommentWidget() {
 
   return (
     <>
+      {/* On a phone the word "Comment" makes this button wide enough to sit
+          on top of whatever action button the page put in the same corner,
+          so down there it's the bulb alone. */}
+      <style>{`
+        @media (max-width: 640px) {
+          .bs-comment-fab { padding: 12px 13px !important; }
+          .bs-comment-fab .bs-comment-word { display: none; }
+        }
+      `}</style>
       {/* The floating button */}
       <button
         type="button"
+        className="bs-comment-fab"
         onClick={() => setOpen((o) => !o)}
         title="Tell us what you'd change"
+        aria-label="Comment"
         style={{
           position: 'fixed',
           right: 18,
@@ -147,7 +158,8 @@ export function CommentWidget() {
           gap: 7,
         }}
       >
-        💡 Comment
+        <span aria-hidden>💡</span>
+        <span className="bs-comment-word">Comment</span>
         {unseenReplies > 0 && (
           <span
             style={{
