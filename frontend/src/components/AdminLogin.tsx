@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Mail, ShieldCheck, ArrowRight, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { PasteSignInLink } from './PasteSignInLink';
+import { writeAdminVerified } from '../lib/adminSession';
 
 /**
  * Admin sign-in: magic-link / email-OTP only.
@@ -16,6 +18,19 @@ export function AdminLogin() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const pasteBox = (
+    <div className="mt-5">
+      <PasteSignInLink
+        tone="rose"
+        onDone={() => {
+          // Same thing the ?verified=1 round-trip does, minus the round trip.
+          writeAdminVerified();
+          window.location.replace(window.location.pathname);
+        }}
+      />
+    </div>
+  );
+
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -62,6 +77,8 @@ export function AdminLogin() {
               that happens, just request a new one.
             </p>
           </div>
+          {pasteBox}
+
           <button
             type="button"
             onClick={() => {
@@ -114,6 +131,8 @@ export function AdminLogin() {
             {busy ? 'Sending…' : <>Send sign-in link <ArrowRight size={14} /></>}
           </button>
         </form>
+        {pasteBox}
+
         <p className="text-center text-xs text-slate-400 mt-5 leading-relaxed">
           For security, every new tab requires a fresh sign-in. No stored admin sessions.
         </p>

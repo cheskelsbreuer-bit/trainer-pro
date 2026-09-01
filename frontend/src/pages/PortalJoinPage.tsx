@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle, Heart } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { PasteSignInLink } from '../components/PasteSignInLink';
 import { useAuth } from '../hooks/useAuth';
 
 interface Info {
@@ -167,6 +168,9 @@ export function PortalJoinPage() {
             <p className="text-xs text-slate-500">
               Nothing arrived? Check spam, or ask {heading} to send the invite again.
             </p>
+            <div className="pt-1">
+              <PasteSignInLink />
+            </div>
             <button
               onClick={() => { setNeedsConfirm(false); setMode('signin'); }}
               className="w-full border border-slate-300 text-slate-700 font-medium py-2.5 rounded-lg"

@@ -31,6 +31,7 @@ import { TermsPage } from './pages/TermsPage';
 import { FindTrainersPage } from './pages/FindTrainersPage';
 import { AdminPage } from './pages/AdminPage';
 import { adminRpc } from './lib/adminRpc';
+import { readAdminVerified, writeAdminVerified } from './lib/adminSession';
 import { BabysittingApp } from './babysitting/BabysittingApp';
 import { CoachApp } from './coach/CoachApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
@@ -250,31 +251,6 @@ function PortalShell() {
   // Babysitting parents get the family portal; everyone else keeps the
   // original client portal. The gate decides from the linked rows.
   return <FamilyPortalGate />;
-}
-
-// Admin shell — a magic-link sign-in trusts the browser for 7 days. We
-// store the verification deadline in localStorage so closing the tab,
-// rebooting, or letting the Supabase token quietly refresh doesn't kick
-// the admin back to the magic-link form. Real auth still happens on the
-// backend via the email allowlist — the verified flag only signals
-// "this device proved itself recently."
-const ADMIN_VERIFIED_UNTIL_KEY = 'admin_verified_until';
-const ADMIN_VERIFY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-function readAdminVerified(): boolean {
-  if (typeof window === 'undefined') return false;
-  const raw = window.localStorage.getItem(ADMIN_VERIFIED_UNTIL_KEY);
-  if (!raw) return false;
-  const ts = Number(raw);
-  if (!Number.isFinite(ts)) return false;
-  return Date.now() < ts;
-}
-function writeAdminVerified() {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(
-    ADMIN_VERIFIED_UNTIL_KEY,
-    String(Date.now() + ADMIN_VERIFY_TTL_MS),
-  );
 }
 
 function AdminShell() {

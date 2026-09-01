@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dumbbell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { isConfigured, supabase } from '../lib/supabase';
+import { PasteSignInLink } from './PasteSignInLink';
 
 type Mode = 'sign-in' | 'sign-up' | 'magic-link';
 
@@ -209,6 +210,14 @@ export function Login() {
                   : 'Send magic link'}
           </button>
         </form>
+
+        {/* Shown once we've told them to go check their inbox: the answer to
+            "I clicked the link and it took me somewhere else". */}
+        {info && info.toLowerCase().includes('email') && (
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <PasteSignInLink />
+          </div>
+        )}
 
         <p className="text-xs text-slate-400 text-center mt-6">
           Your data is private — only you can read it.
