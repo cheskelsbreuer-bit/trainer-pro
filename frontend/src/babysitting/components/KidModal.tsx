@@ -20,6 +20,8 @@ import {
   readCustomValues,
   readKidTagIds,
   tagsWithCustom,
+  readSmsConsent,
+  tagsWithSmsConsent,
 } from '../theme';
 import { useUpsertKid, useKids } from '../lib/data';
 import { useBabysittingConfig, appendLog } from '../lib/config';
@@ -48,6 +50,9 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
   const [emergency, setEmergency] = useState(kid?.emergency_contact ?? '');
   const [cfValues, setCfValues] = useState<Record<string, string>>(kid ? readCustomValues(kid) : {});
   const [tagIds, setTagIds] = useState<string[]>(kid ? readKidTagIds(kid) : []);
+  // Text consent starts OFF for a new kid. Carriers require the opt-in to
+  // be a deliberate, separate choice — never bundled into signing up.
+  const [smsConsent, setSmsConsent] = useState(kid ? readSmsConsent(kid) : false);
   const [err, setErr] = useState('');
 
   const familyOptions = useMemo(() => {
@@ -78,7 +83,7 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
       hourlyRate: hourlyRate.trim() ? parseFloat(hourlyRate) || 0 : null,
       startDate: kid ? readStartDate(kid) : new Date().toISOString().slice(0, 10),
     });
-    const tags = tagsWithCustom(baseTags, cfValues, tagIds);
+    const tags = tagsWithSmsConsent(tagsWithCustom(baseTags, cfValues, tagIds), smsConsent);
     try {
       await upsert.mutateAsync({
         id: kid?.id,
@@ -212,6 +217,34 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
             </div>
           </Field>
         )}
+        <Field label="Text messages" style={{ gridColumn: '1 / -1' }}>
+          <label
+            style={{
+              display: 'flex',
+              gap: 10,
+              alignItems: 'flex-start',
+              background: B.rowAlt,
+              border: `1px solid ${B.rule}`,
+              borderRadius: B.radiusSm,
+              padding: '11px 13px',
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={smsConsent}
+              onChange={(e) => setSmsConsent(e.target.checked)}
+              style={{ marginTop: 3 }}
+            />
+            <span style={{ fontSize: '0.84rem', lineHeight: 1.5, color: B.ink }}>
+              Text me balance reminders and schedule updates.
+              <span style={{ color: B.mute }}>
+                {' '}Optional — you'll get the same service either way. Msg &amp; data rates may
+                apply. Reply STOP to stop.
+              </span>
+            </span>
+          </label>
+        </Field>
         <Field label="Allergies" style={{ gridColumn: '1 / -1' }} hint="Shows as a red badge everywhere this kid appears.">
           <input style={inputStyle} value={allergies ?? ''} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. peanuts, dairy" />
         </Field>

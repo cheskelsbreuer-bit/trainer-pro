@@ -269,6 +269,18 @@ export function readCustomValues(c: Client): Record<string, string> {
 }
 
 /** Read the tag ids applied to a kid. */
+/** Did this family opt IN to text messages? Carrier rules require the
+ *  choice to be voluntary and recorded, so it lives as its own tag and
+ *  defaults to OFF — no tag means no texts. */
+export function readSmsConsent(c: Client): boolean {
+  return (c.tags ?? []).includes('smsconsent:1');
+}
+
+export function tagsWithSmsConsent(prev: string[], consented: boolean): string[] {
+  const rest = prev.filter((t) => !t.startsWith('smsconsent:'));
+  return consented ? [...rest, 'smsconsent:1'] : rest;
+}
+
 export function readKidTagIds(c: Client): string[] {
   return (c.tags ?? []).filter((t) => t.startsWith(KTAG_PREFIX)).map((t) => t.slice(KTAG_PREFIX.length));
 }

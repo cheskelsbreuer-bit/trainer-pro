@@ -266,7 +266,8 @@ def _group_families(kids: list[dict], muted: set[str]) -> list[dict]:
                 "parent": parent,
                 "kid_names": [m["full_name"].split(" ")[0] for m in members],
                 "balance": balance,
-                "phone": phone,
+                "sms_ok": any("smsconsent:1" in (m.get("tags") or []) for m in members),
+            "phone": phone,
                 "email": email,
             }
         )
@@ -447,6 +448,10 @@ def _run_for_trainer(sb_admin, trainer: dict, req: WeeklyBalancesRequest, trigge
             if tw_client is None:
                 if not errors or not errors[-1].startswith("_sms_unconfigured"):
                     errors.append("_sms_unconfigured: texts requested but Twilio is not set up on the server")
+            elif not f.get("sms_ok"):
+                # No recorded opt-in for this family — carrier rules say
+                # never text them. Email still goes.
+                pass
             elif f["phone"]:
                 try:
                     _send_sms(f["phone"], f["sms_body"], tw_client)
@@ -622,7 +627,10 @@ def payment_receipt(
     trainer_name = trainer.get("business_name") or trainer.get("full_name") or "Your babysitter"
 
     phone = next((m.get("phone") for m in members if m.get("phone")), None)
-    sms_wanted = receipts.get("smsEnabled", True)
+    # Only text a family that actually opted in (carrier rule, and the
+    # promise made on the consent checkbox).
+    sms_consent = any("smsconsent:1" in (m.get("tags") or []) for m in members)
+    sms_wanted = receipts.get("smsEnabled", True) and sms_consent
 
     channels: list[str] = []
     errors: list[str] = []
@@ -781,7 +789,7 @@ def announce(req: AnnounceRequest, authorization: str | None = Header(default=No
                 sent_email += 1
             except Exception as e:  # noqa: BLE001 — one family never stops the rest
                 errors.append(f"{f['label']}: {str(e)[:120]}")
-        if "sms" in channels and tw_client is not None and f["phone"]:
+        if "sms" in channels and tw_client is not None and f["phone"] and f.get("sms_ok"):
             try:
                 _send_sms(f["phone"], body, tw_client)
                 sent_sms += 1
