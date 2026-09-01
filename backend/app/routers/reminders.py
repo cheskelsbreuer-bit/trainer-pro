@@ -275,13 +275,51 @@ def _group_families(kids: list[dict], muted: set[str]) -> list[dict]:
     return out
 
 
+def _bare_from() -> str:
+    """RESEND_FROM_EMAIL may be 'Name <a@b.com>' or just 'a@b.com'."""
+    raw = (settings.RESEND_FROM_EMAIL or "").strip()
+    if "<" in raw and ">" in raw:
+        return raw[raw.index("<") + 1 : raw.index(">")].strip()
+    return raw
+
+
 def _send_email_for(trainer_name: str, bs_settings: dict, to_email: str, subject: str, body: str) -> str:
-    """Send one email. Prefers the sitter's own Gmail (free, her address);
-    falls back to Resend when the deploy has it configured. Returns the
-    channel used. Raises on failure."""
+    """Send one email as the sitter.
+
+    Resend (HTTPS) is the primary path: this host blocks outbound SMTP
+    ports, so a Gmail attempt can only ever time out — and doing that per
+    family would make a 40-family run take many minutes. Mail therefore
+    goes out as "Her Business <our verified domain>" with Reply-To set to
+    her own address, so a parent hitting Reply reaches her inbox.
+
+    Direct Gmail SMTP stays as a fallback for deploys that DO allow SMTP
+    and have no Resend key. Returns the channel used; raises on failure."""
     gmail = (bs_settings.get("gmail") or {}) if isinstance(bs_settings.get("gmail"), dict) else {}
     g_addr = (gmail.get("address") or "").strip()
     g_pass = (gmail.get("appPassword") or "").replace(" ", "").strip()
+
+    if settings.RESEND_API_KEY:
+        import httpx
+
+        from_name = trainer_name.replace('"', "'")
+        resp = httpx.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": f"{from_name} <{_bare_from()}>",
+                "to": [to_email],
+                "subject": subject,
+                "text": body,
+                **({"reply_to": [g_addr]} if g_addr else {}),
+            },
+            timeout=15,
+        )
+        if resp.status_code >= 300:
+            raise RuntimeError(f"Resend {resp.status_code}: {resp.text[:200]}")
+        return "email"
 
     gmail_error: str | None = None
     if g_addr and g_pass:

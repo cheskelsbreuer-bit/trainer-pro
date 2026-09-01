@@ -1,9 +1,10 @@
 // Messages — the heart of the product. Three parts:
-//   1. The Thursday Run: every family that owes, message ready — tap
+//   1. The reminder run: every family that owes, message ready — tap
 //      Text / Email / Copy, mark done, watch the progress bar fill.
-//   2. Automatic sending: pick a day, flip it on — emails go by
-//      themselves through her own Gmail (free), texts too when the
-//      server has Twilio. Practice mode previews before anything real.
+//   2. Automatic sending: pick a day, flip it on. Emails go out from the
+//      server under her business name with replies routed to her own
+//      address; texts ride the same path once the carrier campaign is
+//      approved. "Send me a test email" proves the setup in one tap.
 //   3. History: every automatic run, with counts, straight from the log.
 
 import { useMemo, useState } from 'react';
@@ -86,14 +87,12 @@ export function MessagesPage() {
     emailSubject: string;
     emailTemplate: string;
     gmailAddress: string;
-    gmailPassword: string;
   } | null>(null);
   const d = drafts ?? {
     smsTemplate: settings.smsTemplate,
     emailSubject: settings.emailSubject,
     emailTemplate: settings.emailTemplate,
     gmailAddress: settings.gmail.address,
-    gmailPassword: settings.gmail.appPassword,
   };
 
   const active = useMemo(() => (kids ?? []).filter((k) => k.status === 'active'), [kids]);
@@ -638,30 +637,18 @@ export function MessagesPage() {
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0 14px' }}>
-          <Field label="Your Gmail address" hint="Emails are sent from this address — free, no business needed.">
-            <input
-              style={inputStyle}
-              value={d.gmailAddress}
-              onChange={(e) => setDrafts({ ...d, gmailAddress: e.target.value })}
-              placeholder="her.email@gmail.com"
-              disabled={!editMode}
-            />
-          </Field>
-          <Field
-            label="Gmail app password"
-            hint='Google → Security → 2-Step Verification → "App passwords". 16 letters.'
-          >
-            <input
-              style={inputStyle}
-              type="password"
-              value={d.gmailPassword}
-              onChange={(e) => setDrafts({ ...d, gmailPassword: e.target.value })}
-              placeholder="•••• •••• •••• ••••"
-              disabled={!editMode}
-            />
-          </Field>
-        </div>
+        <Field
+          label="Your email address"
+          hint="Emails go out under your business name. When a parent hits Reply, it lands here."
+        >
+          <input
+            style={inputStyle}
+            value={d.gmailAddress}
+            onChange={(e) => setDrafts({ ...d, gmailAddress: e.target.value })}
+            placeholder="you@example.com"
+            disabled={!editMode}
+          />
+        </Field>
 
         <Field
           label="💳 Where do they pay? (your payment link)"
@@ -724,7 +711,7 @@ export function MessagesPage() {
                     smsTemplate: d.smsTemplate,
                     emailSubject: d.emailSubject,
                     emailTemplate: d.emailTemplate,
-                    gmail: { address: d.gmailAddress.trim(), appPassword: d.gmailPassword.trim() },
+                    gmail: { address: d.gmailAddress.trim(), appPassword: '' },
                   },
                   'Message settings saved',
                 )
