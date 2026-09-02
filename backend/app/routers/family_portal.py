@@ -181,6 +181,98 @@ def set_sms_consent(req: SmsConsentRequest, authorization: str | None = Header(d
     return {"ok": True, "consent": req.consent, "kids": len(rows)}
 
 
+# ── Everything the parent was told, kept in the app ───────────────────
+#
+# A text can fail, an email can land in spam, and a phone can be in
+# another room. Whatever we sent — "she arrived", a receipt, a balance
+# reminder — is also here, in order, for a parent who wants to check.
+# Nothing new is recorded for this: it reads the same activity log the
+# sitter's own history comes from, scoped to this parent's children, so
+# the app can never disagree with what actually went out.
+
+# Actions worth showing a parent, newest first. Anything else in the log
+# is the sitter's own business and stays out of here.
+_PARENT_VISIBLE = ("arrival_notice", "payment_receipt", "absence_reported")
+
+
+def _money(value) -> str:
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return ""
+    return f"${n:,.2f}".replace(".00", "")
+
+
+@router.get("/notices")
+def notices(authorization: str | None = Header(default=None)) -> dict:
+    user = _parent(authorization)
+    sb = supabase_admin()
+    rows = _family_rows(sb, user.user_id)
+    if not rows:
+        return {"notices": []}
+
+    mine = {r["id"]: (r.get("full_name") or "Your child").split(" ")[0] for r in rows}
+    trainer_id = rows[0]["trainer_id"]
+
+    log = (
+        sb.table("activity_log")
+        .select("id, created_at, action, entity_id, details")
+        .eq("trainer_id", trainer_id)
+        .in_("action", list(_PARENT_VISIBLE))
+        .order("created_at", desc=True)
+        .limit(200)
+        .execute()
+    )
+
+    out = []
+    for row in log.data or []:
+        d = row.get("details") or {}
+        client_id = d.get("client_id") or row.get("entity_id")
+        if client_id not in mine:
+            continue
+        name = mine[client_id]
+        action = row.get("action")
+
+        if action == "arrival_notice":
+            # Only tell them about a message that actually went out.
+            if not d.get("sent"):
+                continue
+            when = d.get("at") or ""
+            text = (
+                f"{name} arrived{f' at {when}' if when else ''}."
+                if d.get("kind") == "arrived"
+                else f"{name} was picked up{f' at {when}' if when else ''}."
+            )
+            icon = "🚸" if d.get("kind") == "arrived" else "🚗"
+        elif action == "payment_receipt":
+            amount = _money(d.get("amount"))
+            text = f"Payment received{f' — {amount}' if amount else ''}. Thank you!"
+            icon = "💛"
+        elif action == "absence_reported":
+            date = d.get("date") or ""
+            note = (d.get("note") or "").strip()
+            text = f"You let them know {name} would be out{f' on {date}' if date else ''}."
+            if note:
+                text += f' "{note}"'
+            icon = "🙋"
+        else:
+            continue
+
+        out.append(
+            {
+                "id": row["id"],
+                "at": row["created_at"],
+                "kind": action,
+                "icon": icon,
+                "text": text,
+            }
+        )
+        if len(out) >= 40:
+            break
+
+    return {"notices": out}
+
+
 # ── Quick pay — the mother pays her balance right from the portal ──────
 #
 # One tap: we compute the family balance, open a Stripe Checkout page

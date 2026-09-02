@@ -417,6 +417,8 @@ export function FamilyPortal({
             </div>
           </Card>
 
+          <UpdatesCard />
+
           {/* Kids */}
           <Card>
             <div style={{ fontFamily: B.fontDisplay, fontWeight: 800, marginBottom: 12 }}>Your kids</div>
@@ -577,6 +579,74 @@ function TextConsentCard() {
         <div style={{ marginTop: 9, fontSize: '0.82rem', color: B.mute }}>
           {on ? 'Saved — you\u2019ll get balance texts.' : 'Saved — no texts will be sent.'}
         </div>
+      )}
+    </Card>
+  );
+}
+
+
+/** Everything the sitter's app told this parent, in one place.
+ *  A text can fail, an email can go to spam, a phone can be in another
+ *  room — but the app is the one copy that is always there. It reads the
+ *  same log the messages were sent from, so it can't claim something was
+ *  sent that wasn't. */
+function UpdatesCard() {
+  const [showAll, setShowAll] = useState(false);
+  const q = useQuery({
+    queryKey: ['portal-notices'],
+    queryFn: () =>
+      api<{ notices: Array<{ id: string; at: string; kind: string; icon: string; text: string }> }>(
+        '/portal/notices',
+      ),
+    retry: false,
+    // A child arriving is worth seeing without a refresh.
+    refetchInterval: 60_000,
+  });
+
+  if (q.isError) return null;
+  const all = q.data?.notices ?? [];
+  if (!all.length) return null;
+  const shown = showAll ? all : all.slice(0, 5);
+
+  return (
+    <Card>
+      <div style={{ fontFamily: B.fontDisplay, fontWeight: 800, marginBottom: 10 }}>Updates</div>
+      <div style={{ display: 'grid', gap: 9 }}>
+        {shown.map((n) => {
+          const when = new Date(n.at);
+          const today = when.toDateString() === new Date().toDateString();
+          return (
+            <div key={n.id} style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
+              <span aria-hidden style={{ fontSize: '0.95rem' }}>{n.icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.9rem', color: B.ink, lineHeight: 1.5 }}>{n.text}</div>
+                <div style={{ fontSize: '0.74rem', color: B.mute, marginTop: 1 }}>
+                  {today
+                    ? when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                    : when.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {all.length > 5 && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          style={{
+            marginTop: 10,
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            color: B.accentDeep,
+          }}
+        >
+          {showAll ? 'Show less' : `Show all ${all.length}`}
+        </button>
       )}
     </Card>
   );
