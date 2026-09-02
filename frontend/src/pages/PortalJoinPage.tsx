@@ -27,7 +27,7 @@ export function PortalJoinPage() {
   // but NO session. Linking would then fail with NOT_AUTHENTICATED.
   const [needsConfirm, setNeedsConfirm] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: inviteError } = useQuery({
     queryKey: ['portal-invite', token],
     queryFn: async (): Promise<Info | null> => {
       if (!token) return null;
@@ -36,6 +36,10 @@ export function PortalJoinPage() {
       return data as Info | null;
     },
     enabled: !!token,
+    // An expired or mistyped link does not become valid on the third
+    // attempt. Retrying only made a mother watch a spinner for twelve
+    // seconds before being told anything at all.
+    retry: false,
   });
 
   const accept = useMutation({
@@ -94,10 +98,26 @@ export function PortalJoinPage() {
   if (isLoading || authLoading) return <Centered>Loading…</Centered>;
 
   if (!data) {
+    // Say WHICH problem and what to do about it. "Invalid link" sent a
+    // mother hunting for a typo when her link had simply run out.
+    // Supabase throws a plain object, not an Error, so instanceof misses
+    // it and every failure looked the same.
+    const raw =
+      typeof inviteError === 'string'
+        ? inviteError
+        : ((inviteError as { message?: string } | null)?.message ?? '');
+    const expired = /INVITE_EXPIRED/.test(raw);
     return (
       <Centered>
         <Icon><AlertCircle size={20} /></Icon>
-        <h1 className="text-xl font-semibold text-slate-900">Invalid link</h1>
+        <h1 className="text-xl font-semibold text-slate-900">
+          {expired ? 'This link has expired' : "This link doesn't work"}
+        </h1>
+        <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+          {expired
+            ? 'Invite links only last a short while. Ask for a new one and it will work straight away.'
+            : 'Check you copied the whole link from the message. If it still fails, ask for a new one.'}
+        </p>
       </Centered>
     );
   }
