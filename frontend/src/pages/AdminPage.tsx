@@ -16,7 +16,7 @@ import {
   Send,
   Reply as ReplyIcon,
 } from 'lucide-react';
-import { adminRpc } from '../lib/adminRpc';
+import { adminRpc, type InstalledReport } from '../lib/adminRpc';
 import { useAuth } from '../hooks/useAuth';
 import { PROJECT_STATUS, STATUS_META, type StatusCategory } from '../lib/projectStatus';
 import { TrainerDetailDrawer } from '../components/TrainerDetailDrawer';
@@ -244,6 +244,8 @@ export function AdminPage() {
             </div>
           ) : null}
         </section>
+
+        <SetupState />
 
         {/* Search */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2">
@@ -730,6 +732,112 @@ function SortableHeader({
         )}
       </span>
     </th>
+  );
+}
+
+/* ─────────────── Which setup SQL has actually landed ─────────────── */
+//
+// Every one of these files is safe to run twice, so the honest advice was
+// always "run them all again". That is useless half way down a list when
+// each one looks the same in the SQL editor once it says Success. This
+// asks the database which ones are there.
+function SetupState() {
+  const q = useQuery({
+    queryKey: ['whats-installed'],
+    queryFn: () => adminRpc.whatsInstalled(),
+    retry: false,
+    staleTime: 30_000,
+  });
+
+  const ROWS: Array<{ key: keyof InstalledReport; file: string; what: string }> = [
+    { key: 'sql_41', file: '41_admin_set_template.sql', what: 'The "move to the babysitting app" button works' },
+    { key: 'sql_42', file: '42_messages_parent_limits.sql', what: 'A parent can reply, but not rewrite or delete' },
+    { key: 'sql_43', file: '43_admin_view_as.sql', what: 'The "what they\'ve set up" report' },
+    { key: 'sql_45', file: '45_admin_read_any_account.sql', what: 'Looking inside an account, any app' },
+    { key: 'sql_47', file: '47_bring_clients_to_babysitting.sql', what: 'Bringing an account\'s people across' },
+  ];
+
+  if (q.isLoading) {
+    return (
+      <section className="bg-white border border-slate-200 rounded-xl p-5">
+        <p className="text-sm text-slate-500">Checking what's set up…</p>
+      </section>
+    );
+  }
+
+  // The checker itself is one of the files. If it isn't there, say which
+  // one to run rather than showing an error nobody can act on.
+  if (q.error) {
+    const msg = (q.error as Error).message;
+    const missing = /does not exist|schema cache|find the function/i.test(msg);
+    return (
+      <section className="bg-white border border-amber-200 rounded-xl p-5">
+        <p className="text-sm font-semibold text-slate-900 mb-1">Setup state unknown</p>
+        <p className="text-xs text-slate-600">
+          {missing ? (
+            <>
+              Run <code className="bg-slate-100 px-1 rounded">supabase/46_whats_installed.sql</code>{' '}
+              in the Supabase SQL editor and this turns into a list of what has and hasn't been
+              done. It only reads; it changes nothing.
+            </>
+          ) : (
+            msg
+          )}
+        </p>
+      </section>
+    );
+  }
+
+  const data = q.data!;
+  const done = ROWS.filter((r) => data[r.key]).length;
+
+  return (
+    <section className="bg-white border border-slate-200 rounded-xl p-5">
+      <div className="flex items-baseline gap-3 mb-3">
+        <h2 className="text-lg font-bold text-slate-900">Setup</h2>
+        <span className="text-xs text-slate-500">
+          {done} of {ROWS.length} run · read from the database, not remembered
+        </span>
+        <button
+          type="button"
+          onClick={() => void q.refetch()}
+          className="ml-auto text-xs text-slate-500 underline hover:text-slate-800"
+        >
+          Re-check
+        </button>
+      </div>
+      <ul className="space-y-2">
+        {ROWS.map((r) => {
+          const ok = !!data[r.key];
+          return (
+            <li key={r.file} className="flex items-start gap-2.5 text-sm">
+              <span
+                className={`mt-0.5 shrink-0 font-mono text-xs ${ok ? 'text-emerald-600' : 'text-rose-500'}`}
+                aria-hidden
+              >
+                {ok ? '✓' : '○'}
+              </span>
+              <div className="min-w-0">
+                <span className={ok ? 'text-slate-500 line-through' : 'text-slate-900 font-medium'}>
+                  {r.what}
+                </span>
+                {!ok && (
+                  <div className="text-xs text-slate-500">
+                    Run <code className="bg-slate-100 px-1 rounded">supabase/{r.file}</code>
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {data.sql_42 && !data.sql_42_column_grant && (
+        <p className="mt-3 text-xs text-amber-700">
+          42's policies are in but its column grant isn't — the last two lines of that file. Run it
+          again; nothing else in it will change.
+        </p>
+      )}
+    </section>
   );
 }
 

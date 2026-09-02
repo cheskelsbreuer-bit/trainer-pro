@@ -508,7 +508,116 @@ function WhichAppCard({
           </button>
         )}
       </div>
+      <BringPeopleAcross trainerId={data.id} clientCount={data.client_count} />
     </section>
+  );
+}
+
+/* ─────────── The half of the move that isn't the template ─────────── */
+//
+// Switching the template changes which app opens. It does not move the
+// people they already typed in: the babysitting roster is every clients
+// row carrying the 'bs:1' marker, and rows added in the coach app carry
+// nothing. Without this they open the new app, find it empty, and have to
+// enter their whole roster a second time.
+function BringPeopleAcross({
+  trainerId,
+  clientCount,
+}: {
+  trainerId: string;
+  clientCount: number;
+}) {
+  const qc = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const [result, setResult] = useState<{ count: number; names: string[]; undo: boolean } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const move = useMutation({
+    mutationFn: (undo: boolean) => adminRpc.clientsToKids(trainerId, undo),
+    onSuccess: (r) => {
+      setResult({ count: r.count, names: r.names ?? [], undo: r.undo });
+      setErr(null);
+      setConfirming(false);
+      qc.invalidateQueries({ queryKey: ['admin-trainer'] });
+    },
+    onError: (e: Error) => {
+      setErr(
+        /does not exist|schema cache|find the function/i.test(e.message)
+          ? 'Run supabase/47_bring_clients_to_babysitting.sql first.'
+          : e.message,
+      );
+      setConfirming(false);
+    },
+  });
+
+  if (!clientCount) return null;
+
+  return (
+    <div className="mt-4 pt-3 border-t border-slate-200">
+      <p className="text-xs text-slate-600">
+        They have <strong>{clientCount}</strong> {clientCount === 1 ? 'person' : 'people'} on their
+        roster. Moving the app doesn't move those — the babysitting app only shows people marked as
+        children, and anyone added in the coach app isn't. Without this they'd open the new app to an
+        empty list and type everyone in again.
+      </p>
+
+      {result && (
+        <p className="mt-2 text-xs text-emerald-700">
+          {result.count === 0
+            ? result.undo
+              ? 'Nothing to take back out.'
+              : 'Nothing to bring across — they were all marked already.'
+            : `${result.undo ? 'Took' : 'Brought'} ${result.count} across: ${result.names
+                .slice(0, 6)
+                .join(', ')}${result.names.length > 6 ? `, and ${result.names.length - 6} more` : ''}.`}
+        </p>
+      )}
+      {err && <p className="mt-2 text-xs text-rose-700">{err}</p>}
+
+      {confirming ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-700">
+            This writes to their account. Their names, phones and notes don't change — only whether
+            the babysitting app can see them.
+          </span>
+          <button
+            type="button"
+            disabled={move.isPending}
+            onClick={() => move.mutate(false)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white disabled:opacity-40"
+          >
+            {move.isPending ? 'Working…' : 'Yes, bring them across'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-300"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-300 hover:bg-slate-50"
+          >
+            Bring their people into the babysitting roster
+          </button>
+          {result && !result.undo && result.count > 0 && (
+            <button
+              type="button"
+              disabled={move.isPending}
+              onClick={() => move.mutate(true)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-300 hover:bg-slate-50 disabled:opacity-40"
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

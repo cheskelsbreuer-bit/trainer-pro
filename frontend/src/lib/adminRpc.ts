@@ -211,4 +211,28 @@ export const adminRpc = {
 
   /** Close it again. An admin can then read only their own rows. */
   viewStop: () => rpc<{ ok: boolean }>('ck_q14'),
+
+  /** Which of the setup SQL files have actually landed in this database.
+   *  Reads the catalog, not anybody's data. */
+  whatsInstalled: () => rpc<InstalledReport>('ck_q15'),
+
+  /** Add (or remove) the babysitting marker on an account's existing
+   *  people, so a roster typed in before the move isn't stranded. */
+  clientsToKids: (trainerId: string, undo = false) =>
+    rpc<{ ok: boolean; undo: boolean; count: number; names: string[] }>('ck_q16', {
+      p_id: trainerId,
+      p_undo: undo,
+    }),
 };
+
+export interface InstalledReport {
+  sql_41: boolean;
+  sql_42: boolean;
+  sql_42_column_grant: boolean;
+  sql_43: boolean;
+  sql_44: boolean;
+  sql_45: boolean;
+  sql_46: boolean;
+  sql_47: boolean;
+  checked_at: string;
+}
