@@ -202,4 +202,13 @@ export const adminRpc = {
         messages: number;
       };
     }>('ck_q11', { p_id: trainerId }),
+
+  /** Open a read-only window onto one account. Until this is called, an
+   *  admin's read policies match nothing, so the flag in the browser is
+   *  inert on its own — see supabase/45_admin_read_any_account.sql. */
+  viewStart: (trainerId: string) =>
+    rpc<{ ok: boolean; target: string }>('ck_q13', { p_id: trainerId }),
+
+  /** Close it again. An admin can then read only their own rows. */
+  viewStop: () => rpc<{ ok: boolean }>('ck_q14'),
 };

@@ -1,141 +1,129 @@
-// The admin's window onto a client's babysitting app.
+// The bar along the bottom while an admin is reading someone's account.
 //
-// It mounts the REAL app — same pages, same components, same layout the
-// client sees — with one substitution: every read comes from a snapshot
-// fetched through the admin RPC instead of from this browser's session,
-// and every write is refused before it can reach the database.
+// It does not mount an app. It doesn't have to: useAuth hands every page
+// the other account's id, so the normal tree renders WHICHEVER app that
+// account opens — babysitting, the 1-on-1 Coach app, the classic one —
+// with that account's rows in it. This is the part that says whose account
+// you are in, gets you out again, and answers the question you came for:
+// what have they actually set up.
 //
-// It takes over the whole tree while the per-tab flag is set, for the same
-// reason the demo does: BabysittingApp brings its own <Routes> and its nav
-// links are absolute, so /kids and /billing have to resolve at the root.
+// (The first version of this did take over the tree, and could only ever
+// show the babysitting app. That is why an account signed up as a solo
+// trainer opened to empty screens.)
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminRpc } from '../lib/adminRpc';
-import type { Trainer } from '../lib/database.types';
-import { BabysittingApp } from './BabysittingApp';
-import { ViewAsProvider, setViewAsTarget } from './lib/viewAs';
+import { setViewAsTarget } from './lib/viewAs';
 import { SetupReport, buildReport } from './SetupReport';
 
-function leave() {
+/** Close the window: tell the database to forget the target, drop the tab
+ *  flag, and go back to admin. The database call comes first — if it fails
+ *  we still clear the flag, because being stuck inside somebody's account
+ *  would be far worse than a stale row that grants a read nobody is using. */
+export async function leaveAccount(): Promise<void> {
+  try {
+    await adminRpc.viewStop();
+  } catch {
+    /* fall through — clearing the flag is what actually gets you out */
+  }
   setViewAsTarget(null);
   window.location.replace('/hq');
 }
 
-function Centered({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        padding: 24,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        background: '#faf7f2',
-        color: '#2b2620',
-        textAlign: 'center',
-      }}
-    >
-      <div style={{ maxWidth: 460, display: 'grid', gap: 14, justifyItems: 'center' }}>
-        {children}
-      </div>
-    </div>
-  );
-}
+export function LookingInsideBar({ trainerId }: { trainerId: string }) {
+  const [showReport, setShowReport] = useState(false);
 
-function LeaveButton({ label = 'Back to admin' }: { label?: string }) {
-  return (
-    <button
-      type="button"
-      onClick={leave}
-      style={{
-        border: 'none',
-        borderRadius: 999,
-        padding: '10px 18px',
-        background: '#2b2620',
-        color: '#fff',
-        fontWeight: 700,
-        fontSize: '0.9rem',
-        cursor: 'pointer',
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-export function LookingInside({ trainerId }: { trainerId: string }) {
   const snap = useQuery({
-    queryKey: ['view-as', trainerId],
+    queryKey: ['view-as-report', trainerId],
     queryFn: () => adminRpc.viewAs(trainerId),
-    // One read, held for the visit. Refetching behind the admin's back
-    // would make the screen change while they are reading it, and there
-    // is nothing live to keep up with — they are not the one editing.
+    // One read, held for the visit. There is nothing live to keep up with:
+    // you are not the one editing.
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     retry: false,
   });
 
-  // Escape always gets you out, even if a page inside has swallowed the
-  // banner (a modal, a full-screen photo).
+  // Shift+Esc always gets you out, even if a page has covered the bar with
+  // a modal or a full-screen photo.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && e.shiftKey) leave();
+      if (e.key === 'Escape' && e.shiftKey) void leaveAccount();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  if (snap.isLoading) {
-    return (
-      <Centered>
-        <div style={{ fontSize: '2rem' }}>👀</div>
-        <div style={{ fontWeight: 700 }}>Opening their app…</div>
-      </Centered>
-    );
+  // A page whose save was refused prints its own message, and those were
+  // written for a broken connection, not for this. Say what really
+  // happened, over the top of whatever it said.
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    let timer: number | undefined;
+    const onBlocked = () => {
+      setBlocked(true);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setBlocked(false), 6000);
+    };
+    window.addEventListener('tp-view-as-blocked', onBlocked);
+    return () => {
+      window.removeEventListener('tp-view-as-blocked', onBlocked);
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  // Anything but a well-formed snapshot means the report is unavailable —
+  // most likely 45 has been run but 43 hasn't. That must never take the
+  // page down: this bar is also the way out of the account, so it has to
+  // render even when the thing it decorates is missing.
+  const s = snap.data && typeof snap.data === 'object' && snap.data.trainer ? snap.data : null;
+  const who = s
+    ? s.trainer.business_name || s.trainer.full_name || s.trainer.email || 'this account'
+    : 'this account';
+  let report: ReturnType<typeof buildReport> | null = null;
+  try {
+    report = s ? buildReport(s) : null;
+  } catch {
+    report = null;
   }
-
-  if (snap.isError || !snap.data) {
-    const msg = snap.error instanceof Error ? snap.error.message : 'Could not open that account.';
-    const missing = /function .*ck_q12|does not exist|schema cache/i.test(msg);
-    return (
-      <Centered>
-        <div style={{ fontSize: '2rem' }}>🚧</div>
-        <div style={{ fontWeight: 700 }}>Could not open that account</div>
-        <p style={{ fontSize: '0.9rem', color: '#6b6156', margin: 0 }}>
-          {missing
-            ? 'The database does not have this feature yet. Run supabase/43_admin_view_as.sql in the Supabase SQL editor, then try again.'
-            : msg}
-        </p>
-        <LeaveButton />
-      </Centered>
-    );
-  }
-
-  return <Inside snapshot={snap.data} />;
-}
-
-function Inside({ snapshot: s }: { snapshot: import('./lib/viewAs').ViewAsSnapshot }) {
-  const [showReport, setShowReport] = useState(false);
-  const who = s.trainer.business_name || s.trainer.full_name || s.trainer.email || 'this account';
-  const report = buildReport(s);
-  const done = report.filter((c) => c.verdict === 'done').length;
+  const done = report ? report.filter((c) => c.verdict === 'done').length : 0;
 
   return (
-    <ViewAsProvider snapshot={s}>
-      <div style={{ paddingBottom: 54 }}>
-        <BabysittingApp trainer={s.trainer as unknown as Trainer} />
-      </div>
-      {/* Bottom, not top: the app's own header is sticky, and a banner
-          that pushes it down changes the layout the client actually has. */}
-      {showReport && (
+    <>
+      {blocked && (
+        <div
+          role="alert"
+          style={{
+            position: 'fixed',
+            left: 12,
+            right: 12,
+            bottom: 56,
+            zIndex: 10000,
+            maxWidth: 460,
+            margin: '0 auto',
+            background: '#7a2e26',
+            color: '#fff',
+            borderRadius: 10,
+            padding: '11px 14px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '0.86rem',
+            lineHeight: 1.45,
+            boxShadow: '0 -8px 30px rgba(0,0,0,0.35)',
+          }}
+        >
+          Nothing was saved. That would have changed their account, and you are
+          only reading it — whatever the page just told you, your connection is
+          fine.
+        </div>
+      )}
+      {showReport && s && (
         <div
           style={{
             position: 'fixed',
             left: 12,
             right: 12,
             bottom: 56,
-            zIndex: 201,
+            zIndex: 9998,
             maxWidth: 560,
             margin: '0 auto',
           }}
@@ -150,7 +138,7 @@ function Inside({ snapshot: s }: { snapshot: import('./lib/viewAs').ViewAsSnapsh
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 202,
+          zIndex: 9999,
           background: '#2b2620',
           color: '#fff',
           padding: '10px 14px',
@@ -160,43 +148,37 @@ function Inside({ snapshot: s }: { snapshot: import('./lib/viewAs').ViewAsSnapsh
           flexWrap: 'wrap',
           fontFamily: 'system-ui, -apple-system, sans-serif',
           fontSize: '0.85rem',
+          lineHeight: 1.45,
         }}
       >
-        <span style={{ marginRight: 'auto' }}>
+        <span style={{ marginRight: 'auto', minWidth: 0 }}>
           👀 Looking inside <strong>{who}</strong> — read only. Nothing you do here
           changes their account, and they are not told you looked.
         </span>
-        <button
-          type="button"
-          onClick={() => setShowReport((v) => !v)}
-          style={{
-            border: '1px solid rgba(255,255,255,0.4)',
-            borderRadius: 999,
-            padding: '6px 14px',
-            background: 'transparent',
-            color: '#fff',
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
-          {showReport ? 'Hide' : `What they've set up — ${done}/${report.length}`}
-        </button>
-        <button
-          type="button"
-          onClick={leave}
-          style={{
-            border: '1px solid rgba(255,255,255,0.4)',
-            borderRadius: 999,
-            padding: '6px 14px',
-            background: 'transparent',
-            color: '#fff',
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
+        {report && (
+          <button
+            type="button"
+            onClick={() => setShowReport((v) => !v)}
+            style={ghost}
+          >
+            {showReport ? 'Hide' : `What they've set up — ${done}/${report.length}`}
+          </button>
+        )}
+        <button type="button" onClick={() => void leaveAccount()} style={ghost}>
           Leave
         </button>
       </div>
-    </ViewAsProvider>
+    </>
   );
 }
+
+const ghost: React.CSSProperties = {
+  border: '1px solid rgba(255,255,255,0.4)',
+  borderRadius: 999,
+  padding: '6px 14px',
+  background: 'transparent',
+  color: '#fff',
+  fontWeight: 700,
+  cursor: 'pointer',
+  flex: 'none',
+};

@@ -107,7 +107,7 @@ export function FamilyPortal({
   // ── Chat with the sitter ────────────────────────────────────────
   // Every message for this family hangs off one anchor kid, so siblings
   // share a single conversation.
-  const chat = useChatMessages();
+  const chat = useChatMessages(true, { clientIds: active.map((k) => k.id) });
   const sendChat = useSendChat();
   const markRead = useMarkThreadRead();
   const [chatOpen, setChatOpen] = useState(false);

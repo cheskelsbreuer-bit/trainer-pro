@@ -521,14 +521,32 @@ function WhichAppCard({
 // sees it, so those questions answer themselves.
 function LookInsideCard({ data }: { data: TrainerDetail }) {
   const keys = (data.template_slugs ?? []).map(appKeyForSlug);
-  const isBabysitting = (keys.includes('coach') ? 'coach' : (keys[0] ?? 'coach')) === 'babysitting';
+  const landsIn: AppKey = keys.includes('coach') ? 'coach' : (keys[0] ?? 'coach');
   const who = data.business_name || data.full_name || data.email || 'this account';
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  function open() {
-    setViewAsTarget(data.id);
-    // A hard reload, like the demo entry point: App() re-reads the flag at
-    // the top of the tree, so a soft navigation would not pick it up.
-    window.location.assign('/');
+  async function open() {
+    setBusy(true);
+    setErr(null);
+    try {
+      // Ask the database to open the window BEFORE setting the flag. Until
+      // this succeeds an admin's read policies match nothing, so a flag set
+      // on its own would just show empty screens.
+      await adminRpc.viewStart(data.id);
+      setViewAsTarget(data.id);
+      // A hard reload, like the demo entry point: App() reads the flag at
+      // the top of the tree, so a soft navigation would not pick it up.
+      window.location.assign('/');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not open that account.';
+      setErr(
+        /does not exist|schema cache|find the function/i.test(msg)
+          ? 'The database does not have this yet. Run supabase/45_admin_read_any_account.sql in the Supabase SQL editor, then try again.'
+          : msg,
+      );
+      setBusy(false);
+    }
   }
 
   return (
@@ -537,26 +555,28 @@ function LookInsideCard({ data }: { data: TrainerDetail }) {
         Look inside their app
       </p>
       <p className="text-xs text-slate-500">
-        Opens {who}'s babysitting app as they see it — their children, their
-        balances, their settings, their chats. <strong>Read only:</strong> every
-        button that would change something is switched off, nothing is written
-        to their account, and they are not told you looked.
+        Opens {who}'s account as they see it — whichever app they actually use,
+        with their own clients, money, messages and settings in it.{' '}
+        <strong>Read only:</strong> the database will not accept a single write
+        to their account while you are in there, nothing is changed, and they
+        are not told you looked.
       </p>
-      {!isBabysitting && (
-        <p className="mt-2 text-xs text-amber-700">
-          This account isn't in the babysitting app, so most screens will be empty.
-        </p>
-      )}
+      <p className="mt-2 text-xs text-slate-500">
+        They land in the <strong>{APP_LABELS[landsIn] ?? landsIn}</strong>, so
+        that is what will open.
+      </p>
+      {err && <p className="mt-2 text-xs text-rose-700">{err}</p>}
       <button
         type="button"
-        onClick={open}
-        className="mt-3 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-300 hover:bg-slate-50"
+        onClick={() => void open()}
+        disabled={busy}
+        className="mt-3 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-300 hover:bg-slate-50 disabled:opacity-40"
       >
-        👀 Open their app
+        {busy ? 'Opening…' : '👀 Open their app'}
       </button>
       <p className="mt-2 text-[11px] text-slate-400">
-        Needs supabase/43_admin_view_as.sql to have been run. Press Leave (or
-        Shift+Esc) to come back here.
+        Needs supabase/45_admin_read_any_account.sql to have been run. Press
+        Leave (or Shift+Esc) to come back here.
       </p>
     </section>
   );

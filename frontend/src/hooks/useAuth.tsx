@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { viewAsTarget } from '../babysitting/lib/viewAs';
 
 interface AuthContextValue {
   user: User | null;
@@ -30,8 +31,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // "Look inside their app": while an admin is reading someone else's
+  // account, every page in every app should ask the database for THAT
+  // account's rows. They all ask the same way — filter by the signed-in
+  // user's id — so swapping the id here does the whole job, once, instead
+  // of rerouting each page's queries one at a time. Babysitting, the 1-on-1
+  // Coach app and the classic app all work with no changes of their own.
+  //
+  // This grants nothing by itself. Changing the id only changes which rows
+  // are asked for; whether any come back is row-level security's decision,
+  // and it says yes only to an admin — see
+  // supabase/45_admin_read_any_account.sql. Someone who is not an admin and
+  // sets the flag by hand gets an empty screen and nothing else.
+  //
+  // The session is deliberately left alone: session.user is still really
+  // them, so signing out, token refresh, and anything reading the session
+  // directly all behave normally.
+  const lookingAt = viewAsTarget();
+  const realUser = session?.user ?? null;
+  const user =
+    lookingAt && realUser && realUser.id !== lookingAt
+      ? ({ ...realUser, id: lookingAt } as User)
+      : realUser;
+
   const value: AuthContextValue = {
-    user: session?.user ?? null,
+    user,
     session,
     loading,
 

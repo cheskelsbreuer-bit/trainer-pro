@@ -35,7 +35,7 @@ import {
 import { useWords } from '../lib/words';
 import { useChatMessages, unreadByClient } from '../lib/chat';
 import { useDemo } from '../demo/flag';
-import { useViewAs, activityByAction } from '../lib/viewAs';
+import { useViewAs } from '../lib/viewAs';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
 import {
   Card,
@@ -64,18 +64,11 @@ export function DashboardPage() {
   const { user } = useAuth();
   const { data: kids, isLoading } = useKids();
 
-  const viewing = useViewAs();
-
   const absences = useQuery({
-    queryKey: ['babysitting-absences', viewing ? `as:${viewing.trainer.id}` : user?.id],
+    queryKey: ['babysitting-absences', user?.id],
     queryFn: async (): Promise<AbsenceRow[]> => {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 7);
-      if (viewing) {
-        return activityByAction(
-          viewing, 'absence_reported', 12, cutoff.toISOString(),
-        ) as unknown as AbsenceRow[];
-      }
       const { data, error } = await supabase
         .from('activity_log')
         .select('id, created_at, details')
@@ -87,7 +80,7 @@ export function DashboardPage() {
       if (error) throw error;
       return (data ?? []) as AbsenceRow[];
     },
-    enabled: !!viewing || !!user,
+    enabled: !!user,
   });
   const { data: payments } = usePayments();
   const cfg = useBabysittingConfig();
@@ -715,11 +708,8 @@ function JoinRequests() {
   };
 
   const rows = useQuery({
-    queryKey: ['bs-join-requests', viewing ? `as:${viewing.trainer.id}` : user?.id],
+    queryKey: ['bs-join-requests', user?.id],
     queryFn: async () => {
-      if (viewing) {
-        return activityByAction(viewing, 'join_request', 30) as unknown as JoinRow[];
-      }
       const { data, error } = await supabase
         .from('activity_log')
         .select('id, created_at, details')
@@ -730,7 +720,9 @@ function JoinRequests() {
       if (error) throw error;
       return (data ?? []) as JoinRow[];
     },
-    enabled: !demo && (!!viewing || !!user),
+    enabled: !demo && !!user,
+    // Nothing new arrives in an account you are only reading, so don't
+    // re-ask for it every two minutes.
     refetchInterval: viewing ? false : 120_000,
   });
 

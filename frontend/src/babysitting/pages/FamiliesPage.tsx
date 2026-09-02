@@ -7,7 +7,6 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { useViewAs } from '../lib/viewAs';
 import type { Client } from '../../lib/database.types';
 import { B, readFamilySlug, familyLabel, shortDate, ageOf } from '../theme';
 import { useKids, usePayments } from '../lib/data';
@@ -46,13 +45,9 @@ export function FamiliesPage() {
   const { data: payments } = usePayments();
   const cfg = useBabysittingConfig();
   const { user } = useAuth();
-  const viewing = useViewAs();
   const { data: bizName } = useQuery({
-    queryKey: ['babysitting-bizname', viewing ? `as:${viewing.trainer.id}` : user?.id],
+    queryKey: ['babysitting-bizname', user?.id],
     queryFn: async (): Promise<string> => {
-      if (viewing) {
-        return viewing.trainer.business_name || viewing.trainer.full_name || 'Babysitting';
-      }
       const { data } = await supabase
         .from('trainers')
         .select('business_name, full_name')
@@ -60,7 +55,7 @@ export function FamiliesPage() {
         .single();
       return (data?.business_name || data?.full_name || 'Babysitting') as string;
     },
-    enabled: !!viewing || !!user,
+    enabled: !!user,
   });
   const settings = cfg.data?.settings;
 

@@ -36,18 +36,13 @@ export const KID_MARKER = 'bs:1';
 export function useKids() {
   const { user } = useAuth();
   const demo = useDemo();
-  const viewing = useViewAs();
   return useQuery({
-    queryKey: ['babysitting-kids', viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id],
+    // `user.id` is whoever's app this is. While an admin is looking inside
+    // someone else's account it is THEIR id, so this one query serves both
+    // cases and there is no second code path to keep in step.
+    queryKey: ['babysitting-kids', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<Client[]> => {
       if (demo) return demoKids();
-      if (viewing) {
-        // Same filter the live query uses, applied to the snapshot: only
-        // rows tagged as babysitting kids, in the same order.
-        return viewing.clients
-          .filter((c) => (c.tags ?? []).includes(KID_MARKER))
-          .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''));
-      }
       const { data, error } = await supabase
         .from('clients')
         .select('*')
@@ -57,7 +52,7 @@ export function useKids() {
       if (error) throw error;
       return (data ?? []) as Client[];
     },
-    enabled: demo || !!viewing || !!user,
+    enabled: demo || !!user,
   });
 }
 
@@ -65,15 +60,10 @@ export function useKids() {
 export function usePayments() {
   const { user } = useAuth();
   const demo = useDemo();
-  const viewing = useViewAs();
   return useQuery({
-    queryKey: [
-      'babysitting-payments',
-      viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id,
-    ],
+    queryKey: ['babysitting-payments', demo ? 'demo' : user?.id],
     queryFn: async (): Promise<Payment[]> => {
       if (demo) return demoPayments();
-      if (viewing) return viewing.payments;
       const { data, error } = await supabase
         .from('payments')
         .select('*')
@@ -82,7 +72,7 @@ export function usePayments() {
       if (error) throw error;
       return (data ?? []) as Payment[];
     },
-    enabled: demo || !!viewing || !!user,
+    enabled: demo || !!user,
   });
 }
 

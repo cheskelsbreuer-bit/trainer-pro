@@ -69,45 +69,48 @@ export function familyThreads(kids: Client[]): Array<{
 /** Every message the signed-in person can see, newest last. The sitter
  *  gets all their threads in one query (cheaper than one per family);
  *  a parent's RLS narrows the same query to their own. */
-export function useChatMessages(enabled = true) {
+export function useChatMessages(
+  enabled = true,
+  /** The parent's side passes the children it is allowed to see. Leave it
+   *  out on the sitter's side and the query narrows to her own account. */
+  scope?: { clientIds: string[] },
+) {
   const { user } = useAuth();
   const demo = useDemo();
   const viewing = useViewAs();
+  const clientIds = scope?.clientIds;
   return useQuery({
-    queryKey: ['bs-chat', viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id],
+    queryKey: ['bs-chat', demo ? 'demo' : user?.id, clientIds?.join(',') ?? 'mine'],
     queryFn: async (): Promise<ChatMessage[]> => {
-      if (viewing) {
-        // Oldest first, like the live query — the snapshot arrives newest
-        // first because that's the useful order for everything else.
-        return [...viewing.messages]
-          .sort((a, b) => a.created_at.localeCompare(b.created_at))
-          .map((m) => ({
-            id: m.id,
-            client_id: m.client_id,
-            sender: m.sender,
-            body: m.body,
-            attachments: (m.attachments as ChatAttachment[] | null) ?? null,
-            read_at: m.read_at,
-            created_at: m.created_at,
-          }));
-      }
       // The demo has no database and no signed-in user, but its chat is a
       // real conversation against the in-memory store.
       if (demo) {
         const { demoChat } = await import('../demo/demoStore');
         return demoChat().map((m) => ({ ...m, attachments: m.attachments ?? null }));
       }
-      const { data, error } = await supabase
+      const base = supabase
         .from('messages')
         .select('id, client_id, sender, body, attachments, read_at, created_at')
         .order('created_at', { ascending: true })
         .limit(500);
+      // Say whose messages we want instead of leaving it to row-level
+      // security. For a sitter and for a parent this changes nothing —
+      // their own policies already narrow it to their own rows. It matters
+      // for an admin, whose read policy narrows by nothing at all: without
+      // a filter here, "the chat" would mean every account's chat.
+      const q = clientIds
+        ? base.in('client_id', clientIds)
+        : user
+          ? base.eq('trainer_id', user.id)
+          : base;
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as ChatMessage[];
     },
-    enabled: enabled && (demo || !!viewing || !!user),
+    enabled: enabled && (demo || !!user) && (!clientIds || clientIds.length > 0),
     // A conversation should feel alive without a socket: poll while the
-    // tab is open, and refetch the moment it regains focus.
+    // tab is open, and refetch the moment it regains focus. Not while
+    // someone is reading a frozen account from the outside.
     refetchInterval: viewing ? false : 20_000,
     refetchOnWindowFocus: !viewing,
   });

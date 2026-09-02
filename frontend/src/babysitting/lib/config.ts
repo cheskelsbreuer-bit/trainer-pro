@@ -275,10 +275,7 @@ export function useBabysittingConfig() {
   const viewing = useViewAs();
   const qc = useQueryClient();
 
-  const key = [
-    'babysitting-config',
-    viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id,
-  ];
+  const key = ['babysitting-config', demo ? 'demo' : user?.id];
 
   const query = useQuery({
     queryKey: key,
@@ -287,9 +284,6 @@ export function useBabysittingConfig() {
         const { demoConfig } = await import('../demo/demoStore');
         return demoConfig();
       }
-      // Looking inside someone else's account: the same blob, read once
-      // by the admin RPC instead of by this browser's own session.
-      if (viewing) return hydrate(viewing.trainer.public_profile.babysitting);
       const { data, error } = await supabase
         .from('trainers')
         .select('id, public_profile')
@@ -299,7 +293,7 @@ export function useBabysittingConfig() {
       const profile = (data as TrainerProfileRow).public_profile ?? {};
       return hydrate((profile as Record<string, unknown>).babysitting);
     },
-    enabled: demo || !!viewing || !!user,
+    enabled: demo || !!user,
   });
 
   const save = useMutation({

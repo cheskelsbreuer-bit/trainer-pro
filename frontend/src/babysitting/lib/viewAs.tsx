@@ -1,19 +1,82 @@
-// "Look inside their app" — an admin-only, read-only view of somebody
-// else's babysitting account.
+// "Look inside their app" — an admin reading somebody else's account.
 //
-// It works exactly like demo mode does: a context that, when set, makes
-// every read hook serve rows from a snapshot instead of the live database,
-// and makes every write refuse. The difference is where the rows come
-// from — the demo invents them, this one fetches a real account through
-// the admin RPC (supabase/43_admin_view_as.sql).
+// How it works, in one line: while the flag below is set, useAuth() hands
+// every page the OTHER account's id, so each app asks the database for
+// that account's rows using the queries it already had. Babysitting, the
+// 1-on-1 Coach app and the classic app all work without knowing anything
+// about this. That is the point: the first version of this feature fed a
+// hand-built snapshot to the babysitting app alone, so an account in any
+// other app opened the wrong screens and showed nothing.
 //
-// Nothing here can write. That is not a policy, it's the shape of the
-// thing: the snapshot is a plain object in memory, the admin's RLS gives
-// them no access to the account's tables, and `assertLive` throws before
-// any mutation can reach Supabase.
+// Why the flag is safe. It is not a permission. It changes which rows are
+// asked for; whether any come back is row-level security's decision, and
+// it says yes only to an admin — supabase/45_admin_read_any_account.sql
+// adds a SELECT policy and nothing else. There is no admin INSERT, UPDATE
+// or DELETE policy on any table, so the database refuses every write to
+// someone else's account whatever the screen does. `assertLive` below is
+// the friendly half of that: it stops the write in the browser so a person
+// gets a sentence instead of a policy error.
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import type { Client, Payment } from '../../lib/database.types';
+
+// ── The per-tab flag ──────────────────────────────────────────────────
+//
+// sessionStorage, like the demo: looking inside an account lasts for the
+// tab it was opened in and is gone when that tab closes. It is never the
+// state you come back to tomorrow by accident.
+
+const VIEW_AS_KEY = 'tp-view-as';
+const VIEW_AS_EVENT = 'tp-view-as-change';
+
+export function viewAsTarget(): string | null {
+  try {
+    return window.sessionStorage.getItem(VIEW_AS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setViewAsTarget(trainerId: string | null): void {
+  try {
+    if (trainerId) window.sessionStorage.setItem(VIEW_AS_KEY, trainerId);
+    else window.sessionStorage.removeItem(VIEW_AS_KEY);
+  } catch {
+    /* private window — the visit just won't survive a reload */
+  }
+  window.dispatchEvent(new CustomEvent(VIEW_AS_EVENT));
+}
+
+/** The account being looked at, or null when this is somebody's own app.
+ *  Components use it to hide anything that would write. */
+export function useViewAs(): string | null {
+  const [at, setAt] = useState<string | null>(() => viewAsTarget());
+  useEffect(() => {
+    const sync = () => setAt(viewAsTarget());
+    window.addEventListener(VIEW_AS_EVENT, sync);
+    return () => window.removeEventListener(VIEW_AS_EVENT, sync);
+  }, []);
+  return at;
+}
+
+/** Called at the top of every mutation. Reading someone's account is one
+ *  thing; changing it behind their back is another, and no button in here
+ *  is meant to. The database refuses these writes anyway — this is what
+ *  turns that refusal into a sentence a person can read. */
+export function assertLive(viewing: string | null): void {
+  if (viewing) {
+    throw new Error(
+      "You're looking at this account read-only. Nothing here can be changed.",
+    );
+  }
+}
+
+// ── The snapshot ──────────────────────────────────────────────────────
+//
+// Still fetched, but only for the setup report on the banner: thirteen
+// questions about an account that are cheaper to answer from one query
+// than from thirteen. The app's own screens no longer go through it —
+// they read the real tables, the way the account's owner does.
 
 export interface ViewAsActivityRow {
   id: string;
@@ -61,75 +124,4 @@ export interface ViewAsSnapshot {
   activity: ViewAsActivityRow[];
   messages: ViewAsMessageRow[];
   taken_at: string;
-}
-
-export const ViewAsContext = createContext<ViewAsSnapshot | null>(null);
-
-/** The account being looked at, or null when this is somebody's own app. */
-export function useViewAs(): ViewAsSnapshot | null {
-  return useContext(ViewAsContext);
-}
-
-/** Called at the top of every mutation. Reading someone's account is one
- *  thing; editing it behind their back is another, and no button in here
- *  is ever meant to do it. If one somehow fires — a stray keyboard
- *  shortcut, a component that saves on unmount — this stops it before it
- *  reaches the database. */
-export function assertLive(snapshot: ViewAsSnapshot | null): void {
-  if (snapshot) {
-    throw new Error(
-      "You're looking at this account read-only. Nothing here can be changed.",
-    );
-  }
-}
-
-export function ViewAsProvider({
-  snapshot,
-  children,
-}: {
-  snapshot: ViewAsSnapshot;
-  children: ReactNode;
-}) {
-  return <ViewAsContext.Provider value={snapshot}>{children}</ViewAsContext.Provider>;
-}
-
-/** Pull one kind of activity row out of a snapshot, in the same order and
- *  with the same limits the live queries use. Keeps the page code honest:
- *  what an admin sees is what the account owner sees, not a rearranged
- *  version of it. */
-export function activityByAction(
-  snapshot: ViewAsSnapshot,
-  action: string,
-  limit: number,
-  sinceIso?: string,
-): ViewAsActivityRow[] {
-  return snapshot.activity
-    .filter((r) => r.action === action && (!sinceIso || r.created_at >= sinceIso))
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .slice(0, limit);
-}
-
-// ── The per-tab flag ──────────────────────────────────────────────────
-//
-// sessionStorage, exactly like the demo: looking inside an account lasts
-// for the tab it was opened in and is gone when that tab closes. It is
-// never the state you come back to tomorrow by accident.
-
-const VIEW_AS_KEY = 'tp-view-as';
-
-export function viewAsTarget(): string | null {
-  try {
-    return window.sessionStorage.getItem(VIEW_AS_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function setViewAsTarget(trainerId: string | null): void {
-  try {
-    if (trainerId) window.sessionStorage.setItem(VIEW_AS_KEY, trainerId);
-    else window.sessionStorage.removeItem(VIEW_AS_KEY);
-  } catch {
-    /* ignore */
-  }
 }

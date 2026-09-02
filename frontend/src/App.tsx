@@ -33,7 +33,7 @@ import { AdminPage } from './pages/AdminPage';
 import { adminRpc } from './lib/adminRpc';
 import { readAdminVerified, writeAdminVerified, ADMIN_AWAITING_KEY } from './lib/adminSession';
 import { BabysittingApp } from './babysitting/BabysittingApp';
-import { LookingInside } from './babysitting/LookingInside';
+import { LookingInsideBar } from './babysitting/LookingInside';
 import { viewAsTarget } from './babysitting/lib/viewAs';
 import { CoachApp } from './coach/CoachApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
@@ -489,22 +489,12 @@ export default function App() {
     );
   }
 
-  // Admin looking inside a client's babysitting app. Takes over the tree
-  // for the same reason the demo does — the app's nav links are absolute,
-  // so /kids and /billing have to resolve at the root. The RPC behind it
-  // refuses anyone who isn't an admin, so the flag alone grants nothing.
+  // Admin looking inside someone's account. Nothing is taken over: useAuth
+  // hands every page that account's id, so the normal tree below renders
+  // whichever app they actually open — babysitting, the Coach app, the
+  // classic one — with their rows in it. All that is added is a bar saying
+  // whose account this is and how to get out.
   const lookingAt = viewAsTarget();
-  if (lookingAt) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <BrowserRouter>
-            <LookingInside trainerId={lookingAt} />
-          </BrowserRouter>
-        </AuthProvider>
-      </QueryClientProvider>
-    );
-  }
 
   // The babysitting demo runs on EVERY host, www included — it needs no
   // login and touches no data, so it takes over the whole tree while the
@@ -563,6 +553,7 @@ export default function App() {
               <Route path="*" element={<LandingPage />} />
             </Routes>
           </BrowserRouter>
+          {lookingAt && <LookingInsideBar trainerId={lookingAt} />}
         </AuthProvider>
       </QueryClientProvider>
     );
@@ -626,6 +617,7 @@ export default function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+        {lookingAt && <LookingInsideBar trainerId={lookingAt} />}
       </AuthProvider>
     </QueryClientProvider>
   );
