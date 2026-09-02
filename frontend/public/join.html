@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign up for childcare updates — Trainer Pro</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         max-width: 620px; margin: 0 auto; padding: 36px 20px 80px; color: #1f2937; line-height: 1.6;
+         background: #fbf8f3; }
+  h1 { font-size: 1.8rem; margin: 0 0 .3rem; }
+  .who { color: #6b7280; margin: 0 0 1.6rem; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px; }
+  label { display: block; font-weight: 600; font-size: .92rem; margin: 16px 0 5px; }
+  input[type=text], input[type=tel], input[type=email], textarea {
+    width: 100%; box-sizing: border-box; padding: 11px 13px; font-size: 1rem;
+    border: 1.5px solid #d1d5db; border-radius: 8px; font-family: inherit; background: #fffdf9; }
+  textarea { min-height: 70px; resize: vertical; }
+  .consent { display: flex; gap: 12px; align-items: flex-start; background: #fffdf9;
+             border: 1px solid #e5e7eb; border-radius: 10px; padding: 15px 16px; margin: 22px 0 6px; }
+  .consent input { margin-top: 4px; width: 18px; height: 18px; flex: none; }
+  .consent span { font-size: .93rem; line-height: 1.55; }
+  .muted { color: #6b7280; }
+  button { margin-top: 18px; width: 100%; padding: 14px; font-size: 1rem; font-weight: 700;
+           background: #c4643a; color: #fff; border: none; border-radius: 10px; cursor: pointer; }
+  button:disabled { opacity: .55; cursor: wait; }
+  .note { font-size: .84rem; color: #6b7280; margin-top: 14px; }
+  .msg { margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: .93rem; }
+  .ok { background: #e3f3ec; border: 1px solid #9ed3bd; color: #12543f; }
+  .bad { background: #fdecec; border: 1px solid #eab8b8; color: #8c2f2f; }
+  a { color: #2563eb; }
+  footer { margin-top: 28px; font-size: .86rem; color: #6b7280; }
+</style>
+</head>
+<body>
+
+<h1>Sign up for childcare updates</h1>
+<p class="who">You're signing up with <strong id="who">your childcare provider</strong>.</p>
+
+<div class="card">
+  <form id="f" method="post" action="/api/public/join">
+    <label for="parent_name">Your name</label>
+    <input id="parent_name" name="parent_name" type="text" required autocomplete="name">
+
+    <label for="child_name">Your child's name</label>
+    <input id="child_name" name="child_name" type="text" required>
+
+    <label for="phone">Mobile number</label>
+    <input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567">
+
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="email" placeholder="you@email.com">
+
+    <label for="note">Anything they should know? (optional)</label>
+    <textarea id="note" name="note" placeholder="Days you need, allergies, pickup notes…"></textarea>
+
+    <div class="consent">
+      <input type="checkbox" id="sms_consent" name="sms_consent" value="yes">
+      <span>
+        <label for="sms_consent" style="display:inline; font-weight:600; margin:0">Text me balance
+        reminders and schedule updates.</label>
+        <span class="muted">Optional — you'll get the same care either way. Msg &amp; data rates
+        may apply. Reply STOP to any message to stop, HELP for help.</span>
+      </span>
+    </div>
+    <p class="note">This box starts unticked. Leaving it unticked is fine: your childcare is
+    exactly the same, and you'll still get everything by email. You can turn texts on or off
+    yourself at any time once you have an account.</p>
+
+    <button type="submit" id="go">Send my details</button>
+    <div id="msg"></div>
+  </form>
+</div>
+
+<footer>
+  Messages are sent by Trainer Pro, the software your childcare provider uses, and always name the
+  provider they are about. No mobile information will be shared with third parties or affiliates for
+  marketing or promotional purposes.
+  <br><br>
+  <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms &amp; SMS Program Terms</a> ·
+  <a href="/sms-opt-in">How texts work</a>
+</footer>
+
+<script>
+  // Progressive enhancement only: the form above is complete, readable and
+  // meaningful with JavaScript switched off, because the people who review
+  // this page do not run any.
+  var params = new URLSearchParams(location.search);
+  var code = params.get('c') || '';
+
+  if (code) {
+    fetch('/api/public/join/' + encodeURIComponent(code))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.name) document.getElementById('who').textContent = d.name; })
+      .catch(function () {});
+  }
+
+  document.getElementById('f').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var msg = document.getElementById('msg');
+    var go = document.getElementById('go');
+    if (!code) {
+      msg.className = 'msg bad';
+      msg.textContent = 'Use the link your childcare provider sent you — it has their name in it.';
+      return;
+    }
+    go.disabled = true;
+    msg.className = '';
+    msg.textContent = '';
+    fetch('/api/public/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: code,
+        parent_name: document.getElementById('parent_name').value,
+        child_name: document.getElementById('child_name').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        note: document.getElementById('note').value,
+        sms_consent: document.getElementById('sms_consent').checked
+      })
+    })
+      .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, b: b }; }); })
+      .then(function (res) {
+        if (res.ok) {
+          document.getElementById('f').innerHTML =
+            '<div class="msg ok"><strong>Thank you — that\'s sent.</strong><br>' +
+            (res.b.name || 'Your childcare provider') +
+            ' will be in touch to finish setting you up.</div>';
+        } else {
+          msg.className = 'msg bad';
+          msg.textContent = (res.b && res.b.detail) || 'Something went wrong. Please try again.';
+          go.disabled = false;
+        }
+      })
+      .catch(function () {
+        msg.className = 'msg bad';
+        msg.textContent = 'Could not send just now — check your connection and try again.';
+        go.disabled = false;
+      });
+  });
+</script>
+</body>
+</html>

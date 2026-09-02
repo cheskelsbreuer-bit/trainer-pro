@@ -22,6 +22,10 @@
       "destination": "/sms-opt-in.html"
     },
     {
+      "source": "/join",
+      "destination": "/join.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
