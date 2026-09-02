@@ -11,6 +11,7 @@ import {
   B,
   readBalance,
   readFamilySlug,
+  readParent,
   readStartDate,
   familyLabel,
   scheduledToday,
@@ -31,6 +32,7 @@ import {
   setAttendanceMany,
 } from '../lib/config';
 import { useWords } from '../lib/words';
+import { useChatMessages, unreadByClient } from '../lib/chat';
 import { useDemo } from '../demo/flag';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
 import {
@@ -271,6 +273,8 @@ export function DashboardPage() {
         <StatTile label="Owed to you" value={formatMoney(totalOwed)} tone={totalOwed > 0 ? 'warn' : 'good'} />
         <StatTile label="Collected this week" value={formatMoney(weekCollected)} tone="good" />
       </div>
+
+      <UnreadFromParents kids={active} />
 
       {/* Today strip */}
       <Card>
@@ -613,5 +617,64 @@ function WaitingChip({ days, everPaid }: { days: number; everPaid: boolean }) {
     <Chip tone={tone} style={{ fontSize: '0.68rem' }}>
       {!everPaid ? label : `waiting ${label}`}
     </Chip>
+  );
+}
+
+
+/** A mother writing "she's not coming today" at seven in the morning is
+ *  the single most useful thing on this screen, and until now it lived
+ *  behind a small badge on another tab. Shows only what is genuinely
+ *  unread and only from parents — her own messages are not news to her —
+ *  and disappears entirely once she has read them. */
+function UnreadFromParents({ kids }: { kids: Client[] }) {
+  const chat = useChatMessages();
+  const items = useMemo(() => {
+    const unread = unreadByClient(chat.data, 'client');
+    if (!unread.size) return [];
+    const byId = new Map(kids.map((k) => [k.id, k]));
+    // Newest message per thread, so the card shows what she'd actually read.
+    const latest = new Map<string, { body: string; at: string }>();
+    for (const m of chat.data ?? []) {
+      if (m.sender !== 'client' || m.read_at) continue;
+      const prev = latest.get(m.client_id);
+      if (!prev || m.created_at > prev.at) latest.set(m.client_id, { body: m.body, at: m.created_at });
+    }
+    return Array.from(unread.entries())
+      .map(([clientId, count]) => {
+        const kid = byId.get(clientId);
+        const who = kid ? readParent(kid) || kid.full_name.split(' ')[0] : 'A parent';
+        return { clientId, count, who, body: latest.get(clientId)?.body ?? '' };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4);
+  }, [chat.data, kids]);
+
+  if (!items.length) return null;
+  const total = items.reduce((n, i) => n + i.count, 0);
+
+  return (
+    <Card style={{ border: `1.5px solid ${B.accent}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: 9 }}>
+        <div style={{ fontFamily: B.fontDisplay, fontWeight: 800 }}>
+          💬 {total} new {total === 1 ? 'message' : 'messages'} from parents
+        </div>
+        <Link to="/chat" style={{ fontSize: '0.8rem', fontWeight: 800, color: B.accentDeep, textDecoration: 'none' }}>
+          Open chat →
+        </Link>
+      </div>
+      <div style={{ display: 'grid', gap: 7 }}>
+        {items.map((i) => (
+          <Link
+            key={i.clientId}
+            to="/chat"
+            style={{ textDecoration: 'none', color: B.ink, fontSize: '0.86rem', lineHeight: 1.5 }}
+          >
+            <b>{i.who}</b>
+            {i.count > 1 && <span style={{ color: B.mute, fontWeight: 700 }}> ({i.count})</span>}
+            {i.body && <span style={{ color: B.inkSoft }}> — {i.body.slice(0, 90)}{i.body.length > 90 ? '…' : ''}</span>}
+          </Link>
+        ))}
+      </div>
+    </Card>
   );
 }
