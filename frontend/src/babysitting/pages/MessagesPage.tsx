@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
+import { daysSince } from '../../lib/format';
 import { useAuth } from '../../hooks/useAuth';
 import { api, ApiError } from '../../lib/api';
 import { B, readFamilySlug, familyLabel, readDays, formatMoney, shortDate, DAY_SHORT, ALL_DAYS,
@@ -1237,8 +1238,7 @@ function AutoRunStatus({
     );
   }
 
-  const when = new Date(last.created_at);
-  const days = Math.floor((Date.now() - when.getTime()) / 86_400_000);
+  const days = daysSince(last.created_at) ?? 0;
   const ago = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
   const d = last.details ?? {};
 

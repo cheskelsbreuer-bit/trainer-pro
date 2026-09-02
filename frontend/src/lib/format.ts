@@ -79,6 +79,44 @@ export function formatRelative(iso: string | null | undefined): string {
   return future ? `in ${day}d` : `${day}d ago`;
 }
 
+/** Whole days since something that has ALREADY happened. Never negative.
+ *
+ *  A device clock a few minutes slow makes a server timestamp look like
+ *  the future, and `Math.floor(gap / a day)` then returns -1. That is how
+ *  the admin page came to say a trainer was last seen "-1 days ago".
+ *  Nothing in the past is ever in the future, so a negative gap is clock
+ *  skew and counts as zero. */
+export function daysSince(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  return Math.max(0, Math.floor((Date.now() - then) / 86_400_000));
+}
+
+/** How long ago something happened, in words, for a timestamp that can
+ *  only be in the past — last seen, invite sent, last billed. Unlike
+ *  formatRelative it never says "in 3h": a past event that reads as the
+ *  future is a slow clock, not a prediction. */
+export function formatSince(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const gap = Math.max(0, Date.now() - then);
+  const min = Math.floor(gap / 60_000);
+  if (min < 2) return 'just now';
+  if (min < 60) return `${min} minutes ago`;
+  const hr = Math.floor(gap / 3_600_000);
+  if (hr < 24) return hr === 1 ? 'an hour ago' : `${hr} hours ago`;
+  const day = Math.floor(gap / 86_400_000);
+  if (day === 1) return 'yesterday';
+  if (day < 30) return `${day} days ago`;
+  const month = Math.floor(day / 30);
+  if (month === 1) return 'a month ago';
+  if (month < 12) return `${month} months ago`;
+  const year = Math.floor(day / 365);
+  return year === 1 ? 'a year ago' : `${year} years ago`;
+}
+
 export function initials(name: string | null | undefined): string {
   if (!name) return '?';
   return name

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { adminRpc, type AdminTrainerDetail, type AdminTrainerActivity } from '../lib/adminRpc';
 import { appKeyForSlug, type AppKey } from '../lib/workspaces';
+import { formatSince } from '../lib/format';
 import { setViewAsTarget } from '../babysitting/lib/viewAs';
 import { TEMPLATES_BY_SLUG } from '../lib/templates';
 
@@ -637,14 +638,13 @@ function LastActivityCard({ data }: { data: TrainerDetail }) {
     );
   }
   const when = new Date(data.last_activity_at);
-  const daysAgo = Math.floor((Date.now() - when.getTime()) / (1000 * 60 * 60 * 24));
   return (
     <section className="bg-slate-50 border border-slate-200 rounded-lg p-3">
       <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 mb-0.5">
         Last seen
       </p>
       <p className="text-sm text-slate-900">
-        {daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`}
+        {formatSince(data.last_activity_at)}
         <span className="text-slate-500 font-normal"> · {data.last_activity_kind ?? '—'}</span>
       </p>
       <p className="text-[11px] text-slate-400 mt-0.5">

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
+import { daysSince } from '../../lib/format';
 import { B, ALL_DAYS, DAY_SHORT, formatMoney, readWeeklyRate, readFamilySlug, tagsAfterCharge } from '../theme';
 import { useBabysittingConfig, appendLog, appendCharge } from '../lib/config';
 import { useKids } from '../lib/data';
@@ -40,9 +41,7 @@ export function AutoBillingCard() {
   const lastAutoBill = (cfg.data?.charges ?? []).find(
     (c) => c.kind === 'week' && (c.note ?? '').startsWith('auto'),
   );
-  const daysSinceLastRun = lastAutoBill
-    ? Math.floor((Date.now() - new Date(lastAutoBill.ts).getTime()) / 86400000)
-    : null;
+  const daysSinceLastRun = lastAutoBill ? daysSince(lastAutoBill.ts) : null;
   const ranRecently = daysSinceLastRun !== null && daysSinceLastRun < 5;
 
   function saveAb(next: { enabled: boolean; day: number }, log: string) {

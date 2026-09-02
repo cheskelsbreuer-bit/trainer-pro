@@ -12,6 +12,7 @@ import { B, readParent } from '../theme';
 import { smsLink, mailtoLink, familySummary } from '../lib/messages';
 import { useDemo } from '../demo/flag';
 import { useViewAs } from '../lib/viewAs';
+import { daysSince } from '../../lib/format';
 import { Btn, Chip } from './ui';
 
 function makeToken(): string {
@@ -147,7 +148,7 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
   // An invite that was sent but never opened is invisible otherwise —
   // the sitter would just see "not set up yet" forever and not know why.
   const inv = invite.data;
-  const daysAgo = inv ? Math.floor((Date.now() - new Date(inv.created_at).getTime()) / 86400000) : null;
+  const daysAgo = inv ? daysSince(inv.created_at) : null;
   const expired =
     inv?.status === 'expired' ||
     (inv?.status === 'pending' && !!inv.expires_at && new Date(inv.expires_at) < new Date());
