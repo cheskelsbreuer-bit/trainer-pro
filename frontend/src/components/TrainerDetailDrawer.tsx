@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { adminRpc, type AdminTrainerDetail, type AdminTrainerActivity } from '../lib/adminRpc';
 import { appKeyForSlug, type AppKey } from '../lib/workspaces';
+import { setViewAsTarget } from '../babysitting/lib/viewAs';
 import { TEMPLATES_BY_SLUG } from '../lib/templates';
 
 type TrainerDetail = AdminTrainerDetail;
@@ -308,6 +309,8 @@ function OverviewTab({
 
       <WhichAppCard data={data} onPatch={onPatch} patchPending={patchPending} />
 
+      <LookInsideCard data={data} />
+
       <section className="bg-slate-50 border border-slate-200 rounded-lg p-4">
         <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2.5">
           Visibility & status
@@ -504,6 +507,56 @@ function WhichAppCard({
           </button>
         )}
       </div>
+    </section>
+  );
+}
+
+/* ─────────────── Look inside their app (read-only) ─────────────── */
+//
+// The stats above say how many clients and how much money. They do not
+// say whether the rates were ever filled in, whether any parent has a
+// phone number, or whether the register has been touched since the day
+// it was set up. This opens the account's own app, exactly as its owner
+// sees it, so those questions answer themselves.
+function LookInsideCard({ data }: { data: TrainerDetail }) {
+  const keys = (data.template_slugs ?? []).map(appKeyForSlug);
+  const isBabysitting = (keys.includes('coach') ? 'coach' : (keys[0] ?? 'coach')) === 'babysitting';
+  const who = data.business_name || data.full_name || data.email || 'this account';
+
+  function open() {
+    setViewAsTarget(data.id);
+    // A hard reload, like the demo entry point: App() re-reads the flag at
+    // the top of the tree, so a soft navigation would not pick it up.
+    window.location.assign('/');
+  }
+
+  return (
+    <section className="bg-white border border-slate-200 rounded-lg p-4">
+      <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2.5">
+        Look inside their app
+      </p>
+      <p className="text-xs text-slate-500">
+        Opens {who}'s babysitting app as they see it — their children, their
+        balances, their settings, their chats. <strong>Read only:</strong> every
+        button that would change something is switched off, nothing is written
+        to their account, and they are not told you looked.
+      </p>
+      {!isBabysitting && (
+        <p className="mt-2 text-xs text-amber-700">
+          This account isn't in the babysitting app, so most screens will be empty.
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={open}
+        className="mt-3 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-300 hover:bg-slate-50"
+      >
+        👀 Open their app
+      </button>
+      <p className="mt-2 text-[11px] text-slate-400">
+        Needs supabase/43_admin_view_as.sql to have been run. Press Leave (or
+        Shift+Esc) to come back here.
+      </p>
     </section>
   );
 }

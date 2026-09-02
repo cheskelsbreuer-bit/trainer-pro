@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useViewAs } from '../lib/viewAs';
 import type { Trainer } from '../../lib/database.types';
 import { B } from '../theme';
 import { useKids, usePayments } from '../lib/data';
@@ -41,13 +42,15 @@ const mutedLine: CSSProperties = {
 
 export function SettingsPage() {
   const { user } = useAuth();
+  const viewing = useViewAs();
   const cfg = useBabysittingConfig();
   const { data: kids } = useKids();
   const { data: payments } = usePayments();
 
   const { data: trainer } = useQuery({
-    queryKey: ['trainer', user?.id],
+    queryKey: ['trainer', viewing ? `as:${viewing.trainer.id}` : user?.id],
     queryFn: async () => {
+      if (viewing) return viewing.trainer as unknown as Trainer;
       const { data, error } = await supabase
         .from('trainers')
         .select('*')
@@ -56,7 +59,7 @@ export function SettingsPage() {
       if (error) throw error;
       return data as Trainer;
     },
-    enabled: !!user,
+    enabled: !!viewing || !!user,
   });
 
   // ── Local drafts, seeded once from the saved config ─────────────────

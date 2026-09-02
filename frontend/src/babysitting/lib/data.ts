@@ -18,6 +18,7 @@ import {
   tagsAfterPaymentDeleted,
 } from '../theme';
 import { useDemo } from '../demo/flag';
+import { useViewAs, assertLive } from './viewAs';
 import {
   demoKids,
   demoPayments,
@@ -35,10 +36,18 @@ export const KID_MARKER = 'bs:1';
 export function useKids() {
   const { user } = useAuth();
   const demo = useDemo();
+  const viewing = useViewAs();
   return useQuery({
-    queryKey: ['babysitting-kids', demo ? 'demo' : user?.id],
+    queryKey: ['babysitting-kids', viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id],
     queryFn: async (): Promise<Client[]> => {
       if (demo) return demoKids();
+      if (viewing) {
+        // Same filter the live query uses, applied to the snapshot: only
+        // rows tagged as babysitting kids, in the same order.
+        return viewing.clients
+          .filter((c) => (c.tags ?? []).includes(KID_MARKER))
+          .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''));
+      }
       const { data, error } = await supabase
         .from('clients')
         .select('*')
@@ -48,7 +57,7 @@ export function useKids() {
       if (error) throw error;
       return (data ?? []) as Client[];
     },
-    enabled: demo || !!user,
+    enabled: demo || !!viewing || !!user,
   });
 }
 
@@ -56,10 +65,15 @@ export function useKids() {
 export function usePayments() {
   const { user } = useAuth();
   const demo = useDemo();
+  const viewing = useViewAs();
   return useQuery({
-    queryKey: ['babysitting-payments', demo ? 'demo' : user?.id],
+    queryKey: [
+      'babysitting-payments',
+      viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id,
+    ],
     queryFn: async (): Promise<Payment[]> => {
       if (demo) return demoPayments();
+      if (viewing) return viewing.payments;
       const { data, error } = await supabase
         .from('payments')
         .select('*')
@@ -68,7 +82,7 @@ export function usePayments() {
       if (error) throw error;
       return (data ?? []) as Payment[];
     },
-    enabled: demo || !!user,
+    enabled: demo || !!viewing || !!user,
   });
 }
 
@@ -114,6 +128,7 @@ async function updateTags(
 /** Record money received: insert a payments row, bump totalpaid. */
 export function useRecordPayment() {
   const demo = useDemo();
+  const viewing = useViewAs();
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
@@ -125,6 +140,7 @@ export function useRecordPayment() {
       description?: string | null;
       currentTags: string[];
     }) => {
+      assertLive(viewing);
       if (demo) {
         demoAddPayment(input);
         demoSetKidTags(input.client_id, tagsAfterPayment(input.currentTags, input.amount));
@@ -153,6 +169,7 @@ export function useRecordPayment() {
 /** Delete a payment AND hand the money back to the balance. */
 export function useDeletePayment() {
   const demo = useDemo();
+  const viewing = useViewAs();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
@@ -161,6 +178,7 @@ export function useDeletePayment() {
       amount: number;
       currentTags: string[];
     }) => {
+      assertLive(viewing);
       if (demo) {
         demoDeletePayment(input.id);
         demoSetKidTags(input.client_id, tagsAfterPaymentDeleted(input.currentTags, input.amount));
@@ -181,6 +199,7 @@ export function useDeletePayment() {
  *  the config blob so the billing history stays reviewable. */
 export function useAddCharge() {
   const demo = useDemo();
+  const viewing = useViewAs();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
@@ -188,6 +207,7 @@ export function useAddCharge() {
       amount: number;
       currentTags: string[];
     }) => {
+      assertLive(viewing);
       if (demo) {
         demoSetKidTags(input.client_id, tagsAfterCharge(input.currentTags, input.amount));
         return;
@@ -204,6 +224,7 @@ export function useAddCharge() {
  *  babysitting-specific ones ride the tags (already encoded by caller). */
 export function useUpsertKid() {
   const demo = useDemo();
+  const viewing = useViewAs();
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
@@ -226,6 +247,7 @@ export function useUpsertKid() {
       tagsFrom?: (current: string[]) => string[];
       status?: 'active' | 'paused' | 'archived';
     }) => {
+      assertLive(viewing);
       let tags = input.tags.includes(KID_MARKER)
         ? input.tags
         : [KID_MARKER, ...input.tags];
@@ -273,9 +295,11 @@ export function useUpsertKid() {
 /** Repair tool: write a kid's tags directly (totals fixes, merges). */
 export function useSetKidTags() {
   const demo = useDemo();
+  const viewing = useViewAs();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; tags: string[] }) => {
+      assertLive(viewing);
       if (demo) {
         demoSetKidTags(input.id, input.tags);
         return;
@@ -291,9 +315,11 @@ export function useSetKidTags() {
  *  only for ghost payments whose kid no longer exists. */
 export function useDeleteGhostPayment() {
   const demo = useDemo();
+  const viewing = useViewAs();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string }) => {
+      assertLive(viewing);
       if (demo) {
         demoDeletePayment(input.id);
         return;
@@ -307,9 +333,11 @@ export function useDeleteGhostPayment() {
 
 export function useSetKidStatus() {
   const demo = useDemo();
+  const viewing = useViewAs();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; status: 'active' | 'paused' | 'archived' }) => {
+      assertLive(viewing);
       if (demo) {
         demoSetKidStatus(input.id, input.status);
         return;

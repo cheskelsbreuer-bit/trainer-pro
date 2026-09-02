@@ -11,6 +11,7 @@
 // the existing typed UI keeps working.
 
 import { supabase } from './supabase';
+import type { ViewAsSnapshot } from '../babysitting/lib/viewAs';
 
 // Base64-decode the {b64: "..."} wrapper that ck_q* RPCs return.
 // Used to dodge Livigent's content filter that pattern-matched our
@@ -174,6 +175,11 @@ export const adminRpc = {
     rpc<AdminTrainerPayment[]>('ck_q6', { p_id: trainerId }),
   trainerActivity: (trainerId: string) =>
     rpc<AdminTrainerActivity[]>('ck_q10', { p_id: trainerId }),
+  /** A complete read-only snapshot of one account's babysitting data, so
+   *  the admin can open the real app and see what the owner sees. Reads
+   *  only — see supabase/43_admin_view_as.sql. */
+  viewAs: (trainerId: string) =>
+    rpc<ViewAsSnapshot>('ck_q12', { p_id: trainerId }),
   waitlist: () => rpc<AdminWaitlistRow[]>('ck_q7'),
   feedback: () => rpc<AdminFeedbackRow[]>('ck_q8'),
   feedbackReply: (feedbackId: string, reply: string) =>

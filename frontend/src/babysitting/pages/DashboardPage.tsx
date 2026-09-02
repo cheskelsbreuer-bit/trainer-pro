@@ -35,6 +35,7 @@ import {
 import { useWords } from '../lib/words';
 import { useChatMessages, unreadByClient } from '../lib/chat';
 import { useDemo } from '../demo/flag';
+import { useViewAs, activityByAction } from '../lib/viewAs';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
 import {
   Card,
@@ -63,11 +64,18 @@ export function DashboardPage() {
   const { user } = useAuth();
   const { data: kids, isLoading } = useKids();
 
+  const viewing = useViewAs();
+
   const absences = useQuery({
-    queryKey: ['babysitting-absences', user?.id],
+    queryKey: ['babysitting-absences', viewing ? `as:${viewing.trainer.id}` : user?.id],
     queryFn: async (): Promise<AbsenceRow[]> => {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 7);
+      if (viewing) {
+        return activityByAction(
+          viewing, 'absence_reported', 12, cutoff.toISOString(),
+        ) as unknown as AbsenceRow[];
+      }
       const { data, error } = await supabase
         .from('activity_log')
         .select('id, created_at, details')
@@ -79,7 +87,7 @@ export function DashboardPage() {
       if (error) throw error;
       return (data ?? []) as AbsenceRow[];
     },
-    enabled: !!user,
+    enabled: !!viewing || !!user,
   });
   const { data: payments } = usePayments();
   const cfg = useBabysittingConfig();
@@ -689,12 +697,29 @@ function UnreadFromParents({ kids }: { kids: Client[] }) {
 function JoinRequests() {
   const { user } = useAuth();
   const demo = useDemo();
+  const viewing = useViewAs();
   const cfg = useBabysittingConfig();
   const [adding, setAdding] = useState<KidPrefill | null>(null);
 
+  type JoinRow = {
+    id: string;
+    created_at: string;
+    details: {
+      parent_name?: string;
+      child_name?: string;
+      phone?: string | null;
+      email?: string | null;
+      sms_consent?: boolean;
+      note?: string | null;
+    } | null;
+  };
+
   const rows = useQuery({
-    queryKey: ['bs-join-requests', user?.id],
+    queryKey: ['bs-join-requests', viewing ? `as:${viewing.trainer.id}` : user?.id],
     queryFn: async () => {
+      if (viewing) {
+        return activityByAction(viewing, 'join_request', 30) as unknown as JoinRow[];
+      }
       const { data, error } = await supabase
         .from('activity_log')
         .select('id, created_at, details')
@@ -703,21 +728,10 @@ function JoinRequests() {
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw error;
-      return (data ?? []) as Array<{
-        id: string;
-        created_at: string;
-        details: {
-          parent_name?: string;
-          child_name?: string;
-          phone?: string | null;
-          email?: string | null;
-          sms_consent?: boolean;
-          note?: string | null;
-        } | null;
-      }>;
+      return (data ?? []) as JoinRow[];
     },
-    enabled: !demo && !!user,
-    refetchInterval: 120_000,
+    enabled: !demo && (!!viewing || !!user),
+    refetchInterval: viewing ? false : 120_000,
   });
 
   const handled = new Set(cfg.data?.handledJoins ?? []);
@@ -765,7 +779,10 @@ function JoinRequests() {
                 <div style={{ fontSize: '0.76rem', marginTop: 6, fontWeight: 800, color: d.sms_consent ? B.green : B.mute }}>
                   {d.sms_consent ? '✓ Wants text reminders' : 'Did not ask for texts'}
                 </div>
+                {/* Nothing to press from outside the account: adding a child
+                    and hiding a request are both real changes to it. */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                  {viewing ? null : (
                   <Btn
                     size="sm"
                     onClick={() =>
@@ -781,9 +798,12 @@ function JoinRequests() {
                   >
                     + Add {child.split(' ')[0]}
                   </Btn>
+                  )}
+                  {viewing ? null : (
                   <Btn size="sm" kind="ghost" onClick={() => hide(r.id)}>
                     Hide
                   </Btn>
+                  )}
                 </div>
               </div>
             );

@@ -15,6 +15,7 @@ export function ChatThread({
   onSendPhoto,
   sending,
   height = 420,
+  readOnly = false,
 }: {
   messages: ChatMessage[];
   me: 'trainer' | 'client';
@@ -24,6 +25,10 @@ export function ChatThread({
   onSendPhoto?: (file: File, caption: string) => Promise<void>;
   sending?: boolean;
   height?: number;
+  /** Show the conversation with no way to add to it — used when an admin
+   *  is reading someone else's account. A box you can type into but never
+   *  send from is worse than no box at all. */
+  readOnly?: boolean;
 }) {
   const [draft, setDraft] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -148,6 +153,11 @@ export function ChatThread({
       </div>
 
       {photoErr && <Chip tone="red">{photoErr}</Chip>}
+      {readOnly ? (
+        <div style={{ fontSize: '0.8rem', color: B.mute, padding: '8px 2px' }}>
+          Reading only — you can't add to this conversation.
+        </div>
+      ) : (
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
         {onSendPhoto && (
           <>
@@ -199,6 +209,7 @@ export function ChatThread({
           {sending ? 'Sending…' : 'Send'}
         </Btn>
       </div>
+      )}
     </div>
   );
 }

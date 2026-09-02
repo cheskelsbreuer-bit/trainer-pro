@@ -16,6 +16,7 @@ import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../lib/database.types';
 import { readFamilySlug } from '../theme';
 import { useDemo } from '../demo/flag';
+import { useViewAs, assertLive } from './viewAs';
 
 export interface ChatAttachment {
   /** Storage path inside the private 'chat-photos' bucket. */
@@ -71,9 +72,25 @@ export function familyThreads(kids: Client[]): Array<{
 export function useChatMessages(enabled = true) {
   const { user } = useAuth();
   const demo = useDemo();
+  const viewing = useViewAs();
   return useQuery({
-    queryKey: ['bs-chat', demo ? 'demo' : user?.id],
+    queryKey: ['bs-chat', viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id],
     queryFn: async (): Promise<ChatMessage[]> => {
+      if (viewing) {
+        // Oldest first, like the live query — the snapshot arrives newest
+        // first because that's the useful order for everything else.
+        return [...viewing.messages]
+          .sort((a, b) => a.created_at.localeCompare(b.created_at))
+          .map((m) => ({
+            id: m.id,
+            client_id: m.client_id,
+            sender: m.sender,
+            body: m.body,
+            attachments: (m.attachments as ChatAttachment[] | null) ?? null,
+            read_at: m.read_at,
+            created_at: m.created_at,
+          }));
+      }
       // The demo has no database and no signed-in user, but its chat is a
       // real conversation against the in-memory store.
       if (demo) {
@@ -88,17 +105,18 @@ export function useChatMessages(enabled = true) {
       if (error) throw error;
       return (data ?? []) as ChatMessage[];
     },
-    enabled: enabled && (demo || !!user),
+    enabled: enabled && (demo || !!viewing || !!user),
     // A conversation should feel alive without a socket: poll while the
     // tab is open, and refetch the moment it regains focus.
-    refetchInterval: 20_000,
-    refetchOnWindowFocus: true,
+    refetchInterval: viewing ? false : 20_000,
+    refetchOnWindowFocus: !viewing,
   });
 }
 
 export function useSendChat() {
   const { user } = useAuth();
   const demo = useDemo();
+  const viewing = useViewAs();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
@@ -108,6 +126,7 @@ export function useSendChat() {
       body: string;
       attachments?: ChatAttachment[];
     }) => {
+      assertLive(viewing);
       if (demo) {
         const { demoSendChat } = await import('../demo/demoStore');
         demoSendChat({
@@ -136,10 +155,16 @@ export function useSendChat() {
  *  a failure here should never interrupt reading the conversation. */
 export function useMarkThreadRead() {
   const demo = useDemo();
+  const viewing = useViewAs();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { clientIds: string[]; from: 'trainer' | 'client' }) => {
       if (!args.clientIds.length) return;
+      // Reading someone's account must not change it. This one fires by
+      // itself when a thread opens, so it returns quietly rather than
+      // throwing — and the client's unread badges stay exactly as they
+      // were.
+      if (viewing) return;
       if (demo) {
         const { demoMarkChatRead } = await import('../demo/demoStore');
         demoMarkChatRead(args.clientIds, args.from);

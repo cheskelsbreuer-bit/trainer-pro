@@ -20,6 +20,7 @@ import {
 import { Card, SectionTitle, EmptyState, Avatar, Chip } from '../components/ui';
 import { ChatThread } from '../components/ChatThread';
 import { InviteParentButton } from '../components/InviteParentButton';
+import { useViewAs } from '../lib/viewAs';
 
 // Two columns on a laptop, one on a phone. Scoped to this page.
 const RESPONSIVE_CSS = `
@@ -30,6 +31,7 @@ const RESPONSIVE_CSS = `
 
 export function ChatPage() {
   const { user } = useAuth();
+  const viewing = useViewAs();
   const { data: kids, isLoading } = useKids();
   const chat = useChatMessages();
   const send = useSendChat();
@@ -185,7 +187,7 @@ export function ChatPage() {
           >
             {open.parent ? `${open.parent} · ${open.label}` : open.label}
           </SectionTitle>
-          {!open.hasPortal && (
+          {!open.hasPortal && !viewing && (
             <div
               style={{
                 background: B.butterSoft,
@@ -208,6 +210,7 @@ export function ChatPage() {
             me="trainer"
             otherName={open.parent || open.label}
             sending={send.isPending}
+            readOnly={!!viewing}
             onSend={(body) =>
               // The demo has no signed-in user but a working in-memory
               // chat, so this must not be gated on `user`.

@@ -11,6 +11,7 @@ import type { Client } from '../../lib/database.types';
 import { B, readParent } from '../theme';
 import { smsLink, mailtoLink, familySummary } from '../lib/messages';
 import { useDemo } from '../demo/flag';
+import { useViewAs } from '../lib/viewAs';
 import { Btn, Chip } from './ui';
 
 function makeToken(): string {
@@ -30,13 +31,14 @@ function inviteOrigin(): string {
 export function InviteParentButton({ kids }: { kids: Client[] }) {
   const { user } = useAuth();
   const demo = useDemo();
+  const viewing = useViewAs();
   const [state, setState] = useState<'idle' | 'busy' | 'ready' | 'copied' | 'error'>('idle');
   const [link, setLink] = useState<string | null>(null);
 
   const invite = useQuery({
     queryKey: ['bs-invite', kids.map((k) => k.id).join(',')],
     queryFn: async (): Promise<{ status: string; created_at: string; expires_at: string | null } | null> => {
-      if (demo || !kids.length) return null;
+      if (demo || viewing || !kids.length) return null;
       const { data, error } = await supabase
         .from('client_portal_invites')
         .select('status, created_at, expires_at')
@@ -55,6 +57,9 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
 
   async function createInvite() {
     if (!firstKid) return;
+    // An invite is a real link that gets texted to a real parent. Never
+    // from inside someone else's account.
+    if (viewing) return;
     setState('busy');
     try {
       const token = makeToken();

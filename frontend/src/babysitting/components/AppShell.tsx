@@ -18,6 +18,7 @@ import { useChatMessages, unreadByClient } from '../lib/chat';
 import { useWords } from '../lib/words';
 import { TourWizard } from './TourWizard';
 import { CommentWidget } from './CommentWidget';
+import { useViewAs } from '../lib/viewAs';
 
 // ── Edit mode — a deliberate switch so day-to-day browsing can't
 //    accidentally change money. Shared across pages via localStorage +
@@ -159,9 +160,12 @@ function Toast() {
 export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const [rawEditMode, setEditMode] = useEditMode();
   const demo = useDemo();
+  const viewing = useViewAs();
   // The demo is a real working app with a memory-only database, so editing
   // is ON from the first second — every button does the real thing.
-  const editMode = demo ? true : rawEditMode;
+  // Looking inside somebody else's account is the opposite: editing is OFF
+  // and cannot be switched on, so no stray tap can change their data.
+  const editMode = viewing ? false : demo ? true : rawEditMode;
   const navigate = useNavigate();
   const cfg = useBabysittingConfig();
   const name = trainer?.business_name || trainer?.full_name || 'Babysitting';
@@ -180,10 +184,20 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const showQuiet = level === 'pro';
 
   useEffect(() => {
-    document.title = demo ? `${name} · Babysitting demo` : `${name} · Babysitting`;
-  }, [name, demo]);
+    document.title = viewing
+      ? `${name} · looking in`
+      : demo
+        ? `${name} · Babysitting demo`
+        : `${name} · Babysitting`;
+  }, [name, demo, viewing]);
 
   function toggleEdit() {
+    if (viewing) {
+      window.alert(
+        "You're looking at this account read-only. Nothing here can be changed.",
+      );
+      return;
+    }
     const s = cfg.data?.settings;
     if (!editMode) {
       if (s?.readOnlyLock) {
@@ -202,6 +216,12 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   }
 
   async function signOut() {
+    // While looking inside someone else's account, this button must not
+    // end the admin's own session — it just closes the window onto theirs.
+    if (viewing) {
+      navigate('/hq');
+      return;
+    }
     await supabase.auth.signOut();
     navigate('/login');
   }
@@ -334,7 +354,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
             {!demo && (
             <button
               onClick={signOut}
-              title="Sign out"
+              title={viewing ? 'Leave their account' : 'Sign out'}
               style={{
                 border: `1.5px solid ${B.rule}`,
                 background: 'transparent',
@@ -346,7 +366,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
                 fontWeight: 800,
               }}
             >
-              Sign out
+              {viewing ? 'Leave' : 'Sign out'}
             </button>
             )}
           </div>
@@ -421,8 +441,11 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
       </main>
       <SaveTrouble />
       <Toast />
-      <TourWizard />
-      <CommentWidget />
+      {/* The tour and the "tell the builder" box belong to whoever owns
+          the account. Neither makes sense — and the comment box would
+          file under the wrong name — from the outside. */}
+      {!viewing && <TourWizard />}
+      {!viewing && <CommentWidget />}
     </div>
   );
 }

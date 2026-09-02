@@ -25,6 +25,7 @@ import {
 } from '../lib/config';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
 import { useDemo } from '../demo/flag';
+import { useViewAs, activityByAction } from '../lib/viewAs';
 import { Card, SectionTitle, Btn, LinkBtn, Chip, EmptyState, Field, inputStyle, Collapse } from '../components/ui';
 
 interface RunFamily {
@@ -85,6 +86,7 @@ export function MessagesPage() {
   const { editMode } = useOutletContext<{ editMode: boolean }>();
   const { user } = useAuth();
   const demo = useDemo();
+  const viewing = useViewAs();
   const { data: kids } = useKids();
   const cfg = useBabysittingConfig();
   const settings = cfg.data?.settings ?? DEFAULT_SETTINGS;
@@ -198,9 +200,26 @@ export function MessagesPage() {
   >([]);
 
   const announcements = useQuery({
-    queryKey: ['babysitting-announcements', demo ? 'demo' : user?.id],
+    queryKey: [
+      'babysitting-announcements',
+      viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id,
+    ],
     queryFn: async (): Promise<Array<{ id: string; body: string; created_at: string }>> => {
       if (demo) return demoAnnouncements;
+      if (viewing) {
+        const seen = new Set<string>();
+        const out: Array<{ id: string; body: string; created_at: string }> = [];
+        for (const m of [...viewing.messages]
+          .filter((m) => m.sender === 'trainer')
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
+          .slice(0, 60)) {
+          if (seen.has(m.body)) continue;
+          seen.add(m.body);
+          out.push({ id: m.id, body: m.body, created_at: m.created_at });
+          if (out.length >= 6) break;
+        }
+        return out;
+      }
       const { data, error } = await supabase
         .from('messages')
         .select('id, body, created_at')
@@ -298,6 +317,7 @@ export function MessagesPage() {
         // it apart from ordinary back-and-forth chat messages.
         attachments: [{ kind: 'announcement' }],
       }));
+      if (viewing) throw new Error("You're looking at this account read-only.");
       const { error } = await supabase.from('messages').insert(rows);
       if (error) throw error;
       setAnnounceText('');
@@ -314,9 +334,17 @@ export function MessagesPage() {
   }
 
   const history = useQuery({
-    queryKey: ['babysitting-reminder-runs', demo ? 'demo' : user?.id],
+    queryKey: [
+      'babysitting-reminder-runs',
+      viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id,
+    ],
     queryFn: async (): Promise<ReminderRunRow[]> => {
       if (demo) return [];
+      if (viewing) {
+        return activityByAction(
+          viewing, 'weekly_balance_reminders', 15,
+        ) as unknown as ReminderRunRow[];
+      }
       const { data, error } = await supabase
         .from('activity_log')
         .select('id, created_at, details')
@@ -327,7 +355,7 @@ export function MessagesPage() {
       if (error) throw error;
       return (data ?? []) as ReminderRunRow[];
     },
-    enabled: demo || !!user,
+    enabled: demo || !!viewing || !!user,
   });
 
   function saveConfig(mutate: (c: BabysittingConfig) => BabysittingConfig, logMsg?: string) {

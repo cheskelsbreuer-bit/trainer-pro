@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useDemo } from '../demo/flag';
+import { useViewAs, assertLive } from './viewAs';
 
 export interface MessageSchedule {
   enabled: boolean;
@@ -213,7 +214,7 @@ const LOG_CAP = 300;
 const ATTENDANCE_CAP = 400;
 const CHARGE_CAP = 1000;
 
-function hydrate(raw: unknown): BabysittingConfig {
+export function hydrate(raw: unknown): BabysittingConfig {
   const r = (raw ?? {}) as Partial<BabysittingConfig>;
   const s = { ...DEFAULT_SETTINGS, ...(r.settings ?? {}) };
   s.schedule = { ...DEFAULT_SETTINGS.schedule, ...(r.settings?.schedule ?? {}) };
@@ -271,9 +272,13 @@ interface TrainerProfileRow {
 export function useBabysittingConfig() {
   const { user } = useAuth();
   const demo = useDemo();
+  const viewing = useViewAs();
   const qc = useQueryClient();
 
-  const key = ['babysitting-config', demo ? 'demo' : user?.id];
+  const key = [
+    'babysitting-config',
+    viewing ? `as:${viewing.trainer.id}` : demo ? 'demo' : user?.id,
+  ];
 
   const query = useQuery({
     queryKey: key,
@@ -282,6 +287,9 @@ export function useBabysittingConfig() {
         const { demoConfig } = await import('../demo/demoStore');
         return demoConfig();
       }
+      // Looking inside someone else's account: the same blob, read once
+      // by the admin RPC instead of by this browser's own session.
+      if (viewing) return hydrate(viewing.trainer.public_profile.babysitting);
       const { data, error } = await supabase
         .from('trainers')
         .select('id, public_profile')
@@ -291,11 +299,12 @@ export function useBabysittingConfig() {
       const profile = (data as TrainerProfileRow).public_profile ?? {};
       return hydrate((profile as Record<string, unknown>).babysitting);
     },
-    enabled: demo || !!user,
+    enabled: demo || !!viewing || !!user,
   });
 
   const save = useMutation({
     mutationFn: async (next: BabysittingConfig) => {
+      assertLive(viewing);
       if (demo) {
         // The demo saves to memory, so her settings changes stick while
         // she plays — and reset on refresh. Nothing leaves the browser.

@@ -33,6 +33,8 @@ import { AdminPage } from './pages/AdminPage';
 import { adminRpc } from './lib/adminRpc';
 import { readAdminVerified, writeAdminVerified, ADMIN_AWAITING_KEY } from './lib/adminSession';
 import { BabysittingApp } from './babysitting/BabysittingApp';
+import { LookingInside } from './babysitting/LookingInside';
+import { viewAsTarget } from './babysitting/lib/viewAs';
 import { CoachApp } from './coach/CoachApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
 import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
@@ -409,6 +411,23 @@ export default function App() {
     return (
       <QueryClientProvider client={queryClient}>
         <ExpiredMagicLink description={authError.description} />
+      </QueryClientProvider>
+    );
+  }
+
+  // Admin looking inside a client's babysitting app. Takes over the tree
+  // for the same reason the demo does — the app's nav links are absolute,
+  // so /kids and /billing have to resolve at the root. The RPC behind it
+  // refuses anyone who isn't an admin, so the flag alone grants nothing.
+  const lookingAt = viewAsTarget();
+  if (lookingAt) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrowserRouter>
+            <LookingInside trainerId={lookingAt} />
+          </BrowserRouter>
+        </AuthProvider>
       </QueryClientProvider>
     );
   }
