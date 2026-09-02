@@ -574,6 +574,7 @@ export function MessagesPage() {
             '✓ Automatic sending is ON',
             'Turn automatic sending on',
           )}
+          <AutoRunStatus enabled={settings.schedule.enabled} runs={history.data} />
           {/* Weekly on a weekday, or monthly on a date ("every 1st") */}
           <div style={{ display: 'flex', gap: 5 }}>
             {(['weekly', 'monthly'] as const).map((f) => (
@@ -1162,6 +1163,67 @@ export function MessagesPage() {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+
+/** "Automatic sending is ON" is a promise. This says whether it has ever
+ *  actually been kept — because the switch being on and the daily job
+ *  actually running are two different things, and only one of them is
+ *  visible from in here. A schedule that has never fired once is the
+ *  single most expensive thing to find out about late. */
+function AutoRunStatus({
+  enabled,
+  runs,
+}: {
+  enabled: boolean;
+  runs: ReminderRunRow[] | undefined;
+}) {
+  if (!enabled || runs === undefined) return null;
+
+  const auto = runs.filter((r) => r.details?.triggered_by === 'cron');
+  const last = auto[0];
+
+  if (!last) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          fontSize: '0.83rem',
+          lineHeight: 1.55,
+          color: B.ink,
+          background: B.butterSoft,
+          border: `1px solid ${B.rule}`,
+          borderRadius: B.radiusSm,
+          padding: '10px 13px',
+        }}
+      >
+        <b>It's switched on, but nothing has gone out on its own yet.</b>
+        <div style={{ color: B.mute, marginTop: 3 }}>
+          Reminders you send with the button below still work. If a whole billing day has
+          passed and this still says nothing has run, the automatic job needs switching on at
+          the server end — tell whoever set the app up.
+        </div>
+      </div>
+    );
+  }
+
+  const when = new Date(last.created_at);
+  const days = Math.floor((Date.now() - when.getTime()) / 86_400_000);
+  const ago = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+  const d = last.details ?? {};
+
+  return (
+    <div style={{ width: '100%', fontSize: '0.83rem', color: B.mute, lineHeight: 1.5 }}>
+      Last automatic run <b style={{ color: B.inkSoft }}>{ago}</b> — {d.sent_email ?? 0} email
+      {(d.sent_email ?? 0) === 1 ? '' : 's'}, {d.sent_sms ?? 0} text
+      {(d.sent_sms ?? 0) === 1 ? '' : 's'}
+      {(d.errors ?? []).length > 0 && (
+        <span style={{ color: B.red, fontWeight: 700 }}> · {(d.errors ?? []).length} problem
+          {(d.errors ?? []).length === 1 ? '' : 's'}</span>
+      )}
+      .
     </div>
   );
 }
