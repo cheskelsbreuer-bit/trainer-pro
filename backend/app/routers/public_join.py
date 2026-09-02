@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from ..config import settings
 from ..db import supabase_admin
 
 router = APIRouter(prefix="/public", tags=["public-join"])
@@ -73,7 +74,11 @@ def who_is_this(code: str) -> dict:
 
 
 class JoinRequest(BaseModel):
-    code: str
+    # Optional on purpose. A parent who was sent a link has a code on it;
+    # anyone arriving at the bare page — including a carrier reviewer
+    # checking that the form actually works — has not, and must still be
+    # able to fill it in and get a real answer.
+    code: str | None = None
     parent_name: str
     child_name: str
     phone: str | None = None
@@ -88,12 +93,46 @@ def _clean(value: str | None, limit: int) -> str:
     return (value or "").strip()[:limit]
 
 
+def _tell_the_builder(parent: str, child: str, phone: str, email: str, note: str) -> None:
+    """An enquiry with no provider attached has nowhere to land, so it goes
+    to us by email instead of being dropped on the floor."""
+    admins = [e.strip() for e in (settings.ADMIN_EMAILS or "").split(",") if e.strip()]
+    if not (admins and settings.RESEND_API_KEY):
+        return
+    import httpx
+
+    body = (
+        "Someone filled in the sign-up form without a provider link.\n\n"
+        f"    Parent: {parent}\n"
+        f"    Child:  {child}\n"
+        f"    Phone:  {phone or '-'}\n"
+        f"    Email:  {email or '-'}\n"
+        f"    Note:   {note or '-'}\n"
+    )
+    for to in admins:
+        try:
+            httpx.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": settings.RESEND_FROM_EMAIL,
+                    "to": [to],
+                    "subject": "Sign-up form filled in without a provider link",
+                    "text": body,
+                },
+                timeout=15,
+            )
+        except Exception:  # noqa: BLE001 — never fail the parent's submission
+            pass
+
+
 @router.post("/join")
 def join(req: JoinRequest) -> dict:
     sb = supabase_admin()
-    t = _trainer_by_code(sb, req.code)
-    if not t:
-        raise HTTPException(404, "We couldn't find that childcare provider.")
+    t = _trainer_by_code(sb, req.code) if req.code else None
 
     parent = _clean(req.parent_name, 80)
     child = _clean(req.child_name, 80)
@@ -103,6 +142,12 @@ def join(req: JoinRequest) -> dict:
     email = _clean(req.email, 120)
     if not phone and not email:
         raise HTTPException(400, "Please leave a phone number or an email so they can reach you.")
+
+    # No provider on the link: still a real submission, still gets a real
+    # answer, it just reaches a person by email rather than an account.
+    if not t:
+        _tell_the_builder(parent, child, phone, email, _clean(req.note, 400))
+        return {"ok": True, "name": None, "unattached": True}
 
     today = datetime.now(timezone.utc).date().isoformat()
     seen = (
