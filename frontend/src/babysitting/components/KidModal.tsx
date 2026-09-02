@@ -53,6 +53,10 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
   // Text consent starts OFF for a new kid. Carriers require the opt-in to
   // be a deliberate, separate choice — never bundled into signing up.
   const [smsConsent, setSmsConsent] = useState(kid ? readSmsConsent(kid) : false);
+  // Only a box she actually ticked or unticked gets written. An untouched
+  // box still shows what was loaded — but a mother may have changed her
+  // mind in her own portal since then, and that is not the form's to undo.
+  const [consentTouched, setConsentTouched] = useState(false);
   const [err, setErr] = useState('');
 
   const familyOptions = useMemo(() => {
@@ -75,18 +79,27 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
     }
     setErr('');
     const orderedDays = ALL_DAYS.filter((d) => days.includes(d));
-    const baseTags = tagsWithProfile(kid?.tags ?? [], {
+    const profile = {
       familySlug: familyName.trim() ? familySlugOf(familyName) : null,
       parent: parent.trim() || null,
       daysSlug: orderedDays.length ? orderedDays.join('-') : null,
       weeklyRate: weeklyRate.trim() ? parseFloat(weeklyRate) || 0 : null,
       hourlyRate: hourlyRate.trim() ? parseFloat(hourlyRate) || 0 : null,
       startDate: kid ? readStartDate(kid) : new Date().toISOString().slice(0, 10),
-    });
-    const tags = tagsWithSmsConsent(tagsWithCustom(baseTags, cfValues, tagIds), smsConsent);
+    };
+    // The same change, applied to whichever tags it is given. On an edit the
+    // upsert re-reads the row and hands the CURRENT tags in here, so money
+    // totals and a mother's text choice that changed while this form was
+    // open survive the save. New kids have nothing to re-read.
+    const applyForm = (current: string[]): string[] => {
+      const withCustom = tagsWithCustom(tagsWithProfile(current, profile), cfValues, tagIds);
+      return consentTouched || !kid ? tagsWithSmsConsent(withCustom, smsConsent) : withCustom;
+    };
+    const tags = applyForm(kid?.tags ?? []);
     try {
       await upsert.mutateAsync({
         id: kid?.id,
+        tagsFrom: kid ? applyForm : undefined,
         full_name: name.trim(),
         phone: phone.trim() || null,
         email: email.trim() || null,
@@ -233,7 +246,10 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
             <input
               type="checkbox"
               checked={smsConsent}
-              onChange={(e) => setSmsConsent(e.target.checked)}
+              onChange={(e) => {
+                setSmsConsent(e.target.checked);
+                setConsentTouched(true);
+              }}
               style={{ marginTop: 3 }}
             />
             <span style={{ fontSize: '0.84rem', lineHeight: 1.5, color: B.ink }}>

@@ -217,13 +217,31 @@ export function useUpsertKid() {
       notes?: string | null; // care notes
       emergency_contact?: string | null;
       tags: string[];
+      /** Preferred on an EDIT: how to get from the row's tags as they are
+       *  in the database right now to what the form wants. The form only
+       *  owns the fields it shows — a payment that landed while the form
+       *  was open, or a mother switching texts off in her own portal, are
+       *  not the form's to undo. `tags` stays as the fallback if the
+       *  re-read fails. */
+      tagsFrom?: (current: string[]) => string[];
       status?: 'active' | 'paused' | 'archived';
     }) => {
-      const tags = input.tags.includes(KID_MARKER)
+      let tags = input.tags.includes(KID_MARKER)
         ? input.tags
         : [KID_MARKER, ...input.tags];
       if (demo) return demoUpsertKid({ ...input, tags });
       if (!user) throw new Error('Not signed in');
+      if (input.id && input.tagsFrom) {
+        const { data: cur, error: readErr } = await supabase
+          .from('clients')
+          .select('tags')
+          .eq('id', input.id)
+          .single();
+        if (!readErr && cur) {
+          const fresh = input.tagsFrom(((cur as { tags: string[] | null }).tags ?? []) as string[]);
+          tags = fresh.includes(KID_MARKER) ? fresh : [KID_MARKER, ...fresh];
+        }
+      }
       const row = {
         full_name: input.full_name,
         phone: input.phone ?? null,
