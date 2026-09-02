@@ -270,8 +270,10 @@ export function useBabysittingConfig() {
   const demo = useDemo();
   const qc = useQueryClient();
 
+  const key = ['babysitting-config', demo ? 'demo' : user?.id];
+
   const query = useQuery({
-    queryKey: ['babysitting-config', demo ? 'demo' : user?.id],
+    queryKey: key,
     queryFn: async (): Promise<BabysittingConfig> => {
       if (demo) {
         const { demoConfig } = await import('../demo/demoStore');
@@ -316,7 +318,25 @@ export function useBabysittingConfig() {
         .eq('id', user.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['babysitting-config'] }),
+    // Show the change straight away, and build the NEXT change on top of
+    // it. Without this, tapping three children into the register in quick
+    // succession loses two of them: each tap starts from the same stale
+    // config and the last write wins. It also made the register feel
+    // dead on a slow phone — tap, nothing, tap again, and the second tap
+    // undoes the first.
+    onMutate: async (next: BabysittingConfig) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<BabysittingConfig>(key);
+      qc.setQueryData(key, next);
+      return { previous };
+    },
+    onError: (_err, _next, ctx) => {
+      // Put it back. A tick that stays on screen after the save failed is
+      // worse than one that disappears — she'd never know to redo it.
+      const c = ctx as { previous?: BabysittingConfig } | undefined;
+      if (c?.previous) qc.setQueryData(key, c.previous);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['babysitting-config'] }),
   });
 
   return { ...query, save };

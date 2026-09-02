@@ -83,6 +83,40 @@ const QUIET_NAV: Array<{ to: string; label: string }> = [
 const LEVEL_RANK: Record<Level, number> = { simple: 0, standard: 1, pro: 2 };
 
 
+/** A save that failed must say so. Everything in this app writes through
+ *  one mutation, so one banner covers the register, payments, settings
+ *  and the rest — and it only appears when a write actually failed, not
+ *  while one is in flight, so a slow phone never nags her. */
+function SaveTrouble() {
+  const cfg = useBabysittingConfig();
+  if (!cfg.save.isError) return null;
+  return (
+    <div
+      role="status"
+      style={{
+        position: 'fixed',
+        left: 12,
+        right: 12,
+        bottom: 12,
+        zIndex: 950,
+        maxWidth: 460,
+        margin: '0 auto',
+        background: B.redSoft,
+        border: `1.5px solid ${B.red}`,
+        borderRadius: B.radiusSm,
+        padding: '11px 14px',
+        boxShadow: B.shadow,
+        fontSize: '0.85rem',
+        lineHeight: 1.5,
+        color: B.ink,
+      }}
+    >
+      <b style={{ color: B.red }}>That didn't save.</b> Your last change has been undone — check
+      your signal and do it again. Nothing else you've entered is affected.
+    </div>
+  );
+}
+
 export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
   const [rawEditMode, setEditMode] = useEditMode();
   const demo = useDemo();
@@ -346,6 +380,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
       <main style={{ maxWidth: 1140, margin: '0 auto', padding: '18px 16px 70px' }}>
         <Outlet context={{ editMode }} />
       </main>
+      <SaveTrouble />
       <TourWizard />
       <CommentWidget />
     </div>
