@@ -10,6 +10,18 @@
       "destination": "https://api.trainerpro.coach/:path*"
     },
     {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/sms-opt-in",
+      "destination": "/sms-opt-in.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
