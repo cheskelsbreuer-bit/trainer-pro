@@ -11,6 +11,7 @@ import {
   B,
   readBalance,
   readFamilySlug,
+  readStartDate,
   familyLabel,
   scheduledToday,
   daysLabel,
@@ -167,18 +168,6 @@ export function DashboardPage() {
   }, [payments]);
 
   // Who owes — grouped per family so one reminder covers siblings.
-  const oweFamilies = useMemo(() => {
-    const byFam = new Map<string, Client[]>();
-    for (const k of active) {
-      const slug = readFamilySlug(k) || `solo-${k.id}`;
-      byFam.set(slug, [...(byFam.get(slug) ?? []), k]);
-    }
-    return Array.from(byFam.entries())
-      .map(([slug, members]) => ({ slug, members, ...familySummary(members) }))
-      .filter((f) => f.balance > 0.005)
-      .sort((a, b) => b.balance - a.balance);
-  }, [active]);
-
   const lastPaymentByFamily = useMemo(() => {
     const kidFam = new Map<string, string>();
     for (const k of active) kidFam.set(k.id, readFamilySlug(k) || `solo-${k.id}`);
@@ -189,6 +178,45 @@ export function DashboardPage() {
     }
     return last;
   }, [payments, active]);
+
+  // Who to chase, in the order worth chasing. Sorted by how LONG the
+  // money has been outstanding rather than how much it is: a family six
+  // weeks behind needs a word before one who owes more but paid on
+  // Friday. A family who has never paid sorts to the top, because that
+  // is the one most likely to have been forgotten about entirely.
+  const oweFamilies = useMemo(() => {
+    const byFam = new Map<string, Client[]>();
+    for (const k of active) {
+      const slug = readFamilySlug(k) || `solo-${k.id}`;
+      byFam.set(slug, [...(byFam.get(slug) ?? []), k]);
+    }
+    const daysSincePaid = (slug: string, since: string | undefined): number => {
+      const last = lastPaymentByFamily.get(slug);
+      // Never paid at all: measure from when the first child started, so a
+      // family who joined last week doesn't outrank one who joined in May.
+      const from = last ?? since;
+      if (!from) return 9999;
+      const d = new Date(from);
+      if (Number.isNaN(d.getTime())) return 9999;
+      return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
+    };
+    return Array.from(byFam.entries())
+      .map(([slug, members]) => {
+        const started = members
+          .map((m) => readStartDate(m))
+          .filter(Boolean)
+          .sort()[0];
+        return {
+          slug,
+          members,
+          ...familySummary(members),
+          waitingDays: daysSincePaid(slug, started ?? undefined),
+          everPaid: lastPaymentByFamily.has(slug),
+        };
+      })
+      .filter((f) => f.balance > 0.005)
+      .sort((a, b) => b.waitingDays - a.waitingDays || b.balance - a.balance);
+  }, [active, lastPaymentByFamily]);
 
   const birthdays = useMemo(() => {
     const now = new Date();
@@ -439,7 +467,10 @@ export function DashboardPage() {
                 return (
                   <tr key={f.slug}>
                     <Td style={{ fontWeight: 800 }}>
-                      {famLabel}
+                      <span style={{ display: 'inline-flex', gap: 7, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                        {famLabel}
+                        <WaitingChip days={f.waitingDays} everPaid={f.everPaid} />
+                      </span>
                       <div className="bs-phone-only" style={{ marginTop: 4, fontSize: '0.74rem', color: B.mute, fontWeight: 700, lineHeight: 1.5 }}>
                         {f.members.map((m) => m.full_name.split(' ')[0]).join(', ')}
                         {shortDate(lastPaymentByFamily.get(f.slug)) && (
@@ -560,5 +591,27 @@ export function DashboardPage() {
       {showPay && <PaymentModal kid={payKid} onClose={() => setShowPay(false)} />}
       {showAdd && <KidModal kid={null} onClose={() => setShowAdd(false)} />}
     </div>
+  );
+}
+
+
+/** How long this money has been outstanding, said the way she'd say it.
+ *  Quiet under two weeks — a family who paid last Friday is not a
+ *  problem — then amber, then red. Colour is doing the sorting work
+ *  visually that the list is already doing structurally. */
+function WaitingChip({ days, everPaid }: { days: number; everPaid: boolean }) {
+  if (days < 14 && everPaid) return null;
+  const label = !everPaid
+    ? 'never paid'
+    : days >= 60
+      ? `${Math.floor(days / 30)} months`
+      : days >= 14
+        ? `${Math.floor(days / 7)} weeks`
+        : `${days} days`;
+  const tone = !everPaid || days >= 42 ? 'red' : days >= 21 ? 'butter' : 'neutral';
+  return (
+    <Chip tone={tone} style={{ fontSize: '0.68rem' }}>
+      {!everPaid ? label : `waiting ${label}`}
+    </Chip>
   );
 }
