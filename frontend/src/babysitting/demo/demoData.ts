@@ -180,7 +180,7 @@ export const DEMO_CONFIG: BabysittingConfig = {
     defaultWeeklyRate: 120,
     defaultHourlyRate: 12,
     smsTemplate:
-      'Hi {parent}! Friendly reminder from your babysitter: the balance for {kids} is {currency}{balance}. Thank you!',
+      'Hi {parent}! Friendly reminder: the balance for {kids} is {currency}{balance}. Thank you!',
     emailSubject: 'Your babysitting balance',
     emailTemplate:
       'Hi {parent},\n\nJust a friendly note that the current babysitting balance for {kids} is {currency}{balance}.\n\nThank you!',
@@ -191,7 +191,7 @@ export const DEMO_CONFIG: BabysittingConfig = {
       enabled: true,
       smsEnabled: true,
       template:
-        'Hi {parent}! Received {currency}{amount} — thank you! The balance for {kids} is now {currency}{balance}.',
+        'Hi {parent}! Received {currency}{amount}, thank you! The balance for {kids} is now {currency}{balance}.',
     },
     appLevel: 'pro',
     familyDiscount: { enabled: true, type: 'percent', value: 10 },

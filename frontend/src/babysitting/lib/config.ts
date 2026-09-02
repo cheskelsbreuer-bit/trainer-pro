@@ -157,7 +157,10 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
   defaultWeeklyRate: 0,
   defaultHourlyRate: 0,
   smsTemplate:
-    'Hi {parent}! Friendly reminder from your babysitter: the balance for {kids} is {currency}{balance}. Thank you!',
+    // No "from your babysitter" — every text now opens with the business's
+    // own name. No em dash either: one non-GSM character halves how much
+    // fits in a message segment, and doubles what it costs to send.
+    'Hi {parent}! Friendly reminder: the balance for {kids} is {currency}{balance}. Thank you!',
   emailSubject: 'Your babysitting balance',
   emailTemplate:
     'Hi {parent},\n\nJust a friendly note that the current babysitting balance for {kids} is {currency}{balance}.\n\nThank you!',
@@ -168,7 +171,7 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
     enabled: false,
     smsEnabled: true,
     template:
-      'Hi {parent}! Received {currency}{amount} — thank you! The balance for {kids} is now {currency}{balance}.',
+      'Hi {parent}! Received {currency}{amount}, thank you! The balance for {kids} is now {currency}{balance}.',
   },
   appLevel: 'standard',
   familyDiscount: { enabled: false, type: 'percent', value: 10 },

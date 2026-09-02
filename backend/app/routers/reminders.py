@@ -377,11 +377,21 @@ def _send_email_for(trainer_name: str, bs_settings: dict, to_email: str, subject
     raise RuntimeError("No email path configured (add Gmail in Messages settings, or set RESEND_API_KEY).")
 
 
-# Carriers require every message in an A2P campaign to carry a way out. The
-# templates a sitter writes are her own words and she shouldn't have to
-# remember this, so it's added here — at the one place every text goes
-# through — and only when she hasn't already said it herself.
+# ── What every text must say, whatever the sitter typed ────────────────
+#
+# Two carrier rules, both of which she should never have to remember:
+#
+#   1. Every message carries a way out.
+#   2. Every message identifies who is sending it — and it has to match
+#      the brand the campaign is registered under. The number belongs to
+#      Trainer Pro; the message is about her business. Saying both, in
+#      that order, is what makes the message and the registration agree:
+#      "Leah's Little Ones (via Trainer Pro): ..."
+#
+# Applied at the one place every text goes through, so no template and no
+# new send path can miss them, and skipped when the text already says it.
 STOP_NOTICE = "Reply STOP to stop."
+PLATFORM_NAME = "Trainer Pro"
 
 
 def with_stop_notice(body: str) -> str:
@@ -391,7 +401,24 @@ def with_stop_notice(body: str) -> str:
     return f"{text} {STOP_NOTICE}"
 
 
-def _send_sms(to_phone: str, body: str, tw_client) -> None:
+def with_sender_id(body: str, business: str | None) -> str:
+    """Open with "<business> (via Trainer Pro): ", once and only once."""
+    text = (body or "").strip()
+    name = (business or "").strip()
+    if not name or PLATFORM_NAME.lower() in text[:90].lower():
+        return text
+    # She often opens with her own name already ("Leah's Little Ones: we're
+    # closed Thursday"). Take that opening off rather than say it twice.
+    if text.lower().startswith(name.lower()):
+        text = text[len(name):].lstrip(" :\u2014-\t")
+    return f"{name} (via {PLATFORM_NAME}): {text}"
+
+
+def sms_body_for(body: str, business: str | None) -> str:
+    return with_stop_notice(with_sender_id(body, business))
+
+
+def _send_sms(to_phone: str, body: str, tw_client, business: str | None = None) -> None:
     clean = to_phone.strip()
     digits = "".join(ch for ch in clean if ch.isdigit())
     if clean.startswith("+"):
@@ -401,7 +428,7 @@ def _send_sms(to_phone: str, body: str, tw_client) -> None:
     else:
         to = "+" + digits
     tw_client.messages.create(
-        body=with_stop_notice(body), from_=settings.TWILIO_FROM_NUMBER, to=to
+        body=sms_body_for(body, business), from_=settings.TWILIO_FROM_NUMBER, to=to
     )
 
 
@@ -510,7 +537,7 @@ def _run_for_trainer(sb_admin, trainer: dict, req: WeeklyBalancesRequest, trigge
                 pass
             elif f["phone"]:
                 try:
-                    _send_sms(f["phone"], f["sms_body"], tw_client)
+                    _send_sms(f["phone"], f["sms_body"], tw_client, trainer_name)
                     sent_sms += 1
                 except Exception as e:  # noqa: BLE001
                     errors.append(f"{f['label']} sms: {e}")
@@ -696,7 +723,12 @@ def payment_receipt(
         try:
             from twilio.rest import Client as TwilioClient
 
-            _send_sms(phone, body, TwilioClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN))
+            _send_sms(
+                phone,
+                body,
+                TwilioClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN),
+                trainer_name,
+            )
             channels.append("sms")
         except Exception as e:  # noqa: BLE001 — the email still goes
             errors.append(f"sms: {e}")
@@ -847,7 +879,7 @@ def announce(req: AnnounceRequest, authorization: str | None = Header(default=No
                 errors.append(f"{f['label']}: {str(e)[:120]}")
         if "sms" in channels and tw_client is not None and f["phone"] and f.get("sms_ok"):
             try:
-                _send_sms(f["phone"], body, tw_client)
+                _send_sms(f["phone"], body, tw_client, trainer_name)
                 sent_sms += 1
             except Exception as e:  # noqa: BLE001
                 msg = str(e)
