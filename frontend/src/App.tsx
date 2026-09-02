@@ -31,7 +31,7 @@ import { TermsPage } from './pages/TermsPage';
 import { FindTrainersPage } from './pages/FindTrainersPage';
 import { AdminPage } from './pages/AdminPage';
 import { adminRpc } from './lib/adminRpc';
-import { readAdminVerified, writeAdminVerified } from './lib/adminSession';
+import { readAdminVerified, writeAdminVerified, ADMIN_AWAITING_KEY } from './lib/adminSession';
 import { BabysittingApp } from './babysitting/BabysittingApp';
 import { CoachApp } from './coach/CoachApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
@@ -262,10 +262,21 @@ function AdminShell() {
   // automatically. We watch for the ?verified=1 marker we set in the redirect
   // URL, then flag this device as verified for 7 days and clean the URL.
   useEffect(() => {
+    if (!user) return;
+    // Two ways to know a fresh magic link just landed. The ?verified=1
+    // marker is the old one, kept for links already sitting in an inbox.
+    // The flag is the new one: it lives in this tab rather than in the
+    // URL, so the address we ask Supabase to send people back to has no
+    // query string on it at all — one less thing that has to match a
+    // redirect allow-list exactly.
     const params = new URLSearchParams(window.location.search);
-    if (params.get('verified') === '1' && user) {
-      writeAdminVerified();
-      setVerified(true);
+    const marked = params.get('verified') === '1';
+    const awaiting = sessionStorage.getItem(ADMIN_AWAITING_KEY) === '1';
+    if (!marked && !awaiting) return;
+    sessionStorage.removeItem(ADMIN_AWAITING_KEY);
+    writeAdminVerified();
+    setVerified(true);
+    if (marked) {
       // Keep whichever door they came in by (/chesky or /hq) — rewriting
       // it to a fixed path would bounce them off the alias.
       window.history.replaceState({}, '', window.location.pathname);

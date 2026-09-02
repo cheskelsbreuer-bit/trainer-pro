@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, ShieldCheck, ArrowRight, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PasteSignInLink } from './PasteSignInLink';
-import { writeAdminVerified } from '../lib/adminSession';
+import { writeAdminVerified, ADMIN_AWAITING_KEY } from '../lib/adminSession';
 
 /**
  * Admin sign-in: magic-link / email-OTP only.
@@ -42,11 +42,15 @@ export function AdminLogin() {
         options: {
           // Land back on /chesky with a marker the AdminShell will pick up.
           // (Renamed from /admin to bypass Livigent URL filtering.)
-          // Come back to the same door they started at (/chesky or /hq).
-          emailRedirectTo: `${window.location.origin}${window.location.pathname}?verified=1`,
+          // Come back to the same door they started at (/chesky or /hq),
+          // and with nothing on the end of it: a bare path is far more
+          // likely to match a redirect allow-list than one carrying a
+          // query string. The tab remembers it is waiting instead.
+          emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
         },
       });
       if (error) throw error;
+      sessionStorage.setItem(ADMIN_AWAITING_KEY, '1');
       setSent(true);
     } catch (e) {
       setError((e as Error).message);

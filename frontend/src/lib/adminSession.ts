@@ -23,3 +23,9 @@ export function writeAdminVerified() {
     String(Date.now() + ADMIN_VERIFY_TTL_MS),
   );
 }
+
+/** Set in this tab just before a sign-in link is emailed, so the link
+ *  itself needs no ?verified=1 on it. A URL with no query string is far
+ *  more likely to match a redirect allow-list, and this survives the
+ *  round trip because the tab stays open while they check their mail. */
+export const ADMIN_AWAITING_KEY = 'admin_awaiting_verify';
