@@ -65,7 +65,9 @@ def send_reminder(
             from twilio.rest import Client as TwilioClient
 
             tw = TwilioClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-            tw.messages.create(body=msg, from_=settings.TWILIO_FROM_NUMBER, to=client["phone"])
+            tw.messages.create(
+                body=with_stop_notice(msg), from_=settings.TWILIO_FROM_NUMBER, to=client["phone"]
+            )
         except Exception as e:
             raise HTTPException(502, f"SMS send failed: {e}") from e
 
@@ -375,6 +377,20 @@ def _send_email_for(trainer_name: str, bs_settings: dict, to_email: str, subject
     raise RuntimeError("No email path configured (add Gmail in Messages settings, or set RESEND_API_KEY).")
 
 
+# Carriers require every message in an A2P campaign to carry a way out. The
+# templates a sitter writes are her own words and she shouldn't have to
+# remember this, so it's added here — at the one place every text goes
+# through — and only when she hasn't already said it herself.
+STOP_NOTICE = "Reply STOP to stop."
+
+
+def with_stop_notice(body: str) -> str:
+    text = (body or "").strip()
+    if "stop" in text.lower():
+        return text
+    return f"{text} {STOP_NOTICE}"
+
+
 def _send_sms(to_phone: str, body: str, tw_client) -> None:
     clean = to_phone.strip()
     digits = "".join(ch for ch in clean if ch.isdigit())
@@ -384,7 +400,9 @@ def _send_sms(to_phone: str, body: str, tw_client) -> None:
         to = "+1" + digits
     else:
         to = "+" + digits
-    tw_client.messages.create(body=body, from_=settings.TWILIO_FROM_NUMBER, to=to)
+    tw_client.messages.create(
+        body=with_stop_notice(body), from_=settings.TWILIO_FROM_NUMBER, to=to
+    )
 
 
 class WeeklyBalancesRequest(BaseModel):
