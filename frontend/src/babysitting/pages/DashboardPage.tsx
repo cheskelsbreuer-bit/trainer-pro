@@ -94,6 +94,9 @@ export function DashboardPage() {
   // ── Attendance: who actually showed up today ────────────────────
   const today = attendanceFor(cfg.data, todayIso);
   const markedCount = today.present.length + today.absent.length;
+  // Whether the parent actually heard about it. She should not have to
+  // wonder, and "no phone, no email" is a real answer she can act on.
+  const [told, setTold] = useState<Record<string, string>>({});
   function mark(kidId: string, state: 'present' | 'absent' | 'picked_up' | 'clear') {
     if (!cfg.data) return;
     cfg.save.mutate(setAttendance(cfg.data, todayIso, kidId, state));
@@ -104,15 +107,32 @@ export function DashboardPage() {
     // the same child today, and picks text or email per family.
     if (!demo && (state === 'present' || state === 'picked_up')) {
       const at = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-      void api('/reminders/arrival-notice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: kidId,
-          kind: state === 'picked_up' ? 'picked_up' : 'arrived',
-          at,
-        }),
-      }).catch(() => undefined);
+      setTold((t) => ({ ...t, [kidId]: 'sending' }));
+      void api<{ sent: boolean; channel: string | null; duplicate?: boolean; reason?: string }>(
+        '/reminders/arrival-notice',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id: kidId,
+            kind: state === 'picked_up' ? 'picked_up' : 'arrived',
+            at,
+          }),
+        },
+      )
+        .then((r) => {
+          const label = r.sent
+            ? r.channel === 'sms'
+              ? 'texted'
+              : 'emailed'
+            : r.duplicate
+              ? 'already told'
+              : r.reason?.includes('switched off') || r.reason?.includes('are off')
+                ? ''
+                : 'no way to reach them';
+          setTold((t) => ({ ...t, [kidId]: label }));
+        })
+        .catch(() => setTold((t) => ({ ...t, [kidId]: '' })));
     }
   }
   function markAllHere() {
@@ -288,6 +308,21 @@ export function DashboardPage() {
                     </div>
                     {k.medical_notes?.trim() && (
                       <div style={{ fontSize: '0.68rem', color: B.red, fontWeight: 800 }}>⚠️ {k.medical_notes}</div>
+                    )}
+                    {told[k.id] && (
+                      <div
+                        style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          color: told[k.id] === 'no way to reach them' ? B.red : B.mute,
+                        }}
+                      >
+                        {told[k.id] === 'sending'
+                          ? '· telling their parent…'
+                          : told[k.id] === 'no way to reach them'
+                            ? '· no phone or email on file'
+                            : `· parent ${told[k.id]}`}
+                      </div>
                     )}
                   </div>
                 </div>
