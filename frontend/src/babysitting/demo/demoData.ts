@@ -43,6 +43,8 @@ function kid(
     allergies?: string;
     notes?: string;
     status?: 'active' | 'paused';
+    /** Said yes to balance texts. Off unless set — same as real life. */
+    texts?: boolean;
   } = {},
 ): Client {
   return {
@@ -67,6 +69,7 @@ function kid(
       `totalowed:${extra.owed ?? 0}`,
       `totalpaid:${extra.paid ?? 0}`,
       `startdate:${dateIn(-85)}`,
+      ...(extra.texts ? ['smsconsent:1'] : []),
       ...(extra.status !== 'paused' && (extra.owed ?? 0) === 960 ? ['ktag:demo-kt1'] : []),
     ],
     rate_per_session: null,
@@ -84,8 +87,9 @@ export const DEMO_KIDS: Client[] = [
     dob: bornMonthsAgo(29),
     allergies: 'peanuts',
     notes: 'Naps 1–3pm. Loves the red cup.',
+    texts: true,
   }),
-  kid('demo-k2', 'Moishy Gold', 'gold', 'Malky', 'sun-mon-tue-wed-thu', { owed: 960, paid: 900, dob: bornMonthsAgo(9) }),
+  kid('demo-k2', 'Moishy Gold', 'gold', 'Malky', 'sun-mon-tue-wed-thu', { owed: 960, paid: 900, dob: bornMonthsAgo(9), texts: true }),
   kid('demo-k3', 'Shaindy Weiss', 'weiss', 'Chani', 'mon-wed-thu', {
     owed: 720,
     paid: 720,
@@ -99,7 +103,7 @@ export const DEMO_KIDS: Client[] = [
     allergies: 'dairy, eggs',
   }),
   kid('demo-k5', 'Perry Berger', 'berger', 'Ruchy', 'sun-tue-thu', { owed: 600, paid: 600, dob: bornMonthsAgo(6) }),
-  kid('demo-k6', 'Tzippy Stern', 'stern', 'Faigy', 'mon-tue-wed', { owed: 480, paid: 380, dob: birthdayIn(18, 3) }),
+  kid('demo-k6', 'Tzippy Stern', 'stern', 'Faigy', 'mon-tue-wed', { owed: 480, paid: 380, dob: birthdayIn(18, 3), texts: true }),
   kid('demo-k7', 'Duvid Klein', 'klein', 'Gitty', 'wed-thu', { owed: 240, paid: 260, dob: bornMonthsAgo(14) }),
   kid('demo-k8', 'Blimi Roth', 'roth', 'Esty', 'sun-mon', { owed: 300, paid: 300, dob: bornMonthsAgo(16), status: 'paused' }),
 ];

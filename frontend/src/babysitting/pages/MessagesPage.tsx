@@ -13,7 +13,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { api, ApiError } from '../../lib/api';
-import { B, readFamilySlug, familyLabel, readDays, formatMoney, shortDate, DAY_SHORT, ALL_DAYS } from '../theme';
+import { B, readFamilySlug, familyLabel, readDays, formatMoney, shortDate, DAY_SHORT, ALL_DAYS,
+  readSmsConsent,
+} from '../theme';
 import { useKids } from '../lib/data';
 import {
   useBabysittingConfig,
@@ -33,11 +35,25 @@ interface RunFamily {
   balance: number;
   phone: string | null;
   email: string | null;
+  /** Has anyone in the family said yes to texts? The server refuses to
+   *  text a family without it, so the preview must not promise one. */
+  smsOk: boolean;
 }
 
 interface DryRunResult {
   dry_run: boolean;
-  families?: Array<{ label: string; balance: number; phone: string | null; email: string | null; sms_body: string }>;
+  families?: Array<{
+    label: string;
+    balance: number;
+    phone: string | null;
+    email: string | null;
+    sms_body: string;
+    /** Has anyone in this family said yes to texts? No consent, no text —
+     *  the server refuses it, so the preview must not promise one. */
+    sms_ok?: boolean;
+  }>;
+  /** Families that had a phone but no opt-in, so only email went. */
+  skipped_no_consent?: number;
   sent_sms?: number;
   sent_email?: number;
   errors?: string[];
@@ -110,6 +126,7 @@ export function MessagesPage() {
           slug,
           label: slug.startsWith('solo-') ? members[0].full_name : familyLabel(slug),
           ...s,
+          smsOk: members.some((m) => readSmsConsent(m)),
         };
       })
       .filter((f) => f.balance > 0.995)
@@ -364,6 +381,7 @@ export function MessagesPage() {
           phone: f.phone,
           email: f.email,
           sms_body: fillTemplate(settings.smsTemplate, f, settings),
+          sms_ok: f.smsOk,
         })),
         sent_email: dryRun ? 0 : withEmail.length,
         sent_sms: 0,
@@ -765,6 +783,39 @@ export function MessagesPage() {
           </div>
         )}
 
+        {/* What will actually happen when she presses it. A phone number is
+            not permission: the server refuses to text a family that hasn't
+            opted in, and without this she'd send to five and see two texts. */}
+        {runFamilies.length > 0 && (() => {
+          const withPhone = runFamilies.filter((f) => f.phone);
+          const waiting = withPhone.filter((f) => !f.smsOk);
+          if (!waiting.length) return null;
+          return (
+            <div
+              style={{
+                marginTop: 10,
+                fontSize: '0.83rem',
+                lineHeight: 1.55,
+                color: B.inkSoft,
+                background: B.rowAlt,
+                border: `1px solid ${B.rule}`,
+                borderRadius: B.radiusSm,
+                padding: '10px 13px',
+              }}
+            >
+              <b>{withPhone.length - waiting.length} of {withPhone.length}</b> will get a text.{' '}
+              {waiting.map((f) => f.label).join(', ')}{' '}
+              {waiting.length === 1 ? "hasn't" : "haven't"} turned texts on, so{' '}
+              {waiting.length === 1 ? 'that family gets' : 'those families get'} the email only —
+              same reminder, same information.
+              <div style={{ color: B.mute, marginTop: 4 }}>
+                They can switch texts on themselves on their parent page, or you can tick it for
+                them on their kid's form if they ask.
+              </div>
+            </div>
+          );
+        })()}
+
         {testMsg && (
           <div
             style={{
@@ -789,10 +840,30 @@ export function MessagesPage() {
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>
                   🧪 Practice run — {(runResult.families ?? []).length} famil{(runResult.families ?? []).length === 1 ? 'y' : 'ies'} would get a reminder:
                 </div>
+                {(() => {
+                  // A phone number is not permission. Say plainly how many
+                  // texts would actually go, so a short number later isn't
+                  // a mystery.
+                  const fams = runResult.families ?? [];
+                  const textable = fams.filter((f) => f.phone && f.sms_ok !== false).length;
+                  const waiting = fams.filter((f) => f.phone && f.sms_ok === false).length;
+                  if (!waiting) return null;
+                  return (
+                    <div style={{ fontSize: '0.82rem', color: B.mute, marginBottom: 8, lineHeight: 1.5 }}>
+                      {textable} of these get a text. {waiting} haven't turned texts on yet, so they
+                      get the email only — same reminder, same information. They can switch texts on
+                      themselves in their parent page.
+                    </div>
+                  );
+                })()}
                 <div style={{ display: 'grid', gap: 6 }}>
                   {(runResult.families ?? []).map((f, i) => (
                     <div key={i} style={{ fontSize: '0.84rem' }}>
-                      <b>{f.label}</b> · {formatMoney(f.balance)} · {f.email ? '✉️' : ''}{f.phone ? ' 📱' : ''}
+                      <b>{f.label}</b> · {formatMoney(f.balance)} · {f.email ? '✉️' : ''}
+                      {f.phone && f.sms_ok !== false ? ' 📱' : ''}
+                      {f.phone && f.sms_ok === false && (
+                        <span style={{ color: B.mute }}> · no texts yet</span>
+                      )}
                       <span style={{ color: B.mute }}> — "{f.sms_body}"</span>
                     </div>
                   ))}
@@ -802,6 +873,14 @@ export function MessagesPage() {
             ) : (
               <div style={{ fontWeight: 800 }}>
                 ✅ Sent: {runResult.sent_email ?? 0} emails, {runResult.sent_sms ?? 0} texts.
+                {!!runResult.skipped_no_consent && (
+                  <div style={{ fontWeight: 600, color: B.mute, fontSize: '0.83rem', marginTop: 5 }}>
+                    {runResult.skipped_no_consent} famil
+                    {runResult.skipped_no_consent === 1 ? 'y has' : 'ies have'} a phone number but
+                    haven't turned texts on, so {runResult.skipped_no_consent === 1 ? 'they' : 'they'}{' '}
+                    got the email only.
+                  </div>
+                )}
                 {(runResult.errors ?? []).length > 0 && (
                   <div style={{ fontWeight: 600, color: B.red, fontSize: '0.83rem', marginTop: 6 }}>
                     {(runResult.errors ?? []).map((e, i) => (

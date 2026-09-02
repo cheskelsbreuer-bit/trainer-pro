@@ -533,8 +533,10 @@ def _run_for_trainer(sb_admin, trainer: dict, req: WeeklyBalancesRequest, trigge
                     errors.append("_sms_unconfigured: texts requested but Twilio is not set up on the server")
             elif not f.get("sms_ok"):
                 # No recorded opt-in for this family — carrier rules say
-                # never text them. Email still goes.
-                pass
+                # never text them. Email still goes, and we count them so
+                # the sitter isn't left wondering why the text number is
+                # lower than the family number.
+                skipped_no_consent += 1
             elif f["phone"]:
                 try:
                     _send_sms(f["phone"], f["sms_body"], tw_client, trainer_name)
@@ -545,6 +547,7 @@ def _run_for_trainer(sb_admin, trainer: dict, req: WeeklyBalancesRequest, trigge
     result = {
         "trainer_id": trainer["id"],
         "dry_run": False,
+        "skipped_no_consent": skipped_no_consent,
         "families_checked": len(plan),
         "sent_sms": sent_sms,
         "sent_email": sent_email,
