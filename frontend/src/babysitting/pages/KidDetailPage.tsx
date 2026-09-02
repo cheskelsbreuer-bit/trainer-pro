@@ -27,6 +27,7 @@ import {
   useBabysittingConfig,
   appendLog,
   attendanceTally,
+  attendanceHistory,
   type AwayRecord,
   type BabysittingConfig,
   type ChargeEntry,
@@ -356,10 +357,29 @@ export function KidDetailPage() {
                 {(() => {
                   const t = attendanceTally(cfg.data, kid.id, 30);
                   if (!t.here && !t.out) return <span style={{ color: B.mute }}>Not tracked yet</span>;
+                  const days = attendanceHistory(cfg.data, kid.id, 30);
                   return (
                     <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
                       <Chip tone="green">{t.here} day{t.here === 1 ? '' : 's'} here</Chip>
                       {t.out > 0 && <Chip tone="neutral">{t.out} out</Chip>}
+                      {/* The days themselves, so "she wasn't there that
+                          Thursday" has an answer instead of a total. */}
+                      <span style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {days.map((d) => (
+                          <span
+                            key={d.date}
+                            title={`${shortDate(d.date)} — ${d.here ? 'here' : 'out'}`}
+                            aria-label={`${shortDate(d.date)}, ${d.here ? 'here' : 'out'}`}
+                            style={{
+                              width: 13,
+                              height: 13,
+                              borderRadius: 3,
+                              background: d.here ? B.green : 'transparent',
+                              border: d.here ? 'none' : `1.5px solid ${B.rule}`,
+                            }}
+                          />
+                        ))}
+                      </span>
                     </span>
                   );
                 })()}

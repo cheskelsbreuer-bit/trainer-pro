@@ -174,6 +174,33 @@ function demoCharges(): BabysittingConfig['charges'] {
   return out;
 }
 
+/** Three weeks of realistic attendance: each kid marked on the weekdays they
+ *  actually come, with the odd day off, so the register and the per-kid day
+ *  strip both show something true instead of an empty state. */
+function demoAttendance(): BabysittingConfig['attendance'] {
+  const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const out: BabysittingConfig['attendance'] = [];
+  for (let back = 21; back >= 1; back--) {
+    const d = new Date();
+    d.setDate(d.getDate() - back);
+    const key = DAY_KEYS[d.getDay()];
+    const date = d.toISOString().slice(0, 10);
+    const present: string[] = [];
+    const absent: string[] = [];
+    for (const k of DEMO_KIDS) {
+      if (k.status !== 'active') continue;
+      const days = (k.tags ?? []).find((t) => t.startsWith('days:'))?.slice(5).split('-') ?? [];
+      if (!days.includes(key)) continue;
+      // A predictable sprinkle of days off — no randomness, so the demo
+      // looks the same every time someone opens it.
+      if ((back + k.id.charCodeAt(k.id.length - 1)) % 11 === 0) absent.push(k.id);
+      else present.push(k.id);
+    }
+    if (present.length || absent.length) out.push({ date, present, absent });
+  }
+  return out;
+}
+
 export const DEMO_CONFIG: BabysittingConfig = {
   version: 1,
   settings: {
@@ -253,7 +280,7 @@ export const DEMO_CONFIG: BabysittingConfig = {
     { id: 'demo-kt1', label: 'New', color: '#4f9d94' },
     { id: 'demo-kt2', label: 'Potty training', color: '#b98420' },
   ],
-  attendance: [],
+  attendance: demoAttendance(),
   closures: [
     { id: 'demo-cl1', date: dateIn(9), name: 'Yom Tov — closed' },
     { id: 'demo-cl2', date: dateIn(10), name: 'Yom Tov — closed' },

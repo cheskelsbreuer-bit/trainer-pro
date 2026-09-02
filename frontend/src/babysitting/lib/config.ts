@@ -375,6 +375,26 @@ export function attendanceFor(cfg: BabysittingConfig | undefined, date: string):
   return cfg?.attendance.find((d) => d.date === date) ?? { date, present: [], absent: [] };
 }
 
+/** The individual days behind the tally, newest last, so a sitter can point
+ *  at a date when a parent says "she wasn't there that Thursday". Only days
+ *  actually marked appear — a day nobody touched is not a claim either way. */
+export function attendanceHistory(
+  cfg: BabysittingConfig | undefined,
+  clientId: string,
+  sinceDays = 35,
+): Array<{ date: string; here: boolean }> {
+  const cut = new Date();
+  cut.setDate(cut.getDate() - sinceDays);
+  const cutKey = cut.toISOString().slice(0, 10);
+  const out: Array<{ date: string; here: boolean }> = [];
+  for (const d of cfg?.attendance ?? []) {
+    if (d.date < cutKey) continue;
+    if (d.present.includes(clientId)) out.push({ date: d.date, here: true });
+    else if (d.absent.includes(clientId)) out.push({ date: d.date, here: false });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
 /** How many days this kid was here / out across the stored history. */
 export function attendanceTally(
   cfg: BabysittingConfig | undefined,
