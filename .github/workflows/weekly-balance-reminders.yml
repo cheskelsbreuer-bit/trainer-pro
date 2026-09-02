@@ -1,6 +1,11 @@
 # Fires the babysitting balance reminders once a day. The backend decides
 # per account whether today is that sitter's chosen send day, and skips
 # accounts that already sent today — so a daily ping is safe.
+#
+# Needs the repository secret CRON_SECRET, set to the same value as the
+# CRON_SECRET environment variable on Render. Without it every run gets a
+# 401 and no reminder is ever sent — see the preflight step below, which
+# exists because that failed silently seven times in a row.
 name: Weekly balance reminders
 on:
   schedule:
@@ -16,19 +21,47 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
+      - name: Check the shared secret is set
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::CRON_SECRET is not set on this repository, so every"
+            echo "::error::send is rejected with 401 and no reminder goes out."
+            echo "::error::Fix: GitHub → Settings → Secrets and variables →"
+            echo "::error::Actions → New repository secret, named CRON_SECRET,"
+            echo "::error::set to the same value as CRON_SECRET on Render."
+            exit 1
+          fi
+          echo "CRON_SECRET is set."
+
       - name: Wake the backend (free tier sleeps)
         run: curl -fsS --max-time 90 https://api.trainerpro.coach/health >/dev/null
+
       - name: Run balance reminders
         run: |
-          curl -fsS --max-time 120 -X POST \
+          # -w prints the status, and the body is echoed on failure, so a
+          # future breakage says what went wrong instead of "exit code 22".
+          code=$(curl -sS --max-time 120 -o body.txt -w '%{http_code}' -X POST \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             -d '{"dry_run": ${{ inputs.dry_run || false }}}' \
-            https://api.trainerpro.coach/reminders/weekly-balances
+            https://api.trainerpro.coach/reminders/weekly-balances)
+          echo "HTTP $code"; cat body.txt; echo
+          if [ "$code" = "401" ]; then
+            echo "::error::The server rejected the secret. GitHub's CRON_SECRET and Render's CRON_SECRET must match exactly."
+            exit 1
+          fi
+          if [ "$code" = "503" ]; then
+            echo "::error::CRON_SECRET is not set on Render, so scheduled sends are switched off there."
+            exit 1
+          fi
+          [ "$code" -lt 400 ] || exit 1
+
       - name: Run automatic weekly billing
         run: |
-          curl -fsS --max-time 120 -X POST \
+          code=$(curl -sS --max-time 120 -o body.txt -w '%{http_code}' -X POST \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             -d '{"dry_run": ${{ inputs.dry_run || false }}}' \
-            https://api.trainerpro.coach/billing/run-weekly
+            https://api.trainerpro.coach/billing/run-weekly)
+          echo "HTTP $code"; cat body.txt; echo
+          [ "$code" -lt 400 ] || exit 1
