@@ -387,6 +387,11 @@ function OverviewTab({
         />
       </section>
 
+      {/* The link this account gives parents. Always available: the slug
+          when they set one, otherwise the account id, so there is never a
+          "they haven't got a link yet" case to explain. */}
+      <JoinLinkCard slug={data.slug} id={data.id} />
+
       {(data.slug || data.email) && (
         <section className="flex flex-wrap gap-2">
           {data.slug && (
@@ -955,5 +960,50 @@ function Row({
         {value || '—'}
       </span>
     </div>
+  );
+}
+
+
+/** The public sign-up link for one account, ready to send.
+ *  It is also the URL a carrier reviewer needs, which is the reason it is
+ *  surfaced here rather than left to be assembled by hand. */
+function JoinLinkCard({ slug, id }: { slug: string | null; id: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `https://www.trainerpro.coach/join?c=${slug || id}`;
+  return (
+    <section className="bg-white border border-slate-200 rounded-lg p-4">
+      <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2">
+        Parent sign-up link
+      </p>
+      <p className="text-xs text-slate-500 mb-2.5">
+        Send this to a parent and they fill in their own details, including whether they want
+        texts. Requests land in this account's activity, not straight into their kid list.
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1.5 break-all">
+          {url}
+        </code>
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard?.writeText(url).then(
+              () => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1600);
+              },
+              () => undefined,
+            );
+          }}
+          className="flex-none text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50"
+        >
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      {!slug && (
+        <p className="text-xs text-slate-400 mt-2">
+          Using the account id because no short name is set. It works exactly the same.
+        </p>
+      )}
+    </section>
   );
 }
