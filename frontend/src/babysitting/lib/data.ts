@@ -79,6 +79,38 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
 
 // ── Mutations ─────────────────────────────────────────────────────────
 
+/** Read the row's tags back from the database, then apply the change to
+ *  THOSE, never to the copy the screen was holding.
+ *
+ *  Everything about a kid lives in one tags array — what they owe, what
+ *  they've paid, their days, their family, and whether their parent said
+ *  yes to texts. Writing the whole array from a stale copy silently
+ *  reverts anything that changed in between: a second payment recorded
+ *  before the list refreshed, or — since parents can now switch texts on
+ *  themselves — a mother's consent being quietly put back after she
+ *  turned it off.
+ *
+ *  Falls back to the caller's copy only if the read itself fails, which
+ *  is still better than not writing the payment at all. */
+async function updateTags(
+  clientId: string,
+  fallback: string[],
+  change: (tags: string[]) => string[],
+): Promise<void> {
+  let base = fallback;
+  const { data, error } = await supabase
+    .from('clients')
+    .select('tags')
+    .eq('id', clientId)
+    .single();
+  if (!error && data) base = ((data as { tags: string[] | null }).tags ?? []) as string[];
+  const { error: writeErr } = await supabase
+    .from('clients')
+    .update({ tags: change(base) })
+    .eq('id', clientId);
+  if (writeErr) throw writeErr;
+}
+
 /** Record money received: insert a payments row, bump totalpaid. */
 export function useRecordPayment() {
   const demo = useDemo();
@@ -110,11 +142,9 @@ export function useRecordPayment() {
         description: input.description ?? 'Babysitting payment',
       });
       if (payErr) throw payErr;
-      const { error: cliErr } = await supabase
-        .from('clients')
-        .update({ tags: tagsAfterPayment(input.currentTags, input.amount) })
-        .eq('id', input.client_id);
-      if (cliErr) throw cliErr;
+      await updateTags(input.client_id, input.currentTags, (tags) =>
+        tagsAfterPayment(tags, input.amount),
+      );
     },
     onSuccess: () => invalidateAll(qc),
   });
@@ -138,11 +168,9 @@ export function useDeletePayment() {
       }
       const { error } = await supabase.from('payments').delete().eq('id', input.id);
       if (error) throw error;
-      const { error: cliErr } = await supabase
-        .from('clients')
-        .update({ tags: tagsAfterPaymentDeleted(input.currentTags, input.amount) })
-        .eq('id', input.client_id);
-      if (cliErr) throw cliErr;
+      await updateTags(input.client_id, input.currentTags, (tags) =>
+        tagsAfterPaymentDeleted(tags, input.amount),
+      );
     },
     onSuccess: () => invalidateAll(qc),
   });
@@ -164,11 +192,9 @@ export function useAddCharge() {
         demoSetKidTags(input.client_id, tagsAfterCharge(input.currentTags, input.amount));
         return;
       }
-      const { error } = await supabase
-        .from('clients')
-        .update({ tags: tagsAfterCharge(input.currentTags, input.amount) })
-        .eq('id', input.client_id);
-      if (error) throw error;
+      await updateTags(input.client_id, input.currentTags, (tags) =>
+        tagsAfterCharge(tags, input.amount),
+      );
     },
     onSuccess: () => invalidateAll(qc),
   });
