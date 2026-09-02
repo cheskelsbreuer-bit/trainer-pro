@@ -165,6 +165,8 @@ export interface BabysittingConfig {
   closures: ClosureDay[];
   attendance: AttendanceDay[]; // newest first, capped
   runState?: RunState;
+  /** Sign-up requests she has already added or hidden. */
+  handledJoins?: string[];
 }
 
 export const DEFAULT_SETTINGS: BabysittingSettings = {
@@ -243,6 +245,7 @@ function hydrate(raw: unknown): BabysittingConfig {
     closures: Array.isArray(r.closures) ? r.closures : [],
     attendance: Array.isArray(r.attendance) ? r.attendance : [],
     runState: r.runState,
+    handledJoins: Array.isArray(r.handledJoins) ? r.handledJoins.slice(-300) : [],
   };
 }
 
@@ -418,6 +421,15 @@ export function setAttendanceMany(
   let next = cfg;
   for (const id of clientIds) next = setAttendance(next, date, id, state);
   return next;
+}
+
+/** Mark a public sign-up request as dealt with — added, or hidden.
+ *  Capped, because this list only ever needs to cover what is still on
+ *  screen. */
+export function markJoinHandled(cfg: BabysittingConfig, id: string): BabysittingConfig {
+  const seen = new Set(cfg.handledJoins ?? []);
+  seen.add(id);
+  return { ...cfg, handledJoins: Array.from(seen).slice(-300) };
 }
 
 export function attendanceFor(cfg: BabysittingConfig | undefined, date: string): AttendanceDay {

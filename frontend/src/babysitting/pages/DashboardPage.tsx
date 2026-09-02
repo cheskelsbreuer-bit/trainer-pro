@@ -28,6 +28,7 @@ import {
   useBabysittingConfig,
   appendLog,
   attendanceFor,
+  markJoinHandled,
   setAttendance,
   setAttendanceMany,
 } from '../lib/config';
@@ -49,7 +50,7 @@ import {
   LinkBtn,
 } from '../components/ui';
 import { PaymentModal } from '../components/PaymentModal';
-import { KidModal } from '../components/KidModal';
+import { KidModal, type KidPrefill } from '../components/KidModal';
 
 interface AbsenceRow {
   id: string;
@@ -273,6 +274,8 @@ export function DashboardPage() {
         <StatTile label="Owed to you" value={formatMoney(totalOwed)} tone={totalOwed > 0 ? 'warn' : 'good'} />
         <StatTile label="Collected this week" value={formatMoney(weekCollected)} tone="good" />
       </div>
+
+      <JoinRequests />
 
       <UnreadFromParents kids={active} />
 
@@ -676,5 +679,130 @@ function UnreadFromParents({ kids }: { kids: Client[] }) {
         ))}
       </div>
     </Card>
+  );
+}
+
+
+/** Parents who filled in the public sign-up link and are waiting to be
+ *  added. They are not children yet — nothing from a public form touches
+ *  the roster until she has read it and pressed Add. */
+function JoinRequests() {
+  const { user } = useAuth();
+  const demo = useDemo();
+  const cfg = useBabysittingConfig();
+  const [adding, setAdding] = useState<KidPrefill | null>(null);
+
+  const rows = useQuery({
+    queryKey: ['bs-join-requests', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('activity_log')
+        .select('id, created_at, details')
+        .eq('trainer_id', user!.id)
+        .eq('action', 'join_request')
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        created_at: string;
+        details: {
+          parent_name?: string;
+          child_name?: string;
+          phone?: string | null;
+          email?: string | null;
+          sms_consent?: boolean;
+          note?: string | null;
+        } | null;
+      }>;
+    },
+    enabled: !demo && !!user,
+    refetchInterval: 120_000,
+  });
+
+  const handled = new Set(cfg.data?.handledJoins ?? []);
+  const waiting = (rows.data ?? []).filter((r) => !handled.has(r.id));
+  if (!waiting.length) return null;
+
+  function hide(id: string) {
+    if (!cfg.data) return;
+    cfg.save.mutate(markJoinHandled(cfg.data, id));
+  }
+
+  return (
+    <>
+      <Card style={{ border: `1.5px solid ${B.green}` }}>
+        <div style={{ fontFamily: B.fontDisplay, fontWeight: 800, marginBottom: 4 }}>
+          🙋 {waiting.length} new sign-up {waiting.length === 1 ? 'request' : 'requests'}
+        </div>
+        <p style={{ fontSize: '0.8rem', color: B.mute, margin: '0 0 12px' }}>
+          Filled in by a parent from your sign-up link. Nothing is added until you say so.
+        </p>
+        <div style={{ display: 'grid', gap: 12 }}>
+          {waiting.map((r) => {
+            const d = r.details ?? {};
+            const child = d.child_name || 'A child';
+            const parent = d.parent_name || 'A parent';
+            return (
+              <div
+                key={r.id}
+                style={{
+                  border: `1px solid ${B.rule}`,
+                  borderRadius: B.radiusSm,
+                  padding: '11px 13px',
+                  background: B.rowAlt,
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: '0.92rem' }}>{child}</div>
+                <div style={{ fontSize: '0.8rem', color: B.inkSoft, marginTop: 2, lineHeight: 1.5 }}>
+                  {[parent, d.phone, d.email].filter(Boolean).join(' · ')}
+                </div>
+                {d.note && (
+                  <div style={{ fontSize: '0.8rem', color: B.mute, marginTop: 4, lineHeight: 1.5 }}>
+                    “{d.note}”
+                  </div>
+                )}
+                <div style={{ fontSize: '0.76rem', marginTop: 6, fontWeight: 800, color: d.sms_consent ? B.green : B.mute }}>
+                  {d.sms_consent ? '✓ Wants text reminders' : 'Did not ask for texts'}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                  <Btn
+                    size="sm"
+                    onClick={() =>
+                      setAdding({
+                        name: d.child_name ?? '',
+                        parent: d.parent_name ?? '',
+                        phone: d.phone ?? '',
+                        email: d.email ?? '',
+                        notes: d.note ?? '',
+                        smsConsent: !!d.sms_consent,
+                      })
+                    }
+                  >
+                    + Add {child.split(' ')[0]}
+                  </Btn>
+                  <Btn size="sm" kind="ghost" onClick={() => hide(r.id)}>
+                    Hide
+                  </Btn>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+      {adding && (
+        <KidModal
+          kid={null}
+          prefill={adding}
+          onClose={() => {
+            // Whether she saved or backed out, she has dealt with it —
+            // and an unsaved one can always be re-added by hand.
+            const match = (rows.data ?? []).find((r) => (r.details?.child_name ?? '') === adding.name);
+            if (match && cfg.data) cfg.save.mutate(markJoinHandled(cfg.data, match.id));
+            setAdding(null);
+          }}
+        />
+      )}
+    </>
   );
 }

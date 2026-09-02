@@ -27,16 +27,35 @@ import { useUpsertKid, useKids } from '../lib/data';
 import { useBabysittingConfig, appendLog } from '../lib/config';
 import { Modal, Field, inputStyle, Btn, Chip } from './ui';
 
-export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => void }) {
+/** What a parent typed into the public sign-up form, so adding them is
+ *  a glance and a Save rather than copying from another screen. */
+export interface KidPrefill {
+  name?: string;
+  parent?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  smsConsent?: boolean;
+}
+
+export function KidModal({
+  kid,
+  onClose,
+  prefill,
+}: {
+  kid: Client | null;
+  onClose: () => void;
+  prefill?: KidPrefill;
+}) {
   const upsert = useUpsertKid();
   const { data: kids } = useKids();
   const cfg = useBabysittingConfig();
 
-  const [name, setName] = useState(kid?.full_name ?? '');
+  const [name, setName] = useState(kid?.full_name ?? prefill?.name ?? '');
   const [familyName, setFamilyName] = useState(kid ? familyLabel(readFamilySlug(kid)).replace(/ family$/, '') : '');
-  const [parent, setParent] = useState(kid ? readParent(kid) : '');
-  const [phone, setPhone] = useState(kid?.phone ?? '');
-  const [email, setEmail] = useState(kid?.email ?? '');
+  const [parent, setParent] = useState(kid ? readParent(kid) : (prefill?.parent ?? ''));
+  const [phone, setPhone] = useState(kid?.phone ?? prefill?.phone ?? '');
+  const [email, setEmail] = useState(kid?.email ?? prefill?.email ?? '');
   const [dob, setDob] = useState(kid?.date_of_birth ?? '');
   const [days, setDays] = useState<string[]>(kid ? readDays(kid) : []);
   const [weeklyRate, setWeeklyRate] = useState(
@@ -46,13 +65,15 @@ export function KidModal({ kid, onClose }: { kid: Client | null; onClose: () => 
     kid ? String(readHourlyRate(kid) || '') : String(cfg.data?.settings.defaultHourlyRate || ''),
   );
   const [allergies, setAllergies] = useState(kid?.medical_notes ?? '');
-  const [notes, setNotes] = useState(kid?.notes ?? '');
+  const [notes, setNotes] = useState(kid?.notes ?? prefill?.notes ?? '');
   const [emergency, setEmergency] = useState(kid?.emergency_contact ?? '');
   const [cfValues, setCfValues] = useState<Record<string, string>>(kid ? readCustomValues(kid) : {});
   const [tagIds, setTagIds] = useState<string[]>(kid ? readKidTagIds(kid) : []);
   // Text consent starts OFF for a new kid. Carriers require the opt-in to
   // be a deliberate, separate choice — never bundled into signing up.
-  const [smsConsent, setSmsConsent] = useState(kid ? readSmsConsent(kid) : false);
+  // Carried straight from what the parent ticked on the public form —
+  // their answer, not a guess, and still hers to change before saving.
+  const [smsConsent, setSmsConsent] = useState(kid ? readSmsConsent(kid) : !!prefill?.smsConsent);
   // Only a box she actually ticked or unticked gets written. An untouched
   // box still shows what was loaded — but a mother may have changed her
   // mind in her own portal since then, and that is not the form's to undo.
