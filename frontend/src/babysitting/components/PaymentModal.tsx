@@ -5,7 +5,8 @@
 import { useMemo, useState } from 'react';
 import type { Client } from '../../lib/database.types';
 import { api } from '../../lib/api';
-import { readBalance, readFamilySlug, familyLabel, readWeeklyRate, formatMoney } from '../theme';
+import { readBalance, readFamilySlug, familyLabel, readWeeklyRate, formatMoney, readParent } from '../theme';
+import { notify } from '../lib/notice';
 import { useRecordPayment, useKids, usePayments } from '../lib/data';
 import { useBabysittingConfig, appendLog } from '../lib/config';
 import { useDemo } from '../demo/flag';
@@ -84,14 +85,28 @@ export function PaymentModal({
             method,
           ),
         );
-        // Thank-you receipt to the parent — fire and forget; a receipt
-        // hiccup must never block or fail the recorded payment.
+        // Thank-you receipt to the parent. Still never blocks the payment —
+        // the modal closes first — but the outcome lands as one line at the
+        // bottom of the screen, because "did the parent get a receipt?" is
+        // a question she'll otherwise be asked and unable to answer.
         if (cfg.data.settings.receipts.enabled && !demo) {
-          void api('/reminders/payment-receipt', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ client_id: selected.id, amount: amt }),
-          }).catch(() => undefined);
+          const who = readParent(selected) || selected.full_name.split(' ')[0] + "'s parent";
+          void api<{ sent: boolean; channel?: string | null; reason?: string }>(
+            '/reminders/payment-receipt',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ client_id: selected.id, amount: amt }),
+            },
+          )
+            .then((r) => {
+              if (r.sent) {
+                notify(`Receipt ${r.channel === 'sms' ? 'texted' : 'emailed'} to ${who}.`, 'good');
+              } else if (r.reason && !/receipts off/i.test(r.reason)) {
+                notify(`Payment saved, but no receipt went to ${who} — ${r.reason}`, 'bad');
+              }
+            })
+            .catch(() => notify(`Payment saved, but the receipt to ${who} didn't send.`, 'bad'));
         }
       }
       onClose();

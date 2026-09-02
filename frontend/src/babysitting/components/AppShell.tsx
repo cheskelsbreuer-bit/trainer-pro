@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabase';
 import type { Trainer } from '../../lib/database.types';
 import { B } from '../theme';
 import { useBabysittingConfig } from '../lib/config';
+import { useNotice } from '../lib/notice';
 import { useDemo, setDemoActive } from '../demo/flag';
 import { useChatMessages, unreadByClient } from '../lib/chat';
 import { useWords } from '../lib/words';
@@ -113,6 +114,44 @@ function SaveTrouble() {
     >
       <b style={{ color: B.red }}>That didn't save.</b> Your last change has been undone — check
       your signal and do it again. Nothing else you've entered is affected.
+    </div>
+  );
+}
+
+/** The app-wide notice line — see lib/notice.ts. Same spot and shape as
+ *  SaveTrouble so there is exactly one place at the bottom of the screen
+ *  where the app talks back, whatever it has to say. Trouble wins if both
+ *  have something to say at once. */
+function Toast() {
+  const n = useNotice();
+  const cfg = useBabysittingConfig();
+  if (!n || cfg.save.isError) return null;
+  const colour = n.tone === 'good' ? B.green : n.tone === 'bad' ? B.red : B.inkSoft;
+  const soft = n.tone === 'good' ? B.greenSoft : n.tone === 'bad' ? B.redSoft : B.rowAlt;
+  return (
+    <div
+      role="status"
+      key={n.at}
+      style={{
+        position: 'fixed',
+        left: 12,
+        right: 12,
+        bottom: 12,
+        zIndex: 950,
+        maxWidth: 460,
+        margin: '0 auto',
+        background: soft,
+        border: `1.5px solid ${colour}`,
+        borderRadius: B.radiusSm,
+        padding: '10px 14px',
+        boxShadow: B.shadow,
+        fontSize: '0.85rem',
+        fontWeight: 700,
+        lineHeight: 1.5,
+        color: B.ink,
+      }}
+    >
+      {n.text}
     </div>
   );
 }
@@ -381,6 +420,7 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
         <Outlet context={{ editMode }} />
       </main>
       <SaveTrouble />
+      <Toast />
       <TourWizard />
       <CommentWidget />
     </div>
