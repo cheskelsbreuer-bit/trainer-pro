@@ -313,10 +313,84 @@ function AdminShell() {
     return <AdminLogin />;
   }
   // Treat any error or non-admin as 404 — don't reveal /chesky exists.
+  //
+  // The cost of that lie is that it also says nothing to the person who IS
+  // supposed to be here and is staring at a 404 wondering what broke. So
+  // `?why=1` on the URL tells the truth. It gives nothing away that the
+  // reader doesn't already have: you have to be signed in, and you have to
+  // have guessed this URL in the first place.
   if (check.error || !check.data?.is_admin) {
-    return <NotFound />;
+    const why = new URLSearchParams(window.location.search).get('why') === '1';
+    return why ? (
+      <AdminWhyNot email={user.email ?? null} uid={user.id} error={check.error} />
+    ) : (
+      <NotFound />
+    );
   }
   return <AdminPage />;
+}
+
+/** Why the admin page is refusing you. Only shown for ?why=1. */
+function AdminWhyNot({
+  email,
+  uid,
+  error,
+}: {
+  email: string | null;
+  uid: string;
+  error: unknown;
+}) {
+  const msg = error instanceof Error ? error.message : error ? String(error) : null;
+  const missing = msg ? /does not exist|schema cache|find the function/i.test(msg) : false;
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="max-w-md text-sm text-slate-700 space-y-3">
+        <h1 className="text-lg font-semibold text-slate-900">
+          {msg
+            ? "You're signed in, but the check itself failed"
+            : "You're signed in, but not as an admin"}
+        </h1>
+        <p>
+          The page is fine. The database was asked whether this account is an admin and{' '}
+          {msg ? 'could not answer' : 'said no'}, so the page showed you a 404 rather than admit it
+          exists.
+        </p>
+        <dl className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 font-mono text-xs">
+          <div>
+            <dt className="inline text-slate-500">signed in as </dt>
+            <dd className="inline text-slate-900">{email ?? '(no email on this account)'}</dd>
+          </div>
+          <div>
+            <dt className="inline text-slate-500">account id </dt>
+            <dd className="inline text-slate-900">{uid}</dd>
+          </div>
+          <div>
+            <dt className="inline text-slate-500">answer </dt>
+            <dd className="inline text-slate-900">{msg ? `error — ${msg}` : 'is_admin = false'}</dd>
+          </div>
+        </dl>
+        {missing ? (
+          <p>
+            That error means the admin functions were never added to this database. Run{' '}
+            <code className="bg-slate-100 px-1 rounded">supabase/22_admin_via_rpc.sql</code> and{' '}
+            <code className="bg-slate-100 px-1 rounded">23</code>,{' '}
+            <code className="bg-slate-100 px-1 rounded">24</code> in the Supabase SQL editor.
+          </p>
+        ) : (
+          <p>
+            If that address is the right one, run{' '}
+            <code className="bg-slate-100 px-1 rounded">supabase/44_admin_fix_me.sql</code> in the
+            Supabase SQL editor — it marks that account as an admin and prints what it found. If it
+            is the <em>wrong</em> address, sign out and sign back in with the right one.
+          </p>
+        )}
+        <p className="text-slate-500 text-xs">
+          Nobody sees this page without both a signed-in account and the <code>?why=1</code> on the
+          address.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function NotFound() {
