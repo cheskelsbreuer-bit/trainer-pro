@@ -613,18 +613,25 @@ function UpdatesCard() {
       <div style={{ fontFamily: B.fontDisplay, fontWeight: 800, marginBottom: 10 }}>Updates</div>
       <div style={{ display: 'grid', gap: 9 }}>
         {shown.map((n) => {
+          // The line already says the clock time an arrival happened, so
+          // this says which DAY and never a second time — two different
+          // clocks on one line is how a parent ends up wondering which
+          // one is real.
           const when = new Date(n.at);
-          const today = when.toDateString() === new Date().toDateString();
+          const midnight = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+          const daysAgo = Math.round((midnight(new Date()) - midnight(when)) / 86_400_000);
+          const day =
+            daysAgo <= 0
+              ? 'Today'
+              : daysAgo === 1
+                ? 'Yesterday'
+                : when.toLocaleDateString([], { month: 'short', day: 'numeric' });
           return (
             <div key={n.id} style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
               <span aria-hidden style={{ fontSize: '0.95rem' }}>{n.icon}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.9rem', color: B.ink, lineHeight: 1.5 }}>{n.text}</div>
-                <div style={{ fontSize: '0.74rem', color: B.mute, marginTop: 1 }}>
-                  {today
-                    ? when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-                    : when.toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                </div>
+                <div style={{ fontSize: '0.74rem', color: B.mute, marginTop: 1 }}>{day}</div>
               </div>
             </div>
           );

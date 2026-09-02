@@ -7,6 +7,8 @@ rows, writing the trainer's activity log) — every query is explicitly
 scoped, per db.py's contract.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
@@ -195,6 +197,14 @@ def set_sms_consent(req: SmsConsentRequest, authorization: str | None = Header(d
 _PARENT_VISIBLE = ("arrival_notice", "payment_receipt", "absence_reported")
 
 
+def _friendly_date(raw) -> str:
+    """2026-08-30 is a database value, not something to show a parent."""
+    try:
+        return datetime.strptime(str(raw)[:10], "%Y-%m-%d").strftime("%b %-d")
+    except (TypeError, ValueError):
+        return ""
+
+
 def _money(value) -> str:
     try:
         n = float(value)
@@ -249,7 +259,7 @@ def notices(authorization: str | None = Header(default=None)) -> dict:
             text = f"Payment received{f' — {amount}' if amount else ''}. Thank you!"
             icon = "💛"
         elif action == "absence_reported":
-            date = d.get("date") or ""
+            date = _friendly_date(d.get("date"))
             note = (d.get("note") or "").strip()
             text = f"You let them know {name} would be out{f' on {date}' if date else ''}."
             if note:
