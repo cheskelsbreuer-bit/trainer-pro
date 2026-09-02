@@ -224,6 +224,13 @@ export const DEMO_CONFIG: BabysittingConfig = {
       template:
         'Hi {parent}! Received {currency}{amount}, thank you! The balance for {kids} is now {currency}{balance}.',
     },
+    arrivals: {
+      enabled: true,
+      onArrive: true,
+      onPickup: true,
+      arriveTemplate: '{kid} arrived safely at {time}.',
+      pickupTemplate: '{kid} was picked up at {time}.',
+    },
     appLevel: 'pro',
     familyDiscount: { enabled: true, type: 'percent', value: 10 },
     autoBilling: { enabled: true, day: 0 },

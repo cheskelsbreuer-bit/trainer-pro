@@ -126,6 +126,24 @@ export function SettingsPage() {
     flash('messages');
   }
 
+  /** One switch, saved straight away — no Save button for a toggle. */
+  function setArrivals(patch: Partial<BabysittingSettings['arrivals']>, note: string) {
+    if (!cfg.data) return;
+    cfg.save.mutate(
+      appendLog(
+        {
+          ...cfg.data,
+          settings: {
+            ...cfg.data.settings,
+            arrivals: { ...cfg.data.settings.arrivals, ...patch },
+          },
+        },
+        'settings',
+        note,
+      ),
+    );
+  }
+
   function resetMessages() {
     setSms(DEFAULT_SETTINGS.smsTemplate);
     setEmailSubject(DEFAULT_SETTINGS.emailSubject);
@@ -309,6 +327,97 @@ export function SettingsPage() {
       </Collapse>
 
       {/* ── Customize studio ─────────────────────────────────────────── */}
+      <Collapse title="🚸 Tell parents their child arrived">
+        <Card>
+          <p style={mutedLine}>
+            The moment you tap a child in on the home screen, their parent hears about it — a text
+            if they've turned texts on, otherwise an email. It's the thing parents ask for most and
+            the thing they never like to phone about.
+          </p>
+          {(() => {
+            const a = cfg.data?.settings.arrivals ?? DEFAULT_SETTINGS.arrivals;
+            const row = (
+              on: boolean,
+              label: string,
+              onClick: () => void,
+              disabled = false,
+            ) => (
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={onClick}
+                style={{
+                  border: 'none',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  borderRadius: B.pill,
+                  padding: '8px 15px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  opacity: disabled ? 0.45 : 1,
+                  background: on ? B.green : '#f2ede4',
+                  color: on ? '#fff' : B.inkSoft,
+                }}
+              >
+                {label}
+              </button>
+            );
+            return (
+              <>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  {row(a.enabled, a.enabled ? '✓ Telling parents' : 'Turn it on', () =>
+                    setArrivals(
+                      { enabled: !a.enabled },
+                      a.enabled ? 'Arrival messages off' : 'Arrival messages on',
+                    ),
+                  )}
+                  {row(
+                    a.onArrive,
+                    'When they arrive',
+                    () => setArrivals({ onArrive: !a.onArrive }, 'Arrival message changed'),
+                    !a.enabled,
+                  )}
+                  {row(
+                    a.onPickup,
+                    "When they're picked up",
+                    () => setArrivals({ onPickup: !a.onPickup }, 'Pickup message changed'),
+                    !a.enabled,
+                  )}
+                </div>
+                {a.enabled && (
+                  <>
+                    <Field label="When they arrive" hint="{kid} is their first name, {time} is the clock time.">
+                      <input
+                        style={inputStyle}
+                        defaultValue={a.arriveTemplate}
+                        onBlur={(e) =>
+                          e.target.value.trim() !== a.arriveTemplate &&
+                          setArrivals({ arriveTemplate: e.target.value.trim() }, 'Arrival wording changed')
+                        }
+                      />
+                    </Field>
+                    <Field label="When they're picked up">
+                      <input
+                        style={inputStyle}
+                        defaultValue={a.pickupTemplate}
+                        onBlur={(e) =>
+                          e.target.value.trim() !== a.pickupTemplate &&
+                          setArrivals({ pickupTemplate: e.target.value.trim() }, 'Pickup wording changed')
+                        }
+                      />
+                    </Field>
+                    <p style={mutedLine}>
+                      One message per child per day, each way — tapping twice won't send it twice.
+                      A family that hasn't turned texts on gets the email instead, and a family with
+                      neither gets nothing rather than an error.
+                    </p>
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </Card>
+      </Collapse>
+
       <Collapse title="🎨 Customize your app">
       <Card>
         <p style={{ ...mutedLine, marginTop: 0 }}>Turn features on or off, pick your colors and fonts, and reorder the menu.</p>

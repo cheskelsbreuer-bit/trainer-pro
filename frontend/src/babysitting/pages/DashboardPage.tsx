@@ -21,6 +21,7 @@ import {
   ALL_DAYS,
 } from '../theme';
 import { useKids, usePayments } from '../lib/data';
+import { api } from '../../lib/api';
 import {
   useBabysittingConfig,
   appendLog,
@@ -29,6 +30,7 @@ import {
   setAttendanceMany,
 } from '../lib/config';
 import { useWords } from '../lib/words';
+import { useDemo } from '../demo/flag';
 import { fillTemplate, familySummary, smsLink, mailtoLink } from '../lib/messages';
 import {
   Card,
@@ -87,13 +89,31 @@ export function DashboardPage() {
   const todayKids = useMemo(() => active.filter((k) => scheduledToday(k)), [active]);
   const todayName = DAY_LABELS[ALL_DAYS[new Date().getDay()]];
   const todayIso = new Date().toISOString().slice(0, 10);
+  const demo = useDemo();
 
   // ── Attendance: who actually showed up today ────────────────────
   const today = attendanceFor(cfg.data, todayIso);
   const markedCount = today.present.length + today.absent.length;
-  function mark(kidId: string, state: 'present' | 'absent' | 'clear') {
+  function mark(kidId: string, state: 'present' | 'absent' | 'picked_up' | 'clear') {
     if (!cfg.data) return;
     cfg.save.mutate(setAttendance(cfg.data, todayIso, kidId, state));
+    // Tell the parent their child is here, or has gone home. Fire and
+    // forget: the register must never wait on a text, and a message that
+    // fails to send is not a reason to lose the attendance mark. The
+    // server decides whether it's switched on, refuses a second one for
+    // the same child today, and picks text or email per family.
+    if (!demo && (state === 'present' || state === 'picked_up')) {
+      const at = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      void api('/reminders/arrival-notice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: kidId,
+          kind: state === 'picked_up' ? 'picked_up' : 'arrived',
+          at,
+        }),
+      }).catch(() => undefined);
+    }
   }
   function markAllHere() {
     if (!cfg.data) return;
@@ -239,6 +259,7 @@ export function DashboardPage() {
             {todayKids.map((k) => {
               const isHere = today.present.includes(k.id);
               const isOut = today.absent.includes(k.id);
+              const isGone = (today.pickedUp ?? []).includes(k.id);
               return (
               <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Link to={`/kids/${k.id}`} style={{ textDecoration: 'none' }}>
@@ -290,6 +311,25 @@ export function DashboardPage() {
                   >
                     ✓
                   </button>
+                  {isHere && (
+                    <button
+                      type="button"
+                      title={isGone ? 'Picked up — tap to undo' : 'Mark picked up'}
+                      onClick={() => mark(k.id, isGone ? 'present' : 'picked_up')}
+                      style={{
+                        border: 'none',
+                        cursor: 'pointer',
+                        borderRadius: 8,
+                        padding: '2px 7px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        background: isGone ? B.accent : '#f2ede4',
+                        color: isGone ? '#fff' : B.inkSoft,
+                      }}
+                    >
+                      🚗
+                    </button>
+                  )}
                   <button
                     type="button"
                     title={isOut ? 'Out — tap to clear' : 'Mark out'}

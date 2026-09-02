@@ -914,6 +914,157 @@ def announce(req: AnnounceRequest, authorization: str | None = Header(default=No
     return result
 
 
+# ── "She got there" — the message a parent actually waits for ─────────
+#
+# The sitter taps a child in on the register; the parent hears about it
+# within seconds. Same rules as every other message here: a text only if
+# that family turned texts on, otherwise email, and never both — this is
+# a one-line reassurance, not a receipt.
+#
+# Deliberately idempotent per child per day per kind. A double-tap, a
+# flaky connection, or a second phone in the kitchen must not send a
+# mother two "Rivky arrived" messages.
+
+
+class ArrivalNoticeRequest(BaseModel):
+    client_id: str
+    kind: Literal["arrived", "picked_up"]
+    at: str | None = None  # local time as the sitter's phone sees it, e.g. "8:42 AM"
+
+
+@router.post("/arrival-notice")
+def arrival_notice(
+    req: ArrivalNoticeRequest,
+    user: CurrentUser,
+    authorization: str = Header(...),
+) -> dict:
+    from ..db import supabase_admin
+
+    sb = supabase_admin()
+
+    kid = (
+        sb.table("clients")
+        .select("id, trainer_id, full_name, phone, email, tags")
+        .eq("id", req.client_id)
+        .eq("trainer_id", user.user_id)
+        .single()
+        .execute()
+    )
+    if not kid.data:
+        raise HTTPException(404, "That child isn't on your list.")
+    k = kid.data
+
+    trainer = (
+        sb.table("trainers")
+        .select("id, full_name, business_name, public_profile")
+        .eq("id", user.user_id)
+        .single()
+        .execute()
+    )
+    t = trainer.data or {}
+    business = t.get("business_name") or t.get("full_name") or "Your babysitter"
+    bs = ((t.get("public_profile") or {}).get("babysitting") or {}).get("settings", {})
+    arrivals = bs.get("arrivals") or {}
+
+    if not arrivals.get("enabled"):
+        return {"sent": False, "reason": "arrival notices are switched off"}
+    if req.kind == "arrived" and not arrivals.get("onArrive", True):
+        return {"sent": False, "reason": "arrival notices are off for arriving"}
+    if req.kind == "picked_up" and not arrivals.get("onPickup", True):
+        return {"sent": False, "reason": "arrival notices are off for pickup"}
+
+    # Already told them today? Then we're done — say so plainly rather
+    # than pretending we sent a second one.
+    today = datetime.now(timezone.utc).date().isoformat()
+    seen = (
+        sb.table("activity_log")
+        .select("id, created_at, details")
+        .eq("trainer_id", user.user_id)
+        .eq("action", "arrival_notice")
+        .gte("created_at", f"{today}T00:00:00Z")
+        .limit(200)
+        .execute()
+    )
+    for row in seen.data or []:
+        d = row.get("details") or {}
+        if d.get("client_id") == req.client_id and d.get("kind") == req.kind and d.get("sent"):
+            return {"sent": False, "reason": "already sent today", "duplicate": True}
+
+    when = (req.at or "").strip() or datetime.now(timezone.utc).strftime("%-I:%M %p")
+    template = (
+        arrivals.get("arriveTemplate") or "{kid} arrived safely at {time}."
+        if req.kind == "arrived"
+        else arrivals.get("pickupTemplate") or "{kid} was picked up at {time}."
+    )
+    first_name = (k.get("full_name") or "Your child").split(" ")[0]
+    body = (
+        str(template)
+        .replace("{kid}", first_name)
+        .replace("{time}", when)
+        .replace("{business}", business)
+    )
+
+    consented = "smsconsent:1" in (k.get("tags") or [])
+    channel = None
+    error = None
+
+    if (
+        consented
+        and k.get("phone")
+        and settings.TWILIO_ACCOUNT_SID
+        and settings.TWILIO_AUTH_TOKEN
+        and settings.TWILIO_FROM_NUMBER
+    ):
+        try:
+            from twilio.rest import Client as TwilioClient
+
+            _send_sms(
+                k["phone"],
+                body,
+                TwilioClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN),
+                business,
+            )
+            channel = "sms"
+        except Exception as e:  # noqa: BLE001 — fall through to email
+            error = str(e)[:160]
+
+    if channel is None and k.get("email"):
+        try:
+            subject = (
+                f"{first_name} arrived" if req.kind == "arrived" else f"{first_name} was picked up"
+            )
+            _send_email_for(business, bs, k["email"], subject, body)
+            channel = "email"
+        except Exception as e:  # noqa: BLE001
+            error = str(e)[:160]
+
+    result = {
+        "sent": channel is not None,
+        "channel": channel,
+        "kind": req.kind,
+        "client_id": req.client_id,
+        "error": error,
+    }
+
+    try:
+        sb.table("activity_log").insert(
+            {
+                "trainer_id": user.user_id,
+                "actor": "system",
+                "action": "arrival_notice",
+                "entity_type": "client",
+                "entity_id": req.client_id,
+                "details": {**result, "kid": first_name, "at": when},
+            }
+        ).execute()
+    except Exception:  # noqa: BLE001 — logging never breaks the send
+        pass
+
+    if channel is None and error is None:
+        result["reason"] = "no phone with texts on, and no email on file"
+    return result
+
+
 class CommentNotifyRequest(BaseModel):
     message: str
     # The feedback row this comment was just saved as. Carrying it lets the

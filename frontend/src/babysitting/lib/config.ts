@@ -30,6 +30,19 @@ export interface ReceiptSettings {
   template: string; // {parent} {kids} {currency}{amount} {currency}{balance} {paylink}
 }
 
+/** "Did she get there?" — the message a parent actually wants.
+ *  Sent the moment the sitter marks a child in or out, through whichever
+ *  channel that family has: a text if they turned texts on, otherwise
+ *  email. Off until she switches it on: it is one message per child per
+ *  morning, which some parents love and some would rather not have. */
+export interface ArrivalNotices {
+  enabled: boolean;
+  onArrive: boolean;
+  onPickup: boolean;
+  arriveTemplate: string; // {kid} {time} {business}
+  pickupTemplate: string;
+}
+
 export interface BabysittingSettings {
   currency: string; // '$'
   /** What she calls the children — 'kid'/'kids' by default, but a day
@@ -47,6 +60,7 @@ export interface BabysittingSettings {
   mutedFamilies: string[]; // family slugs left out of reminder runs
   gmail: GmailSending;
   receipts: ReceiptSettings;
+  arrivals: ArrivalNotices;
   appLevel: 'simple' | 'standard' | 'pro'; // how much of the app shows
   familyDiscount: { enabled: boolean; type: 'percent' | 'flat'; value: number }; // 2nd+ siblings
   autoBilling: { enabled: boolean; day: number }; // weekly charges post themselves (day: 0=Sun…6=Sat)
@@ -116,8 +130,12 @@ export interface AwayRecord {
  *  small (a year of six-day weeks is ~310 entries). */
 export interface AttendanceDay {
   date: string; // YYYY-MM-DD
-  present: string[]; // client ids
-  absent: string[]; // client ids
+  present: string[]; // client ids — arrived
+  absent: string[]; // client ids — didn't come
+  /** Arrived AND has since gone home. A subset of `present`: a child who
+   *  was picked up was, by definition, here. Optional so days recorded
+   *  before pickup existed still read correctly. */
+  pickedUp?: string[];
 }
 
 /** Recycle bin — deleted payments wait here before they're truly gone. */
@@ -173,6 +191,13 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
     template:
       'Hi {parent}! Received {currency}{amount}, thank you! The balance for {kids} is now {currency}{balance}.',
   },
+  arrivals: {
+    enabled: false,
+    onArrive: true,
+    onPickup: true,
+    arriveTemplate: '{kid} arrived safely at {time}.',
+    pickupTemplate: '{kid} was picked up at {time}.',
+  },
   appLevel: 'standard',
   familyDiscount: { enabled: false, type: 'percent', value: 10 },
   autoBilling: { enabled: false, day: 0 },
@@ -194,6 +219,7 @@ function hydrate(raw: unknown): BabysittingConfig {
   if (!(s.schedule.dayOfMonth >= 1 && s.schedule.dayOfMonth <= 28)) s.schedule.dayOfMonth = 1;
   s.gmail = { ...DEFAULT_SETTINGS.gmail, ...(r.settings?.gmail ?? {}) };
   s.receipts = { ...DEFAULT_SETTINGS.receipts, ...(r.settings?.receipts ?? {}) };
+  s.arrivals = { ...DEFAULT_SETTINGS.arrivals, ...(r.settings?.arrivals ?? {}) };
   s.mutedFamilies = Array.isArray(r.settings?.mutedFamilies) ? r.settings!.mutedFamilies : [];
   s.paymentMethods =
     Array.isArray(r.settings?.paymentMethods) && r.settings!.paymentMethods.length
@@ -341,15 +367,18 @@ export function setAttendance(
   cfg: BabysittingConfig,
   date: string,
   clientId: string,
-  state: 'present' | 'absent' | 'clear',
+  state: 'present' | 'absent' | 'picked_up' | 'clear',
 ): BabysittingConfig {
   const rest = cfg.attendance.filter((d) => d.date !== date);
   const day = cfg.attendance.find((d) => d.date === date) ?? { date, present: [], absent: [] };
   const present = day.present.filter((id) => id !== clientId);
   const absent = day.absent.filter((id) => id !== clientId);
-  if (state === 'present') present.push(clientId);
+  const pickedUp = (day.pickedUp ?? []).filter((id) => id !== clientId);
+  // Picked up means arrived and then went home, so it implies present.
+  if (state === 'present' || state === 'picked_up') present.push(clientId);
+  if (state === 'picked_up') pickedUp.push(clientId);
   if (state === 'absent') absent.push(clientId);
-  const next: AttendanceDay = { date, present, absent };
+  const next: AttendanceDay = { date, present, absent, pickedUp };
   const kept = present.length || absent.length ? [next, ...rest] : rest;
   return {
     ...cfg,
@@ -372,7 +401,10 @@ export function setAttendanceMany(
 }
 
 export function attendanceFor(cfg: BabysittingConfig | undefined, date: string): AttendanceDay {
-  return cfg?.attendance.find((d) => d.date === date) ?? { date, present: [], absent: [] };
+  const day = cfg?.attendance.find((d) => d.date === date);
+  return day
+    ? { ...day, pickedUp: day.pickedUp ?? [] }
+    : { date, present: [], absent: [], pickedUp: [] };
 }
 
 /** The individual days behind the tally, newest last, so a sitter can point
