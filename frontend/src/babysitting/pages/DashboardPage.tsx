@@ -342,9 +342,11 @@ export function DashboardPage() {
             <thead>
               <tr>
                 <Th>Family</Th>
-                <Th>Kids</Th>
+                {/* On a phone the kid chips and the last-payment date move
+                    under the family name — see the bs-phone-only block. */}
+                <Th className="bs-phone-hide">Kids</Th>
                 <Th style={{ textAlign: 'right' }}>Owes</Th>
-                <Th>Last payment</Th>
+                <Th className="bs-phone-hide">Last payment</Th>
                 <Th style={{ textAlign: 'right' }}>Remind / collect</Th>
               </tr>
             </thead>
@@ -361,8 +363,16 @@ export function DashboardPage() {
                   : '';
                 return (
                   <tr key={f.slug}>
-                    <Td style={{ fontWeight: 800 }}>{famLabel}</Td>
-                    <Td>
+                    <Td style={{ fontWeight: 800 }}>
+                      {famLabel}
+                      <div className="bs-phone-only" style={{ marginTop: 4, fontSize: '0.74rem', color: B.mute, fontWeight: 700, lineHeight: 1.5 }}>
+                        {f.members.map((m) => m.full_name.split(' ')[0]).join(', ')}
+                        {shortDate(lastPaymentByFamily.get(f.slug)) && (
+                          <> · last paid {shortDate(lastPaymentByFamily.get(f.slug))}</>
+                        )}
+                      </div>
+                    </Td>
+                    <Td className="bs-phone-hide">
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {f.members.map((m) => (
                           <Chip key={m.id} tone="neutral">{m.full_name.split(' ')[0]}</Chip>
@@ -372,12 +382,12 @@ export function DashboardPage() {
                     <Td style={{ textAlign: 'right', fontWeight: 800, color: B.red }}>
                       {formatMoney(f.balance)}
                     </Td>
-                    <Td style={{ color: B.inkSoft }}>{shortDate(lastPaymentByFamily.get(f.slug))}</Td>
+                    <Td className="bs-phone-hide" style={{ color: B.inkSoft }}>{shortDate(lastPaymentByFamily.get(f.slug))}</Td>
                     <Td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: 6 }}>
                         {f.phone && settings && (
                           <LinkBtn href={smsLink(f.phone, smsBody)} kind="soft" title={`Text ${f.parentName || 'the parent'} their balance`}>
-                            📱 Text
+                            📱<span className="bs-phone-hide"> Text</span>
                           </LinkBtn>
                         )}
                         {f.email && settings && (
@@ -386,7 +396,7 @@ export function DashboardPage() {
                             kind="ghost"
                             title={`Email ${f.parentName || 'the parent'} their balance`}
                           >
-                            ✉️ Email
+                            ✉️<span className="bs-phone-hide"> Email</span>
                           </LinkBtn>
                         )}
                         {editMode && (

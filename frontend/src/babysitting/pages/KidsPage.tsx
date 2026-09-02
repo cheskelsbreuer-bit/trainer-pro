@@ -288,10 +288,12 @@ export function KidsPage() {
             <tr>
               {editMode && <Th style={{ width: 34 }} />}
               <Th>Kid</Th>
-              <Th>Family</Th>
-              <Th>Parent</Th>
-              <Th>Days</Th>
-              <Th>Allergies</Th>
+              {/* On a phone these four fold up under the kid's name instead
+                  of pushing the table wider than the screen. */}
+              <Th className="bs-phone-hide">Family</Th>
+              <Th className="bs-phone-hide">Parent</Th>
+              <Th className="bs-phone-hide">Days</Th>
+              <Th className="bs-phone-hide">Allergies</Th>
               <Th>Balance</Th>
               <Th style={{ textAlign: 'right' }}>Actions</Th>
             </tr>
@@ -329,14 +331,26 @@ export function KidsPage() {
                         )}
                       </span>
                     </Link>
+                    {/* The phone version of the four columns hidden to the
+                        right — same facts, stacked instead of spread. */}
+                    <div className="bs-phone-only" style={{ marginTop: 5, fontSize: '0.74rem', color: B.mute, fontWeight: 700, lineHeight: 1.5 }}>
+                      {[slug ? familyLabel(slug) : null, parent || null, daysLabel(k) || null]
+                        .filter(Boolean)
+                        .join(' · ')}
+                      {k.medical_notes && (
+                        <div style={{ marginTop: 4 }}>
+                          <AllergyBadge allergies={k.medical_notes} />
+                        </div>
+                      )}
+                    </div>
                   </Td>
-                  <Td style={{ color: B.inkSoft, fontWeight: 700 }}>{slug ? familyLabel(slug) : '—'}</Td>
-                  <Td>
+                  <Td className="bs-phone-hide" style={{ color: B.inkSoft, fontWeight: 700 }}>{slug ? familyLabel(slug) : '—'}</Td>
+                  <Td className="bs-phone-hide">
                     <div style={{ fontWeight: 700, color: B.inkSoft }}>{parent || '—'}</div>
                     {k.phone && <div style={{ fontSize: '0.74rem', color: B.mute, marginTop: 1 }}>{k.phone}</div>}
                   </Td>
-                  <Td style={{ color: B.inkSoft, whiteSpace: 'nowrap' }}>{daysLabel(k) || '—'}</Td>
-                  <Td>
+                  <Td className="bs-phone-hide" style={{ color: B.inkSoft, whiteSpace: 'nowrap' }}>{daysLabel(k) || '—'}</Td>
+                  <Td className="bs-phone-hide">
                     <AllergyBadge allergies={k.medical_notes} />
                   </Td>
                   <Td>
@@ -344,13 +358,15 @@ export function KidsPage() {
                   </Td>
                   <Td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                      <Link to={`/kids/${k.id}`} style={{ textDecoration: 'none' }}>
+                      {/* On a phone the whole row already opens the kid, so
+                          this button is only taking width from their name. */}
+                      <Link to={`/kids/${k.id}`} className="bs-phone-hide" style={{ textDecoration: 'none' }}>
                         <Btn size="sm" kind="ghost">View</Btn>
                       </Link>
                       {editMode && (
                         <>
                           <Btn size="sm" kind="soft" onClick={() => setPayKid(k)} title={`Record a payment for ${k.full_name}`}>
-                            💛 Pay
+                            💛<span className="bs-phone-hide"> Pay</span>
                           </Btn>
                           <Btn size="sm" kind="ghost" onClick={() => setEditKid(k)} title={`Edit ${k.full_name}`}>
                             ✏️

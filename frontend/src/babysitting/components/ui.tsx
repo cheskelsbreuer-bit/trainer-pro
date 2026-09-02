@@ -368,7 +368,16 @@ export function Chip({
 export function BalancePill({ balance }: { balance: number }) {
   const b = formatBalance(balance);
   const tone = b.tone === 'owe' ? 'red' : b.tone === 'credit' ? 'accent' : 'green';
-  return <Chip tone={tone}>{b.label}</Chip>;
+  // On a phone the red pill already says "owed" — the word only costs the
+  // kid's name the room it needs. "Paid up" has no number, so it stays.
+  const [amount, ...rest] = b.label.split(' ');
+  if (b.tone === 'zero') return <Chip tone={tone}>{b.label}</Chip>;
+  return (
+    <Chip tone={tone} style={{ whiteSpace: 'nowrap' }}>
+      {amount}
+      <span className="bs-phone-hide"> {rest.join(' ')}</span>
+    </Chip>
+  );
 }
 
 export function AllergyBadge({ allergies }: { allergies: string | null | undefined }) {
@@ -423,6 +432,18 @@ export function PhoneSafety() {
       .bs-shell *[style*="grid"] { grid-auto-columns: minmax(0, 1fr); }
       .bs-shell table { max-width: 100%; }
       .bs-shell { overflow-x: clip; }
+      /* Columns that earn their place on a laptop but only cost you a
+         sideways scroll on a phone. What they held moves under the name
+         instead — see .bs-phone-only. */
+      .bs-phone-only { display: none; }
+      @media (max-width: 700px) {
+        .bs-shell .bs-phone-hide { display: none !important; }
+        .bs-shell .bs-phone-only { display: block; }
+        .bs-shell th, .bs-shell td { padding-left: 8px; padding-right: 8px; }
+        /* Only the folded-up detail line may break mid-word; a name broken
+           across lines as "Tzi / pp / y" is worse than a little scrolling. */
+        .bs-shell .bs-phone-only { overflow-wrap: anywhere; }
+      }
     `}</style>
   );
 }
@@ -450,9 +471,18 @@ export function TableWrap({ children }: { children: ReactNode }) {
   );
 }
 
-export function Th({ children, style }: { children?: ReactNode; style?: CSSProperties }) {
+export function Th({
+  children,
+  style,
+  className,
+}: {
+  children?: ReactNode;
+  style?: CSSProperties;
+  className?: string;
+}) {
   return (
     <th
+      className={className}
       style={{
         textAlign: 'left',
         fontSize: '0.7rem',
@@ -471,9 +501,17 @@ export function Th({ children, style }: { children?: ReactNode; style?: CSSPrope
   );
 }
 
-export function Td({ children, style }: { children?: ReactNode; style?: CSSProperties }) {
+export function Td({
+  children,
+  style,
+  className,
+}: {
+  children?: ReactNode;
+  style?: CSSProperties;
+  className?: string;
+}) {
   return (
-    <td style={{ padding: '11px 14px', borderBottom: `1px solid ${B.rule}`, color: B.ink, verticalAlign: 'middle', ...style }}>
+    <td className={className} style={{ padding: '11px 14px', borderBottom: `1px solid ${B.rule}`, color: B.ink, verticalAlign: 'middle', ...style }}>
       {children}
     </td>
   );

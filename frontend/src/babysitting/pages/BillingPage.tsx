@@ -323,11 +323,14 @@ export function BillingPage() {
               <TableWrap>
                 <thead>
                   <tr>
-                    <Th>Date</Th>
+                    {/* The date, family, how they paid and the note all fold
+                        under the kid's name on a phone rather than squeezing
+                        their name into a column two letters wide. */}
+                    <Th className="bs-phone-hide">Date</Th>
                     <Th>Kid</Th>
-                    <Th>Family</Th>
-                    <Th>Method</Th>
-                    <Th>Note</Th>
+                    <Th className="bs-phone-hide">Family</Th>
+                    <Th className="bs-phone-hide">Method</Th>
+                    <Th className="bs-phone-hide">Note</Th>
                     <Th style={{ textAlign: 'right' }}>Amount</Th>
                     {editMode && <Th style={{ textAlign: 'right' }} />}
                   </tr>
@@ -337,7 +340,7 @@ export function BillingPage() {
                     const kid = kidById.get(p.client_id);
                     return (
                       <tr key={p.id}>
-                        <Td style={{ color: B.inkSoft, whiteSpace: 'nowrap' }}>{shortDate(p.paid_at)}</Td>
+                        <Td className="bs-phone-hide" style={{ color: B.inkSoft, whiteSpace: 'nowrap' }}>{shortDate(p.paid_at)}</Td>
                         <Td>
                           {kid ? (
                             <Link
@@ -357,10 +360,15 @@ export function BillingPage() {
                           ) : (
                             <span style={{ color: B.mute }}>(kid removed)</span>
                           )}
+                          <div className="bs-phone-only" style={{ marginTop: 4, fontSize: '0.74rem', color: B.mute, fontWeight: 700, lineHeight: 1.5 }}>
+                            {[shortDate(p.paid_at), famLabelOf(kid) || null, p.method || null, p.description || null]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </div>
                         </Td>
-                        <Td style={{ color: B.inkSoft }}>{famLabelOf(kid) || '—'}</Td>
-                        <Td>{p.method ? <Chip tone="neutral" style={{ textTransform: 'capitalize' }}>{p.method}</Chip> : '—'}</Td>
-                        <Td>{noteCell(p.description)}</Td>
+                        <Td className="bs-phone-hide" style={{ color: B.inkSoft }}>{famLabelOf(kid) || '—'}</Td>
+                        <Td className="bs-phone-hide">{p.method ? <Chip tone="neutral" style={{ textTransform: 'capitalize' }}>{p.method}</Chip> : '—'}</Td>
+                        <Td className="bs-phone-hide">{noteCell(p.description)}</Td>
                         <Td style={{ textAlign: 'right' }}>
                           <Chip tone={Number(p.amount) >= 0 ? 'green' : 'red'}>{formatMoney(Number(p.amount))}</Chip>
                         </Td>
@@ -418,11 +426,11 @@ export function BillingPage() {
               <TableWrap>
                 <thead>
                   <tr>
-                    <Th>Date</Th>
+                    <Th className="bs-phone-hide">Date</Th>
                     <Th>Kid</Th>
-                    <Th>Family</Th>
-                    <Th>What</Th>
-                    <Th>Note</Th>
+                    <Th className="bs-phone-hide">Family</Th>
+                    <Th className="bs-phone-hide">What</Th>
+                    <Th className="bs-phone-hide">Note</Th>
                     <Th style={{ textAlign: 'right' }}>Amount</Th>
                     {editMode && <Th />}
                   </tr>
@@ -432,7 +440,7 @@ export function BillingPage() {
                     const kid = kidById.get(c.clientId);
                     return (
                       <tr key={c.id}>
-                        <Td style={{ color: B.inkSoft, whiteSpace: 'nowrap' }}>{shortDate(c.ts)}</Td>
+                        <Td className="bs-phone-hide" style={{ color: B.inkSoft, whiteSpace: 'nowrap' }}>{shortDate(c.ts)}</Td>
                         <Td style={{ fontWeight: 800 }}>
                           {kid ? (
                             <Link to={`/kids/${kid.id}`} style={{ textDecoration: 'none', color: B.ink }}>
@@ -441,10 +449,15 @@ export function BillingPage() {
                           ) : (
                             c.kidName
                           )}
+                          <div className="bs-phone-only" style={{ marginTop: 4, fontSize: '0.74rem', color: B.mute, fontWeight: 700, lineHeight: 1.5 }}>
+                            {[shortDate(c.ts), c.familySlug ? familyLabel(c.familySlug) : null, c.note || null]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </div>
                         </Td>
-                        <Td style={{ color: B.inkSoft }}>{c.familySlug ? familyLabel(c.familySlug) : '—'}</Td>
-                        <Td>{kindChip(c)}</Td>
-                        <Td>{noteCell(c.note)}</Td>
+                        <Td className="bs-phone-hide" style={{ color: B.inkSoft }}>{c.familySlug ? familyLabel(c.familySlug) : '—'}</Td>
+                        <Td className="bs-phone-hide">{kindChip(c)}</Td>
+                        <Td className="bs-phone-hide">{noteCell(c.note)}</Td>
                         <Td style={{ textAlign: 'right', fontWeight: 800 }}>
                           {c.amount < 0 ? (
                             <span style={{ color: B.accentDeep }}>{formatMoney(-c.amount)} credit</span>
