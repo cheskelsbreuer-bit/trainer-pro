@@ -63,10 +63,14 @@ businesses, or given to advertisers or data brokers. Consent is recorded for one
 is never transferred to another.</p>
 
 <h2>The opt-in, exactly as the parent sees it</h2>
-<p>The business enters the child's details on an enrolment form. Near the bottom of that form,
-under the heading <strong>Text messages</strong>, sits this checkbox. It is
-<strong>unticked when the form opens</strong> and stays unticked unless the parent asks for it to
-be ticked:</p>
+<p>There are two ways a parent can opt in, and both use the same wording and the same
+unticked-by-default checkbox. Consent is stored one way, so turning it off by either route turns
+off every message.</p>
+
+<p><strong>1. The parent ticks it themselves.</strong> Every parent has a Trainer Pro account —
+they sign in to see their balance, message their provider and pay online. In that account, under
+<strong>Text messages</strong>, is this checkbox. It is off until they turn it on, and one tap
+turns it back off at any time:</p>
 
 <div class="consent">
   <input type="checkbox" disabled aria-label="Example of the consent checkbox, shown unticked">
@@ -80,18 +84,24 @@ be ticked:</p>
 <p class="muted">Above is the real control, reproduced here so it can be inspected without an
 account. It is disabled on this page because this is documentation, not the live form.</p>
 
+<p><strong>2. The provider records it when a parent asks in person.</strong> A parent enrolling
+their child face to face may simply ask to be texted. The provider then ticks the same box, with
+the same wording, on the enrolment form. Nothing is pre-ticked, the form saves perfectly well with
+it left alone, and the parent can undo it themselves in their own account at any time.</p>
+
 <h2>Step by step</h2>
 <ol>
-  <li>A parent enrols their child with the business in person and gives their phone number for
+  <li>A parent enrols their child with a childcare provider and gives their phone number for
       childcare purposes.</li>
-  <li>The business opens the enrolment form in Trainer Pro and fills in the child's details.</li>
-  <li>The business asks the parent whether they would like balance reminders by text.</li>
-  <li>Only if the parent says yes is the box above ticked. It is never pre-ticked, and the form
-      saves perfectly well with it left alone.</li>
-  <li>The saved consent is stored against that parent's record. Every message the system sends
-      checks it first: a record without consent is skipped on every text-sending path.</li>
-  <li>A parent may withdraw at any time by replying STOP, or by asking the business to untick the
-      box.</li>
+  <li>The parent is invited to create a Trainer Pro account, where they can see their balance,
+      message the provider and pay online.</li>
+  <li>Text messages are off. Nothing is sent unless the box above is ticked — by the parent in
+      their own account, or by the provider at the parent's request.</li>
+  <li>The saved consent is stored against that family's record. Every message the system sends
+      checks it first: a family without consent is skipped on every text-sending path, while
+      still receiving exactly the same childcare and the same information by email.</li>
+  <li>A parent may withdraw at any time: reply STOP to any message, untick the box in their own
+      account, or ask the provider to untick it.</li>
 </ol>
 
 <h2>What the messages actually say</h2>

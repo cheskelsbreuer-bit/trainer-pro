@@ -115,6 +115,72 @@ def report_absence(req: AbsenceRequest, authorization: str | None = Header(defau
     return {"ok": True}
 
 
+# ── Text consent, set by the parent themselves ────────────────────────
+#
+# The sitter can record consent on the enrolment form when a parent asks
+# for it in person, but that is the business recording someone else's
+# answer. This endpoint is the parent doing it themselves, in their own
+# account: it is their phone, so it should be their tick. Carriers care
+# about that distinction, and so should we.
+#
+# Consent applies to every kid in the family — the reminders are about
+# one balance, not one child — and is scoped to this parent's own rows.
+
+CONSENT_TAG = "smsconsent:1"
+
+
+class SmsConsentRequest(BaseModel):
+    consent: bool
+
+
+@router.get("/sms-consent")
+def read_sms_consent(authorization: str | None = Header(default=None)) -> dict:
+    user = _parent(authorization)
+    rows = _family_rows(supabase_admin(), user.user_id)
+    if not rows:
+        raise HTTPException(404, "No children are linked to this account yet.")
+    return {
+        "consent": any(CONSENT_TAG in (r.get("tags") or []) for r in rows),
+        "kids": len(rows),
+    }
+
+
+@router.post("/sms-consent")
+def set_sms_consent(req: SmsConsentRequest, authorization: str | None = Header(default=None)) -> dict:
+    """Turn balance texts on or off for this family. Off is the default and
+    always available — nothing about the childcare changes either way."""
+    user = _parent(authorization)
+    sb = supabase_admin()
+    rows = _family_rows(sb, user.user_id)
+    if not rows:
+        raise HTTPException(404, "No children are linked to this account yet.")
+
+    for row in rows:
+        tags = [t for t in (row.get("tags") or []) if t != CONSENT_TAG]
+        if req.consent:
+            tags.append(CONSENT_TAG)
+        sb.table("clients").update({"tags": tags}).eq("id", row["id"]).eq(
+            "auth_user_id", user.user_id
+        ).execute()
+
+    # The sitter should be able to see who turned texts on, and when.
+    sb.table("activity_log").insert(
+        {
+            "trainer_id": rows[0]["trainer_id"],
+            "actor": "client",
+            "action": "sms_consent_changed",
+            "entity_type": "client",
+            "entity_id": rows[0]["id"],
+            "details": {
+                "consent": req.consent,
+                "by": "parent",
+                "kids": [r["full_name"] for r in rows],
+            },
+        }
+    ).execute()
+    return {"ok": True, "consent": req.consent, "kids": len(rows)}
+
+
 # ── Quick pay — the mother pays her balance right from the portal ──────
 #
 # One tap: we compute the family balance, open a Stripe Checkout page

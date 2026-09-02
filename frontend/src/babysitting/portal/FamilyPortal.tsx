@@ -3,7 +3,7 @@
 // phone-first. Standalone page (no sitter shell, no edit mode).
 
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { api } from '../../lib/api';
 import type { Client, Payment } from '../../lib/database.types';
@@ -448,6 +448,11 @@ export function FamilyPortal({
             </div>
           </Card>
 
+          {/* Text messages — the parent's own switch. It's their phone, so
+              it's their tick: the sitter can record consent when a parent
+              asks in person, but this is the parent doing it themselves. */}
+          <TextConsentCard />
+
           {/* Absence form */}
           {absenceKid && (
             <Card style={{ border: `2px solid ${B.accent}` }}>
@@ -502,5 +507,77 @@ export function FamilyPortal({
         </div>
       </div>
     </div>
+  );
+}
+
+
+/** Balance texts, switched on or off by the parent in their own account.
+ *  Off unless they turn it on, and turning it off is always one tap away —
+ *  nothing about the childcare changes either way. */
+function TextConsentCard() {
+  const qc = useQueryClient();
+  const state = useQuery({
+    queryKey: ['portal-sms-consent'],
+    queryFn: () => api<{ consent: boolean; kids: number }>('/portal/sms-consent'),
+    retry: false,
+  });
+
+  const save = useMutation({
+    mutationFn: (consent: boolean) =>
+      api<{ ok: boolean; consent: boolean }>('/portal/sms-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consent }),
+      }),
+    onSuccess: (res) => {
+      qc.setQueryData(['portal-sms-consent'], { consent: res.consent, kids: 0 });
+    },
+  });
+
+  // If the endpoint isn't reachable, say nothing rather than show a broken
+  // switch — texts are optional, and the portal works without this card.
+  if (state.isError) return null;
+  const on = save.data?.consent ?? state.data?.consent ?? false;
+
+  return (
+    <Card>
+      <div style={{ fontFamily: B.fontDisplay, fontWeight: 800, marginBottom: 10 }}>
+        Text messages
+      </div>
+      <label
+        style={{
+          display: 'flex',
+          gap: 11,
+          alignItems: 'flex-start',
+          cursor: save.isPending ? 'wait' : 'pointer',
+          opacity: save.isPending ? 0.6 : 1,
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={on}
+          disabled={save.isPending || state.isLoading}
+          onChange={(e) => save.mutate(e.target.checked)}
+          style={{ marginTop: 3, width: 17, height: 17 }}
+        />
+        <span style={{ fontSize: '0.9rem', lineHeight: 1.55, color: B.ink }}>
+          Text me balance reminders and schedule updates.
+          <span style={{ color: B.mute }}>
+            {' '}Optional — you'll get the same care either way. Msg &amp; data rates may apply.
+            Reply STOP to any message to stop.
+          </span>
+        </span>
+      </label>
+      {save.isError && (
+        <div style={{ marginTop: 9, fontSize: '0.82rem', color: B.red }}>
+          That didn't save. Check your connection and tap it again.
+        </div>
+      )}
+      {save.isSuccess && !save.isPending && (
+        <div style={{ marginTop: 9, fontSize: '0.82rem', color: B.mute }}>
+          {on ? 'Saved — you\u2019ll get balance texts.' : 'Saved — no texts will be sent.'}
+        </div>
+      )}
+    </Card>
   );
 }
