@@ -402,10 +402,16 @@ export function AppShell({ trainer }: { trainer: Trainer | undefined }) {
               color: B.ink,
             }}
           >
-            <span>
+            {/* Two versions of the same thing. On a phone the long one ate
+                half the first screen, so the app itself started below the
+                fold — which is a poor way to show somebody an app. */}
+            <span className="bs-phone-hide">
               👋 <b>This is a live demo</b> — everything works. Record a payment, text a
               parent, add a child; it all really happens. The sample family lives only in
               this browser, so nothing you do here can break anything. Refresh to start over.
+            </span>
+            <span className="bs-phone-only" style={{ flex: '1 1 auto' }}>
+              👋 <b>Live demo</b> — everything works, nothing can break.
             </span>
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
               <button

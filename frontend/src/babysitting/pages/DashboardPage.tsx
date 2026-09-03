@@ -263,7 +263,10 @@ export function DashboardPage() {
   return (
     <div style={{ display: 'grid', gap: 18 }}>
       {/* Stat row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+      <div
+        className="bs-statrow"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}
+      >
         <StatTile
           label={`Here today · ${todayName}`}
           value={markedCount ? today.present.length : todayKids.length}
@@ -317,7 +320,7 @@ export function DashboardPage() {
               const isOut = today.absent.includes(k.id);
               const isGone = (today.pickedUp ?? []).includes(k.id);
               return (
-              <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div key={k.id} className="bs-regrow" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Link to={`/kids/${k.id}`} style={{ textDecoration: 'none' }}>
                 <div
                   style={{
@@ -364,7 +367,7 @@ export function DashboardPage() {
                 </div>
               </Link>
               {editMode && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div className="bs-regmarks" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <button
                     type="button"
                     title={isHere ? 'Here — tap to clear' : 'Mark here'}

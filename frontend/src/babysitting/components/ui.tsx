@@ -49,6 +49,7 @@ export function SectionTitle({
 }) {
   return (
     <div
+      className="bs-sectiontitle"
       style={{
         display: 'flex',
         alignItems: 'baseline',
@@ -96,6 +97,7 @@ export function StatTile({
   const t = tones[tone];
   return (
     <div
+      className="bs-stat"
       style={{
         background: t.bg,
         border: `1px solid ${t.ring}`,
@@ -443,6 +445,87 @@ export function PhoneSafety() {
         /* Only the folded-up detail line may break mid-word; a name broken
            across lines as "Tzi / pp / y" is worse than a little scrolling. */
         .bs-shell .bs-phone-only { overflow-wrap: anywhere; }
+
+        /* The tabs used to wrap into three rows, so on a phone you met a
+           wall of buttons and had to scroll past it before seeing any of
+           the app. One row that slides sideways instead. */
+        /* !important because the nav sets flex-wrap inline, and an inline
+           style beats a stylesheet rule without it. */
+        .bs-shell nav[aria-label="Main"] {
+          flex-wrap: nowrap !important;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          scroll-snap-type: x proximity;
+          margin: 0 -6px;
+          padding: 0 6px 2px;
+          -webkit-overflow-scrolling: touch;
+        }
+        .bs-shell nav[aria-label="Main"]::-webkit-scrollbar { display: none; }
+        .bs-shell nav[aria-label="Main"] > a { flex: 0 0 auto; scroll-snap-align: start; }
+
+        /* A card heading and its buttons don't fit side by side on a phone:
+           the heading wrapped mid-phrase and the buttons ran off the edge.
+           Give the buttons a line of their own. */
+        .bs-shell .bs-sectiontitle { flex-wrap: wrap; align-items: flex-start; }
+        .bs-shell .bs-sectiontitle > h2 { flex: 1 1 100%; }
+
+        /* Five tiles at desktop proportions ran to about 600px on a phone
+           — the whole first screen spent on numbers, with the register (the
+           thing she actually opens the app for) below the fold. Same
+           numbers, two thirds of the height. */
+        .bs-shell .bs-stat { padding: 10px 11px !important; }
+        .bs-shell .bs-stat > div:first-child { font-size: 1.22rem; }
+        .bs-shell .bs-stat > div + div { margin-top: 2px; font-size: 0.7rem; }
+        /* Three across rather than two: five tiles then take two rows
+           instead of three, and the register clears the fold. */
+        .bs-shell .bs-statrow {
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          gap: 8px !important;
+        }
+
+        /* The register is the thing she taps every morning, so it has to be
+           right on a phone above everything else. Each child gets a full
+           row: name on the left taking whatever space is left, the two
+           marks together on the right. They used to stack one above the
+           other beside a narrow name pill, which read as broken. */
+        .bs-shell .bs-regrow {
+          width: 100%;
+          flex-wrap: nowrap !important;
+          gap: 8px !important;
+        }
+        .bs-shell .bs-regrow > a { flex: 1 1 auto; min-width: 0; }
+        .bs-shell .bs-regrow > a > div { width: 100%; }
+        /* Side by side, and big enough to hit. They are stacked on a
+           desktop because the chips are small there; on a phone that put
+           one mark above the other next to a full-width name, which looked
+           like a mistake. The old targets were 2px tall on a screen you
+           use one-handed with a child on your hip. */
+        .bs-shell .bs-regmarks {
+          flex-direction: row !important;
+          gap: 6px !important;
+          flex: 0 0 auto;
+        }
+        .bs-shell .bs-regmarks > button {
+          min-width: 44px;
+          min-height: 38px;
+          font-size: 0.95rem !important;
+        }
+
+        /* The floating "tell us" bubble is a pill with a word in it, which
+           on a phone is wide enough to sit on top of whatever button
+           happens to be bottom-right — a Pay button, in the middle of the
+           one table where that matters. Shrink it to the icon. */
+        .bs-comment-fab {
+          padding: 0 !important;
+          width: 46px;
+          height: 46px;
+          justify-content: center;
+        }
+        /* By class, not :last-child — when there is an unread reply the
+           badge is the last child, and hiding that is the opposite of
+           what we want. */
+        .bs-comment-fab .bs-comment-word { display: none; }
       }
     `}</style>
   );

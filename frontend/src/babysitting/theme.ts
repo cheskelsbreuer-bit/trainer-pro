@@ -358,11 +358,22 @@ export function formatBalance(n: number): { label: string; tone: 'owe' | 'credit
   return { label: `${formatMoney(-n)} credit`, tone: 'credit' };
 }
 
+/** "Aug 26" for anything within the year, "Aug 26, 2025" beyond it.
+ *
+ *  The year used to be printed always, which on a phone turned "last paid
+ *  Aug 26, 2026" into three wrapped lines inside a narrow table column —
+ *  and nobody chasing this week's money needs telling that August was this
+ *  year. Older dates keep the year, because there it is the whole point. */
 export function shortDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const withinTheYear = Math.abs(Date.now() - d.getTime()) < 330 * 86_400_000;
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(withinTheYear ? {} : { year: 'numeric' }),
+  });
 }
 
 export function ageOf(dobIso: string | null | undefined): string {
