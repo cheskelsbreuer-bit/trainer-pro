@@ -34,6 +34,7 @@ import { adminRpc } from './lib/adminRpc';
 import { readAdminVerified, writeAdminVerified, ADMIN_AWAITING_KEY } from './lib/adminSession';
 import { BabysittingApp } from './babysitting/BabysittingApp';
 import { LookingInsideBar } from './babysitting/LookingInside';
+import { FamilyLinkPage } from './babysitting/portal/FamilyLinkPage';
 import { viewAsTarget } from './babysitting/lib/viewAs';
 import { CoachApp } from './coach/CoachApp';
 import { applyAppearance, defaultAppearance } from './lib/appearance';
@@ -555,6 +556,10 @@ export default function App() {
                   must work on the public host too — otherwise an invite
                   link dead-ends on the marketing homepage. */}
               <Route path="/portal-join/:token" element={<PortalJoinPage />} />
+              {/* The texted family link. No login, so it must resolve on
+                  every host a parent might land on — she taps whatever
+                  address was in the message. */}
+              <Route path="/f/:token" element={<FamilyLinkPage />} />
               <Route path="/portal" element={<PortalShell />} />
               <Route path="/intake/:token" element={<IntakePage />} />
               <Route path="/join-studio/:token" element={<JoinStudioPage />} />
@@ -594,6 +599,7 @@ export default function App() {
             <Route path="/intake/:token" element={<IntakePage />} />
             <Route path="/join-studio/:token" element={<JoinStudioPage />} />
             <Route path="/portal-join/:token" element={<PortalJoinPage />} />
+            <Route path="/f/:token" element={<FamilyLinkPage />} />
             <Route path="/babysitting-demo" element={<DemoEntry />} />
 
             {/* Auth-protected but uses its own layout */}

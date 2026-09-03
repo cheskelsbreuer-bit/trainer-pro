@@ -13,6 +13,7 @@ import { smsLink, mailtoLink, familySummary } from '../lib/messages';
 import { useDemo } from '../demo/flag';
 import { useViewAs } from '../lib/viewAs';
 import { useBabysittingConfig } from '../lib/config';
+import { FamilyLinkButton } from './FamilyLinkButton';
 import { daysSince } from '../../lib/format';
 import { Btn, Chip } from './ui';
 
@@ -53,6 +54,11 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
     },
     enabled: !demo && kids.length > 0,
   });
+
+  // When the mothers don't use email, the account-based invite is a dead
+  // end — there is no address to send it to and no login she will finish.
+  // The texted link is the whole flow instead.
+  const phoneOnly = !!cfg.data?.settings.phoneOnly;
 
   const fam = familySummary(kids);
   const firstKid = kids[0];
@@ -99,6 +105,9 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
       window.prompt('Send this link to the parent:', link);
     }
   }
+
+  // Same slot on every screen, a different flow underneath.
+  if (phoneOnly) return <FamilyLinkButton kids={kids} />;
 
   if ((state === 'ready' || state === 'copied') && link) {
     const msg = `Hi ${parent}! Here's your personal link to our family portal — you can see your kids' schedule and balance anytime. Tap to set it up: ${link}`;
