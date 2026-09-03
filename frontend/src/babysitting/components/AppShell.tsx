@@ -26,22 +26,34 @@ import { useViewAs } from '../lib/viewAs';
 const EDIT_KEY = 'babysitting-edit-mode';
 const EDIT_EVENT = 'babysitting-edit-mode-change';
 
+/** Somebody who has never touched this switch gets editing ON.
+ *
+ *  It used to default to off, and that made day one wrong: a sitter opens
+ *  the app she has just paid for, sees "🔒 View only" across the top of her
+ *  own account, adds her first child, and then cannot tick that child in —
+ *  the register's marks are hidden until she finds a toggle nobody told her
+ *  about. The lock is worth having once there is a term's worth of money in
+ *  there and a phone in an apron pocket; it is not worth having on an empty
+ *  account.
+ *
+ *  A stored value always wins, in both directions, so anyone who
+ *  deliberately locks it stays locked. This lives in one place because the
+ *  first version of the change didn't: the initial read said "on" and the
+ *  cross-tab sync still said "off", so the switch flipped itself back the
+ *  moment anything touched storage. */
+function readEditMode(): boolean {
+  try {
+    const stored = window.localStorage.getItem(EDIT_KEY);
+    return stored === null ? true : stored === '1';
+  } catch {
+    return true;
+  }
+}
+
 export function useEditMode(): [boolean, (v: boolean) => void] {
-  const [on, setOn] = useState<boolean>(() => {
-    try {
-      return window.localStorage.getItem(EDIT_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [on, setOn] = useState<boolean>(readEditMode);
   useEffect(() => {
-    const sync = () => {
-      try {
-        setOn(window.localStorage.getItem(EDIT_KEY) === '1');
-      } catch {
-        /* ignore */
-      }
-    };
+    const sync = () => setOn(readEditMode());
     window.addEventListener(EDIT_EVENT, sync);
     window.addEventListener('storage', sync);
     return () => {
