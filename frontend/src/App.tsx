@@ -150,7 +150,15 @@ function ProtectedShell() {
   // portal instead of a coach dashboard they can't use.
   if (!trainer) return <FamilyPortalGate />;
   // First-time signup: walk them through the wizard before showing the app.
-  if (!trainer.onboarded_at) return <OnboardingWizard trainer={trainer} />;
+  //
+  // Not while an admin is looking inside, though. Someone who signed up and
+  // never finished is exactly the account worth inspecting, and dropping the
+  // admin into that person's wizard shows them a form instead of an app —
+  // and a wizard whose every save is refused, at that. Skip straight to the
+  // app; an empty one is itself the answer to "what did they do".
+  if (!trainer.onboarded_at && !viewAsTarget()) {
+    return <OnboardingWizard trainer={trainer} />;
+  }
 
   // A coach who does several disciplines chose at signup how they want
   // it: ONE combined app (the neutral all-in-one shell) or SEPARATE apps

@@ -54,32 +54,38 @@ const READ_ONLY_MESSAGE =
   "You're looking at this account read-only. Nothing here can be changed. " +
   'Press Leave at the bottom of the screen to go back to your own.';
 
-export const supabase = new Proxy(client, {
-  get(target, prop, receiver) {
-    if (prop !== 'from') return Reflect.get(target, prop, receiver);
-    return (table: string) => {
-      const builder = target.from(table);
-      if (!lookingAtSomeoneElse()) return builder;
-      return new Proxy(builder, {
-        get(b, key, r) {
-          if (WRITE_VERBS.includes(key as (typeof WRITE_VERBS)[number])) {
-            return () => {
-              // Say so out loud as well as throwing. Pages catch a failed
-              // save and print their own line — the Coach app's is
-              // "check the connection and try again", which would send
-              // someone off debugging their wifi. The bar at the bottom
-              // listens for this and says what really happened.
-              window.dispatchEvent(
-                new CustomEvent('tp-view-as-blocked', { detail: { table } }),
-              );
-              throw new Error(READ_ONLY_MESSAGE);
-            };
-          }
-          return Reflect.get(b, key, r);
-        },
-      });
-    };
-  },
-}) as typeof client;
+// Only `from` is replaced, and only on the instance. The first version of
+// this wrapped the whole client in a Proxy, which was a worse idea than it
+// looked: every `supabase.auth.…`, `supabase.rpc(…)` and
+// `supabase.storage.…` call in the app — around fifty of them — would then
+// run with `this` bound to the Proxy rather than the client, and a library
+// method that reads a private field off `this` throws outright when it is
+// handed a stand-in. Swapping one bound method leaves `this` exactly as the
+// library expects everywhere else.
+const realFrom = client.from.bind(client);
+
+client.from = ((table: string) => {
+  const builder = realFrom(table);
+  if (!lookingAtSomeoneElse()) return builder;
+  for (const verb of WRITE_VERBS) {
+    Object.defineProperty(builder, verb, {
+      configurable: true,
+      value: () => {
+        // Say so out loud as well as throwing. Pages catch a failed save
+        // and print their own line — the Coach app's is "check the
+        // connection and try again", which would send someone off
+        // debugging their wifi. The bar at the bottom listens for this and
+        // says what really happened.
+        window.dispatchEvent(
+          new CustomEvent('tp-view-as-blocked', { detail: { table } }),
+        );
+        throw new Error(READ_ONLY_MESSAGE);
+      },
+    });
+  }
+  return builder;
+}) as typeof client.from;
+
+export const supabase = client;
 
 export const isConfigured = !!url && !!anonKey;
