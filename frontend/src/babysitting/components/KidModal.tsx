@@ -167,9 +167,16 @@ export function KidModal({
         <Field label="Parent's phone">
           <input style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" />
         </Field>
-        <Field label="Parent's email">
-          <input style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="parent@email.com" />
-        </Field>
+        {/* Hidden when the mothers she works with don't use email. Being
+            asked every single time for an address nobody has is how an app
+            starts to feel like it wasn't built for you. Anything already
+            typed in stays — the value is still saved, it just stops being
+            asked for. */}
+        {!cfg.data?.settings.phoneOnly && (
+          <Field label="Parent's email">
+            <input style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="parent@email.com" />
+          </Field>
+        )}
         <Field label="Birthday">
           <input style={inputStyle} type="date" value={dob ?? ''} onChange={(e) => setDob(e.target.value)} />
         </Field>

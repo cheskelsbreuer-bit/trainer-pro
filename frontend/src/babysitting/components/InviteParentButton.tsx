@@ -12,6 +12,7 @@ import { B, readParent } from '../theme';
 import { smsLink, mailtoLink, familySummary } from '../lib/messages';
 import { useDemo } from '../demo/flag';
 import { useViewAs } from '../lib/viewAs';
+import { useBabysittingConfig } from '../lib/config';
 import { daysSince } from '../../lib/format';
 import { Btn, Chip } from './ui';
 
@@ -33,6 +34,7 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
   const { user } = useAuth();
   const demo = useDemo();
   const viewing = useViewAs();
+  const cfg = useBabysittingConfig();
   const [state, setState] = useState<'idle' | 'busy' | 'ready' | 'copied' | 'error'>('idle');
   const [link, setLink] = useState<string | null>(null);
 
@@ -123,7 +125,7 @@ export function InviteParentButton({ kids }: { kids: Client[] }) {
             📱 Text invite
           </a>
         )}
-        {fam.email && (
+        {fam.email && !cfg.data?.settings.phoneOnly && (
           <a href={mailtoLink(fam.email, 'Your family portal login', emailBody)} style={{ ...chip, background: B.accent, color: '#fff', border: 'none' }}>
             ✉️ Email invite
           </a>

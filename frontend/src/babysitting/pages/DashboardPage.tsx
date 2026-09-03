@@ -359,7 +359,7 @@ export function DashboardPage() {
                         {told[k.id] === 'sending'
                           ? '· telling their parent…'
                           : told[k.id] === 'no way to reach them'
-                            ? '· no phone or email on file'
+                            ? (settings?.phoneOnly ? '· no phone number on file' : '· no phone or email on file')
                             : `· parent ${told[k.id]}`}
                       </div>
                     )}
@@ -507,7 +507,7 @@ export function DashboardPage() {
                             📱<span className="bs-phone-hide"> Text</span>
                           </LinkBtn>
                         )}
-                        {f.email && settings && (
+                        {f.email && settings && !settings.phoneOnly && (
                           <LinkBtn
                             href={mailtoLink(f.email, settings.emailSubject, emailBody)}
                             kind="ghost"

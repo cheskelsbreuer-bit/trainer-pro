@@ -463,7 +463,7 @@ export function MessagesPage() {
       <Card>
         <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 14 }}>
           Every family that owes, message ready. Tap <b>Text</b> and your messaging app opens with it written;
-          tap <b>Email</b> for a ready-to-send email; <b>Copy</b> is for Google Voice. Mark each family done as you go.
+          {settings.phoneOnly ? <><b>Copy</b> is for Google Voice.</> : <>tap <b>Email</b> for a ready-to-send email; <b>Copy</b> is for Google Voice.</>} Mark each family done as you go.
         </div>
 
         {runFamilies.length === 0 ? (
@@ -498,7 +498,7 @@ export function MessagesPage() {
                           📱 Text
                         </LinkBtn>
                       )}
-                      {f.email && (
+                      {f.email && !settings.phoneOnly && (
                         <LinkBtn
                           href={mailtoLink(f.email, settings.emailSubject, emailBody)}
                           kind="accent"
@@ -563,8 +563,14 @@ export function MessagesPage() {
           🤖 Automatic sending
         </SectionTitle>
         <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 14 }}>
-          Pick a day and the reminders go out by themselves. Emails send from your own Gmail (free).
-          Use <b>Send me a test email</b> first to check your setup.
+          {settings.phoneOnly ? (
+            <>Pick a day and the reminders go out by themselves, as texts.</>
+          ) : (
+            <>
+              Pick a day and the reminders go out by themselves. Emails send from your own Gmail
+              (free). Use <b>Send me a test email</b> first to check your setup.
+            </>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
@@ -646,7 +652,8 @@ export function MessagesPage() {
               of every month
             </label>
           )}
-          {toggle(
+          {/* No email channel to choose when the parents don't have email. */}
+          {!settings.phoneOnly && toggle(
             settings.schedule.emailAuto,
             () => saveAutomation({ schedule: { ...settings.schedule, emailAuto: !settings.schedule.emailAuto } }, 'Email channel toggled'),
             '✉️ Emails: auto',
@@ -660,18 +667,23 @@ export function MessagesPage() {
           )}
         </div>
 
-        <Field
-          label="Your email address"
-          hint="Emails go out under your business name. When a parent hits Reply, it lands here."
-        >
-          <input
-            style={inputStyle}
-            value={d.gmailAddress}
-            onChange={(e) => setDrafts({ ...d, gmailAddress: e.target.value })}
-            placeholder="you@example.com"
-            disabled={!editMode}
-          />
-        </Field>
+        {/* Nothing to set up when no parent has an address to send to.
+            Telling a sitter to connect Gmail so she can email people who
+            don't use email is the app wasting her afternoon. */}
+        {!settings.phoneOnly && (
+          <Field
+            label="Your email address"
+            hint="Emails go out under your business name. When a parent hits Reply, it lands here."
+          >
+            <input
+              style={inputStyle}
+              value={d.gmailAddress}
+              onChange={(e) => setDrafts({ ...d, gmailAddress: e.target.value })}
+              placeholder="you@example.com"
+              disabled={!editMode}
+            />
+          </Field>
+        )}
 
         <Field
           label="💳 Where do they pay? (your payment link)"
@@ -702,22 +714,28 @@ export function MessagesPage() {
                 disabled={!editMode}
               />
             </Field>
-            <Field label="Email subject">
-              <input
-                style={inputStyle}
-                value={d.emailSubject}
-                onChange={(e) => setDrafts({ ...d, emailSubject: e.target.value })}
-                disabled={!editMode}
-              />
-            </Field>
-            <Field label="Email body">
-              <textarea
-                style={{ ...inputStyle, minHeight: 90, resize: 'vertical' }}
-                value={d.emailTemplate}
-                onChange={(e) => setDrafts({ ...d, emailTemplate: e.target.value })}
-                disabled={!editMode}
-              />
-            </Field>
+            {/* No email going out, so nothing to word. The saved wording
+                stays exactly as it is for anyone who turns email back on. */}
+            {!settings.phoneOnly && (
+              <>
+                <Field label="Email subject">
+                  <input
+                    style={inputStyle}
+                    value={d.emailSubject}
+                    onChange={(e) => setDrafts({ ...d, emailSubject: e.target.value })}
+                    disabled={!editMode}
+                  />
+                </Field>
+                <Field label="Email body">
+                  <textarea
+                    style={{ ...inputStyle, minHeight: 90, resize: 'vertical' }}
+                    value={d.emailTemplate}
+                    onChange={(e) => setDrafts({ ...d, emailTemplate: e.target.value })}
+                    disabled={!editMode}
+                  />
+                </Field>
+              </>
+            )}
             <div style={{ background: B.butterSoft, borderRadius: B.radiusSm, padding: '10px 14px', fontSize: '0.84rem', marginBottom: 12 }}>
               <b>Preview:</b> {sampleFill(d.smsTemplate)}
             </div>
@@ -743,6 +761,7 @@ export function MessagesPage() {
             >
               {cfg.save.isPending ? 'Saving…' : '💾 Save message settings'}
             </Btn>
+            {!settings.phoneOnly && (
             <Btn
               kind="ghost"
               disabled={testState === 'busy'}
@@ -775,6 +794,7 @@ export function MessagesPage() {
             >
               {testState === 'busy' ? 'Sending…' : '📬 Send me a test email'}
             </Btn>
+            )}
             <Btn
               onClick={() => {
                 if (window.confirm(`Really send now? Reminders go out to ${runFamilies.length} famil${runFamilies.length === 1 ? 'y' : 'ies'}.`)) {
@@ -1012,7 +1032,9 @@ export function MessagesPage() {
               {([
                 ['app', postToApp, setPostToApp, '📱 In the app', 'Appears at the top of their parent portal, right away'],
                 ['text', sendText, setSendText, '💬 Text it', 'Sends the text by itself to every family you picked (once carrier approval is through)'],
-                ['email', sendEmail, setSendEmail, '✉️ Email it', 'Sends the email by itself to every family you picked'],
+                ...(settings.phoneOnly
+                  ? []
+                  : [['email', sendEmail, setSendEmail, '✉️ Email it', 'Sends the email by itself to every family you picked'] as const]),
               ] as const).map(([key, on, set, label, hint]) => (
                 <button
                   key={key}
@@ -1111,8 +1133,18 @@ export function MessagesPage() {
           🧾 Payment receipts
         </SectionTitle>
         <div style={{ color: B.inkSoft, fontSize: '0.87rem', marginBottom: 12 }}>
-          When you record a payment, the parent automatically gets a thank-you with their new balance —
-          by email (your Gmail above) and, once texting is set up on the server, by text too.
+          {settings.phoneOnly ? (
+            <>
+              When you record a payment, the parent automatically gets a thank-you text with their
+              new balance, once texting is set up on the server.
+            </>
+          ) : (
+            <>
+              When you record a payment, the parent automatically gets a thank-you with their new
+              balance — by email (your Gmail above) and, once texting is set up on the server, by
+              text too.
+            </>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
           {toggle(

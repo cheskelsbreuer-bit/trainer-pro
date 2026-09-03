@@ -330,7 +330,7 @@ export function KidDetailPage() {
                         📞 {kid.phone}
                       </a>
                     )}
-                    {kid.email && (
+                    {kid.email && !cfg.data?.settings.phoneOnly && (
                       <a href={`mailto:${kid.email}`} style={linkStyle}>
                         ✉️ {kid.email}
                       </a>

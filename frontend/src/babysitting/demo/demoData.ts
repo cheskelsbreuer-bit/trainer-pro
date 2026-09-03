@@ -238,6 +238,11 @@ export const DEMO_CONFIG: BabysittingConfig = {
     editPin: '',
     readOnlyLock: false,
     paymentMethods: ['cash', 'check', 'zelle', 'venmo', 'other'],
+    // Off here on purpose: the demo should show everything the app can do,
+    // and flipping it on in Settings mid-conversation — watching email
+    // disappear from the whole app — answers "our mothers don't use email"
+    // better than a screenshot of it already gone.
+    phoneOnly: false,
   },
   log: [
     {

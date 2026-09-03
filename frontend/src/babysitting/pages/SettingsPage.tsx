@@ -252,6 +252,46 @@ export function SettingsPage() {
 
       {/* ── Reminder messages ────────────────────────────────────────── */}
       <Collapse title="💬 Reminder messages">
+      <Card style={{ marginBottom: 14 }}>
+        <SectionTitle>How you reach parents</SectionTitle>
+        <label
+          style={{
+            display: 'flex',
+            gap: 12,
+            alignItems: 'flex-start',
+            cursor: 'pointer',
+            padding: '4px 2px',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={!!cfg.data?.settings.phoneOnly}
+            disabled={cfg.save.isPending}
+            onChange={(e) => {
+              if (!cfg.data) return;
+              const on = e.target.checked;
+              cfg.save.mutate(
+                appendLog(
+                  { ...cfg.data, settings: { ...cfg.data.settings, phoneOnly: on } },
+                  'settings',
+                  on ? 'Phone only — no email anywhere' : 'Email switched back on',
+                ),
+              );
+            }}
+            style={{ width: 20, height: 20, marginTop: 2, accentColor: B.primary, flex: 'none' }}
+          />
+          <span>
+            <span style={{ fontWeight: 800, fontSize: '0.92rem' }}>
+              The mothers I work with don't use email
+            </span>
+            <span style={{ display: 'block', fontSize: '0.83rem', color: B.mute, marginTop: 3, lineHeight: 1.5 }}>
+              Takes email out of the app completely — no email box when you add a child, no
+              email button next to a family, no choice to make when you send a reminder.
+              Everything to a parent is a text. Nothing you've already typed in is deleted.
+            </span>
+          </span>
+        </label>
+      </Card>
       <Card>
         <SectionTitle
           right={
@@ -281,16 +321,20 @@ export function SettingsPage() {
             onChange={(e) => setSms(e.target.value)}
           />
         </Field>
-        <Field label="Email subject">
-          <input style={inputStyle} value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
-        </Field>
-        <Field label="Email message">
-          <textarea
-            style={{ ...inputStyle, minHeight: 110, resize: 'vertical' }}
-            value={emailBody}
-            onChange={(e) => setEmailBody(e.target.value)}
-          />
-        </Field>
+        {!cfg.data?.settings.phoneOnly && (
+          <>
+            <Field label="Email subject">
+              <input style={inputStyle} value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
+            </Field>
+            <Field label="Email message">
+              <textarea
+                style={{ ...inputStyle, minHeight: 110, resize: 'vertical' }}
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+              />
+            </Field>
+          </>
+        )}
 
         {/* Live preview against a sample family */}
         <Card

@@ -72,6 +72,18 @@ export interface BabysittingSettings {
   editPin: string; // '' = no PIN; otherwise 4 digits asked before editing
   readOnlyLock: boolean; // true = editing can't be turned on at all
   paymentMethods: string[]; // her own list of how people pay
+  /** The mothers she works with don't use email.
+   *
+   *  This is not a preference, it is a fact about whole communities, and
+   *  an app that keeps asking for an address nobody has is an app that
+   *  looks broken. With this on, email disappears: no email box on a
+   *  child's form, no email button beside a family, no "email or text?"
+   *  choice on a reminder. Everything to a parent is a text, and the app
+   *  stops counting a missing address as something wrong.
+   *
+   *  Off by default, because plenty of sitters do use email and losing it
+   *  silently would be worse than the thing this fixes. */
+  phoneOnly: boolean;
 }
 
 export interface CustomFieldDef {
@@ -208,6 +220,7 @@ export const DEFAULT_SETTINGS: BabysittingSettings = {
   editPin: '',
   readOnlyLock: false,
   paymentMethods: ['cash', 'check', 'zelle', 'venmo', 'other'],
+  phoneOnly: false,
 };
 
 const LOG_CAP = 300;

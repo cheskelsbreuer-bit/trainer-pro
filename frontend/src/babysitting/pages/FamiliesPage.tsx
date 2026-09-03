@@ -216,7 +216,7 @@ export function FamiliesPage() {
                         📞 {f.phone}
                       </a>
                     )}
-                    {f.email && (
+                    {f.email && !settings?.phoneOnly && (
                       <a
                         href={`mailto:${f.email}`}
                         style={{
@@ -280,7 +280,7 @@ export function FamiliesPage() {
                       📱 Text
                     </LinkBtn>
                   )}
-                  {canRemind && f.email && settings && (
+                  {canRemind && f.email && settings && !settings.phoneOnly && (
                     <LinkBtn
                       href={mailtoLink(f.email, settings.emailSubject, emailBody)}
                       kind="ghost"
