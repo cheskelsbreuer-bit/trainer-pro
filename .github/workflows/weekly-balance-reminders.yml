@@ -19,7 +19,7 @@ on:
 jobs:
   send:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 10
     steps:
       - name: Check the shared secret is set
         run: |
@@ -34,7 +34,16 @@ jobs:
           echo "CRON_SECRET is set."
 
       - name: Wake the backend (free tier sleeps)
-        run: curl -fsS --max-time 90 https://api.trainerpro.coach/health >/dev/null
+        # A cold Render worker occasionally needs more than one 90-second
+        # try; one slow wake must not cancel the day's reminders.
+        run: |
+          for attempt in 1 2 3; do
+            curl -fsS --max-time 90 https://api.trainerpro.coach/health >/dev/null && exit 0
+            echo "Backend not awake yet (attempt $attempt), waiting…"
+            sleep 15
+          done
+          echo "::error::Backend did not wake after three tries."
+          exit 1
 
       - name: Run balance reminders
         run: |
